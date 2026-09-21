@@ -1,0 +1,14 @@
+# Phase 7 pilot: a handful of states, for inspecting raw requests by hand.
+experiment_id: pilot
+seed: 42
+environments: [MiniGrid-DoorKey-6x6-v0]
+agents: [random, greedy, rollout_heuristic, oracle, fake]
+dataset:
+  seeds: 20
+  states_per_episode: 2
+  split: development
+  states_per_environment: 10
+offline:
+  horizons: [1, 2]
+online:
+  starts_per_environment: 5

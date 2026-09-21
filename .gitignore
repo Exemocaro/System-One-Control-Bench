@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Private working documents — the full research plan and the decision log.
+# Not part of the public repository.
+docs/plan.md
+docs/DECISIONS.md
+
+# Experiment outputs. Raw records are published deliberately, not by default.
+runs/
