@@ -1,0 +1,8 @@
+description: The goal is diagonal, but a wall blocks the route that starts east.
+moves_to_goal: 2
+best_first_moves: [south]
+map: |
+  #####
+  #A#.#
+  #.G.#
+  #####

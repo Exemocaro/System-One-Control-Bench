@@ -1,0 +1,8 @@
+description: A wall blocks the direct route east; go down and around.
+moves_to_goal: 3
+best_first_moves: [south]
+map: |
+  #####
+  #A#.#
+  #..G#
+  #####

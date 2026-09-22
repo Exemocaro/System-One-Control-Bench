@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System-One Control Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f2f3ef;
+    --panel: #ffffff;
+    --ink: #1d2422;
+    --muted: #5f6b66;
+    --line: #d6dad3;
+    --floor: #e9ece6;
+    --grid: #d3d8d0;
+    --wall: #34403b;
+    --accent: #2f5bd3;
+    --accent-soft: #dfe6fa;
+    --good: #2e8b57;
+    --good-soft: #dcefe3;
+    --bad: #c2412d;
+    --bad-soft: #f6e0db;
+    --goal: #3fa34d;
+    --gold: #d9a400;
+    --sans: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #121614;
+      --panel: #1a201d;
+      --ink: #e7ece8;
+      --muted: #98a39e;
+      --line: #2c3531;
+      --floor: #232a27;
+      --grid: #2f3834;
+      --wall: #56635d;
+      --accent: #7c9bff;
+      --accent-soft: #23304f;
+      --good: #4cc38a;
+      --good-soft: #193328;
+      --bad: #f07a63;
+      --bad-soft: #3a211c;
+      --goal: #4cb85b;
+      --gold: #e6b822;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--sans);
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px 16px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0 auto 6px 0; }
+  label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+  select, button {
+    font: 500 14px var(--sans);
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px 20px;
+    min-height: 0;
+  }
+  @media (max-width: 860px) {
+    body { height: auto; }
+    main { grid-template-columns: minmax(0, 1fr); }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel h2 { font-size: 13px; margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .title { display: grid; gap: 2px; }
+  .title strong { font-size: 18px; }
+  .title span { color: var(--muted); font-size: 14px; }
+
+  #board { flex: 1; min-height: 160px; display: grid; place-items: center; }
+  #board svg { max-width: 100%; max-height: 100%; width: auto; height: 100%; display: block; }
+
+  .status { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px; color: var(--muted); }
+  .pill { font: 500 12px/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; background: var(--floor); color: var(--ink); }
+  .pill.won { background: var(--good-soft); color: var(--good); }
+  .pill.lost { background: var(--bad-soft); color: var(--bad); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .history { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 500 12px var(--mono);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .chip.good { border-color: var(--good); color: var(--good); }
+  .chip.bad { border-color: var(--bad); color: var(--bad); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+
+  #seen { overflow: auto; }
+  .viewing { font-size: 14px; font-weight: 700; }
+  pre {
+    margin: 0;
+    font: 13px/1.5 var(--mono);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .field { display: grid; gap: 4px; }
+  .field > span { font-size: 12px; color: var(--muted); }
+  .question { font-weight: 700; }
+
+  .options { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .option {
+    display: grid;
+    grid-template-columns: 5.5em minmax(0, 1fr) minmax(60px, 30%) 3em;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .option.picked { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .option .id { font: 12px var(--mono); color: var(--muted); }
+  .option .text { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .track { height: 8px; background: var(--floor); border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; background: var(--muted); }
+  .option.picked .fill { background: var(--accent); }
+  .pct { font: 12px var(--mono); text-align: right; }
+  .tag { font: 500 11px/1.6 var(--mono); text-transform: uppercase; padding: 0 5px; border-radius: 3px; }
+  .tag.best { background: var(--good-soft); color: var(--good); }
+  .tag.pick { background: var(--accent-soft); color: var(--accent); }
+
+  .verdict { padding: 10px 12px; border-radius: 6px; background: var(--floor); font-size: 14px; }
+  .verdict.good { background: var(--good-soft); }
+  .verdict.bad { background: var(--bad-soft); }
+  .error { padding: 10px 12px; border-radius: 6px; background: var(--bad-soft); color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>System-One Control Bench</h1>
+  <label>Scenario <select id="scenario"></select></label>
+  <label>Player <select id="player"></select></label>
+  <label>Prompt <select id="prompt"></select></label>
+  <button id="new" class="primary">New game</button>
+</header>
+
+<main>
+  <section class="panel" aria-label="Board">
+    <div class="title"><strong id="name"></strong><span id="description"></span></div>
+    <div id="board"></div>
+    <div class="status" id="status"></div>
+    <div class="controls">
+      <button id="step">Play one move</button>
+      <button id="play">Play to the end</button>
+    </div>
+    <div class="history" id="history"></div>
+  </section>
+
+  <section class="panel" id="seen" aria-label="What the player sees">
+    <h2>What the player sees</h2>
+    <div id="error" class="error" hidden></div>
+    <div class="viewing" id="viewing"></div>
+    <div class="field"><span>State</span><pre id="state"></pre></div>
+    <div class="field"><span>Question</span><div class="question" id="question"></div></div>
+    <div class="field"><span>Options</span><ul class="options" id="options"></ul></div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const CELL = 48;
+  let catalog = null;
+  let game = null;
+  let viewing = null;
+  let busy = false;
+
+  async function call(method, path, body) {
+    const response = await fetch(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || response.statusText);
+    return data;
+  }
+
+  function showError(message) {
+    $("error").textContent = message || "";
+    $("error").hidden = !message;
+  }
+
+  function remember() {
+    try {
+      localStorage.setItem("socb", JSON.stringify({
+        scenario: $("scenario").value, player: $("player").value, prompt: $("prompt").value,
+      }));
+    } catch (_) {}
+  }
+
+  function recall() {
+    try { return JSON.parse(localStorage.getItem("socb")) || {}; } catch (_) { return {}; }
+  }
+
+  function fillSelects() {
+    const saved = recall();
+    const groups = {};
+    for (const s of catalog.scenarios) (groups[s.moves_to_goal] ||= []).push(s);
+    $("scenario").innerHTML = Object.entries(groups).map(([distance, list]) =>
+      `<optgroup label="${distance} move${distance === "1" ? "" : "s"} from the goal">${
+        list.map((s) => `<option value="${s.name}">${s.name}</option>`).join("")}</optgroup>`).join("");
+    $("player").innerHTML = catalog.players.map((p) =>
+      `<option value="${p.name}">${p.name}${p.paid ? " (paid)" : ""}</option>`).join("");
+    $("prompt").innerHTML = catalog.prompts.map((p) =>
+      `<option value="${p.name}" title="${p.description}">${p.name}</option>`).join("");
+    for (const id of ["scenario", "player", "prompt"]) {
+      if (saved[id] && [...$(id).options].some((o) => o.value === saved[id])) $(id).value = saved[id];
+    }
+  }
+
+  function keyGlyph(cx, cy, scale) {
+    return `<g stroke="var(--gold)" stroke-width="${3 * scale}" fill="none" stroke-linecap="round">
+      <circle cx="${cx - 7 * scale}" cy="${cy}" r="${5 * scale}"/>
+      <path d="M${cx - 2 * scale} ${cy}H${cx + 11 * scale}M${cx + 7 * scale} ${cy}v${5 * scale}M${cx + 11 * scale} ${cy}v${4 * scale}"/></g>`;
+  }
+
+  const ARROWS = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
+
+  function drawBoard(board, move) {
+    const h = board.rows.length, w = board.rows[0].length;
+    let svg = `<svg viewBox="0 0 ${w * CELL} ${h * CELL}" role="img" aria-label="Board">`;
+    board.rows.forEach((row, y) => [...row].forEach((cell, x) => {
+      const X = x * CELL, Y = y * CELL, cx = X + CELL / 2, cy = Y + CELL / 2;
+      svg += `<rect x="${X}" y="${Y}" width="${CELL}" height="${CELL}" fill="var(${cell === "#" ? "--wall" : "--floor"})" stroke="var(--grid)"/>`;
+      if (cell === "G") svg += `<rect x="${X + 4}" y="${Y + 4}" width="${CELL - 8}" height="${CELL - 8}" rx="4" fill="var(--goal)"/>`;
+      if (cell === "K") svg += keyGlyph(cx, cy, 1.2);
+      if (cell === "D") {
+        svg += `<rect x="${X + 4}" y="${Y + 4}" width="${CELL - 8}" height="${CELL - 8}" fill="var(--gold)"/>`;
+        svg += `<circle cx="${cx}" cy="${cy - 3}" r="4.5" fill="var(--wall)"/><rect x="${cx - 2}" y="${cy}" width="4" height="9" fill="var(--wall)"/>`;
+      }
+    }));
+    const [ax, ay] = board.agent;
+    const acx = ax * CELL + CELL / 2, acy = ay * CELL + CELL / 2;
+    if (move && ARROWS[move]) {
+      const [dx, dy] = ARROWS[move];
+      const ex = acx + dx * CELL * 0.8, ey = acy + dy * CELL * 0.8;
+      svg += `<line x1="${acx}" y1="${acy}" x2="${ex}" y2="${ey}" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>`;
+      svg += `<circle cx="${ex}" cy="${ey}" r="5" fill="var(--accent)"/>`;
+    }
+    svg += `<circle cx="${acx}" cy="${acy}" r="${CELL * 0.3}" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>`;
+    svg += `<text x="${acx}" y="${acy + 5}" text-anchor="middle" font-family="var(--mono)" font-size="15" font-weight="500" fill="var(--panel)">A</text>`;
+    if (board.holding.length) svg += keyGlyph(ax * CELL + CELL - 12, ay * CELL + 10, 0.55);
+    return svg + "</svg>";
+  }
+
+  function outcome() {
+    const moves = game.steps.length;
+    const failed = game.steps.at(-1)?.choice.move === null && game.steps.length > 0;
+    if (game.won) return `<span class="pill won">Won in ${moves} move${moves === 1 ? "" : "s"}</span>`;
+    if (failed) return `<span class="pill lost">Stopped: no valid answer</span>`;
+    if (game.over) return `<span class="pill lost">Out of moves</span>`;
+    return `<span class="pill">Playing</span>`;
+  }
+
+  function render() {
+    const scenario = catalog.scenarios.find((s) => s.name === game.scenario);
+    $("name").textContent = game.scenario;
+    $("description").textContent = scenario.description;
+    $("status").innerHTML = `${outcome()}<span>${game.steps.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.moves_to_goal}</span><span>${game.player} · ${game.prompt}</span>`;
+
+    const step = viewing === null ? null : game.steps[viewing];
+    $("board").innerHTML = drawBoard(step ? step.board : game.board, step?.choice.move);
+
+    $("history").innerHTML = game.steps.map((s, i) =>
+      `<button class="chip ${s.correct ? "good" : "bad"} ${viewing === i ? "active" : ""}" data-i="${i}">${s.number} ${s.choice.move ?? "—"} ${s.correct ? "✓" : "✗"}</button>`).join("")
+      + (game.over ? "" : `<button class="chip ${viewing === null ? "active" : ""}" data-i="now">next</button>`);
+
+    const paid = catalog.players.find((p) => p.name === game.player)?.paid;
+    const left = game.max_moves - game.steps.length;
+    $("step").disabled = busy || game.over;
+    $("play").disabled = busy || game.over;
+    $("play").textContent = paid && !game.over ? `Play to the end (up to ${left} paid calls)` : "Play to the end";
+
+    renderSeen(step);
+  }
+
+  function renderSeen(step) {
+    const request = step ? step.request : game.next?.request;
+    if (!request) {
+      $("viewing").textContent = "The game is over. Pick a move above to see what was asked.";
+      $("state").textContent = "";
+      $("question").textContent = "";
+      $("options").innerHTML = "";
+      $("verdict").hidden = true;
+      return;
+    }
+    const best = step ? step.best_moves : game.next.best_moves;
+    const probabilities = step ? step.choice.probabilities : {};
+    $("viewing").textContent = step ? `Move ${step.number}: what the player was asked` : `Move ${game.steps.length + 1}: what the player will be asked`;
+    $("state").textContent = request.state;
+    $("question").textContent = request.question;
+    $("options").innerHTML = request.options.map((o) => {
+      const p = probabilities[o.move];
+      const picked = step && step.choice.move === o.move;
+      const renamed = o.text !== o.move ? `<span class="tag">${o.move}</span>` : "";
+      return `<li class="option ${picked ? "picked" : ""}">
+        <span class="id">${o.id}</span>
+        <span class="text">${o.text} ${renamed} ${best.includes(o.move) ? '<span class="tag best">best</span>' : ""} ${picked ? '<span class="tag pick">picked</span>' : ""}</span>
+        <span class="track"><span class="fill" style="display:block;width:${Math.round((p ?? 0) * 100)}%"></span></span>
+        <span class="pct">${p === undefined ? "" : Math.round(p * 100) + "%"}</span>
+      </li>`;
+    }).join("");
+
+    const verdict = $("verdict");
+    verdict.hidden = false;
+    if (!step) {
+      verdict.className = "verdict";
+      verdict.textContent = `Best move${best.length === 1 ? "" : "s"} here: ${best.join(" or ")}.`;
+    } else if (step.choice.move === null) {
+      verdict.className = "verdict bad";
+      verdict.textContent = `No valid answer: ${step.choice.error}`;
+    } else {
+      verdict.className = `verdict ${step.correct ? "good" : "bad"}`;
+      verdict.textContent = step.correct
+        ? `Picked ${step.choice.move}, a best move. Took ${step.seconds.toFixed(2)} s.`
+        : `Picked ${step.choice.move}, but the best was ${step.best_moves.join(" or ")}. Took ${step.seconds.toFixed(2)} s.`;
+    }
+  }
+
+  async function run(action) {
+    busy = true;
+    showError("");
+    if (game) render();
+    try {
+      await action();
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      busy = false;
+      if (game) render();
+    }
+  }
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function newGame() {
+    remember();
+    game = await call("POST", "/api/games", {
+      scenario: $("scenario").value, player: $("player").value, prompt: $("prompt").value,
+    });
+    viewing = null;
+  }
+
+  async function playOne() {
+    game = await call("POST", `/api/games/${game.id}/step`);
+    viewing = null;
+  }
+
+  async function playAll() {
+    const before = game.steps.length;
+    game = await call("POST", `/api/games/${game.id}/play`);
+    for (let i = before; i < game.steps.length; i++) {
+      viewing = i;
+      render();
+      await sleep(150);
+    }
+    viewing = game.over ? game.steps.length - 1 : null;
+  }
+
+  $("new").addEventListener("click", () => run(newGame));
+  $("step").addEventListener("click", () => run(playOne));
+  $("play").addEventListener("click", () => run(playAll));
+  for (const id of ["scenario", "player", "prompt"]) $(id).addEventListener("change", () => run(newGame));
+  $("history").addEventListener("click", (event) => {
+    const i = event.target.closest("[data-i]")?.dataset.i;
+    if (i === undefined) return;
+    viewing = i === "now" ? null : Number(i);
+    render();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (!game || event.target.tagName === "SELECT") return;
+    const last = game.steps.length - 1;
+    const current = viewing ?? (game.over ? last : last + 1);
+    const next = event.key === "ArrowLeft" ? current - 1 : event.key === "ArrowRight" ? current + 1 : null;
+    if (next === null || next < 0) return;
+    viewing = next > last ? (game.over ? last : null) : next;
+    render();
+  });
+
+  run(async () => {
+    catalog = await call("GET", "/api/catalog");
+    fillSelects();
+    await newGame();
+  });
+})();
+</script>
+</body>
+</html>

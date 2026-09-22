@@ -1,62 +1,31 @@
-"""Building hand-written worlds from the ASCII maps in `tests/maps.py`."""
+from system_one_control.board import Board
+from system_one_control.players import Choice, Player, Turn
+from system_one_control.prompt import Prompt
+from system_one_control.rules import CompassRules
+from system_one_control.scenario import Scenario
 
-from system_one_control.domain import Snapshot
-from system_one_control.transition import (
-    CLOSED,
-    DOOR,
-    EMPTY,
-    GOAL,
-    KEY,
-    LAVA,
-    LOCKED,
-    OPEN,
-    WALL,
-)
-
-# minigrid.core.constants.COLOR_TO_IDX
-GREEN = 1
-YELLOW = 4
-GREY = 5
-
-CHARS = {
-    "#": (WALL, GREY, 0),
-    ".": (EMPTY, 0, 0),
-    "G": (GOAL, GREEN, 0),
-    "K": (KEY, YELLOW, 0),
-    "D": (DOOR, YELLOW, LOCKED),
-    "d": (DOOR, YELLOW, CLOSED),
-    "o": (DOOR, YELLOW, OPEN),
-    "L": (LAVA, 0, 0),
-}
+PROMPT = Prompt(name="plain", description="", state="{map}", question="Which way?")
 
 
-def snapshot_from_ascii(rows, agent_pos, agent_dir, *, carrying=None, max_steps=100):
-    """Build a Snapshot from an ASCII map. Rows are y, columns are x."""
-    return Snapshot(
-        env_id="hand-built",
-        width=len(rows[0]),
-        height=len(rows),
-        cells=tuple(tuple(CHARS[char] for char in row) for row in rows),
-        agent_pos=agent_pos,
-        agent_dir=agent_dir,
-        carrying=carrying,
-        mission="hand-built",
-        step_count=0,
-        max_steps=max_steps,
+def scenario(text: str, moves_to_goal: int, best: tuple[str, ...], max_moves: int = 20) -> Scenario:
+    return Scenario(
+        name="test",
+        description="",
+        board=Board.parse(text),
+        rules=CompassRules(),
+        moves_to_goal=moves_to_goal,
+        best_first_moves=best,
+        max_moves=max_moves,
     )
 
 
-def render(snapshot):
-    """Draw a snapshot as text, with the agent as an arrow. For failure messages."""
-    arrows = {0: ">", 1: "v", 2: "<", 3: "^"}
-    symbols = {value: key for key, value in CHARS.items()}
-    lines = []
-    for y, row in enumerate(snapshot.cells):
-        line = ""
-        for x, cell in enumerate(row):
-            if (x, y) == tuple(snapshot.agent_pos):
-                line += arrows[snapshot.agent_dir]
-            else:
-                line += symbols.get(cell, "?")
-        lines.append(line)
-    return "\n".join(lines)
+class AlwaysPlayer(Player):
+    """Always answers the same move, allowed or not."""
+
+    name = "always"
+
+    def __init__(self, move: str | None) -> None:
+        self.move = move
+
+    def choose(self, turn: Turn) -> Choice:
+        return Choice(self.move)

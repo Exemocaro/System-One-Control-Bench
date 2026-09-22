@@ -1,0 +1,8 @@
+description: The goal is right next to you, to the east.
+moves_to_goal: 1
+best_first_moves: [east]
+map: |
+  #####
+  #AG.#
+  #...#
+  #####

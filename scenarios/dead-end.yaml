@@ -1,0 +1,8 @@
+description: Walls on three sides; the only open move reaches the goal.
+moves_to_goal: 1
+best_first_moves: [south]
+map: |
+  #####
+  ##A##
+  ##G##
+  #####

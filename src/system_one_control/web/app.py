@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+from uuid import uuid4
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+
+from system_one_control.board import Board
+from system_one_control.game import Game, Step
+from system_one_control.players import PLAYERS, make_player
+from system_one_control.prompt import Request, load_prompts
+from system_one_control.scenario import load_scenarios
+
+PAGE = Path(__file__).with_name("index.html")
+
+
+class NewGame(BaseModel):
+    scenario: str
+    player: str
+    prompt: str
+
+
+def create_app() -> FastAPI:
+    scenarios = load_scenarios()
+    prompts = load_prompts()
+    games: dict[str, Game] = {}
+    app = FastAPI(title="System-One Control Bench")
+
+    def find_game(game_id: str) -> Game:
+        if game_id not in games:
+            raise HTTPException(404, f"no game {game_id!r}")
+        return games[game_id]
+
+    @app.get("/", response_class=HTMLResponse)
+    def page() -> str:
+        return PAGE.read_text(encoding="utf-8")
+
+    @app.get("/api/catalog")
+    def catalog() -> dict[str, Any]:
+        return {
+            "scenarios": [
+                {"name": s.name, "description": s.description, "moves_to_goal": s.moves_to_goal}
+                for s in scenarios.values()
+            ],
+            "players": [{"name": name, "paid": entry.paid} for name, entry in PLAYERS.items()],
+            "prompts": [{"name": p.name, "description": p.description} for p in prompts.values()],
+        }
+
+    @app.post("/api/games")
+    def new_game(body: NewGame) -> dict[str, Any]:
+        for kind, name, known in (
+            ("scenario", body.scenario, scenarios),
+            ("prompt", body.prompt, prompts),
+            ("player", body.player, PLAYERS),
+        ):
+            if name not in known:
+                raise HTTPException(404, f"unknown {kind} {name!r}")
+        try:
+            player = make_player(body.player)
+        except (ImportError, RuntimeError) as error:
+            raise HTTPException(400, str(error)) from error
+        game_id = uuid4().hex[:8]
+        games[game_id] = Game(scenarios[body.scenario], player, prompts[body.prompt])
+        return game_json(game_id, games[game_id])
+
+    @app.post("/api/games/{game_id}/step")
+    def step(game_id: str) -> dict[str, Any]:
+        game = find_game(game_id)
+        if game.over:
+            raise HTTPException(409, "the game is over")
+        game.step()
+        return game_json(game_id, game)
+
+    @app.post("/api/games/{game_id}/play")
+    def play(game_id: str) -> dict[str, Any]:
+        game = find_game(game_id)
+        game.play()
+        return game_json(game_id, game)
+
+    return app
+
+
+def board_json(board: Board) -> dict[str, Any]:
+    return {
+        "rows": list(board.rows),
+        "agent": [board.agent.x, board.agent.y],
+        "holding": list(board.holding),
+    }
+
+
+def request_json(request: Request) -> dict[str, Any]:
+    return {
+        "state": request.state,
+        "question": request.question,
+        "options": [{"id": o.id, "move": o.move, "text": o.text} for o in request.options],
+    }
+
+
+def step_json(step: Step) -> dict[str, Any]:
+    return {
+        "number": step.number,
+        "board": board_json(step.board),
+        "after": board_json(step.after),
+        "request": request_json(step.request),
+        "choice": {
+            "move": step.choice.move,
+            "probabilities": step.choice.probabilities,
+            "error": step.choice.error,
+        },
+        "best_moves": list(step.best_moves),
+        "correct": step.correct,
+        "seconds": round(step.seconds, 3),
+    }
+
+
+def game_json(game_id: str, game: Game) -> dict[str, Any]:
+    upcoming = None
+    if not game.over:
+        upcoming = {
+            "request": request_json(game.next_request()),
+            "best_moves": list(game.solver.best_moves(game.board)),
+        }
+    return {
+        "id": game_id,
+        "scenario": game.scenario.name,
+        "player": game.player.name,
+        "prompt": game.prompt.name,
+        "moves_to_goal": game.scenario.moves_to_goal,
+        "max_moves": game.scenario.max_moves,
+        "board": board_json(game.board),
+        "won": game.won,
+        "over": game.over,
+        "steps": [step_json(step) for step in game.steps],
+        "next": upcoming,
+    }
