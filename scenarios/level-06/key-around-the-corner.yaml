@@ -1,0 +1,7 @@
+description: The key is round the corner; fetch it, then go through the door and up to the goal.
+moves_to_goal: 6
+map: |
+  ######
+  #.A#G#
+  #K.D.#
+  ######

@@ -9,20 +9,22 @@ from system_one_control.board import Board
 from system_one_control.rules import Rules, make_rules
 
 SCENARIO_DIR = Path(__file__).resolve().parents[2] / "scenarios"
-DEFAULT_MAX_MOVES = 20
+MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest moves
 
 
 @dataclass(frozen=True)
 class Scenario:
-    """One starting board, the rules it is played under, and its known answer."""
+    """One starting board, the rules it is played under, and how far the goal is."""
 
     name: str
     description: str
     board: Board
     rules: Rules
     moves_to_goal: int
-    best_first_moves: tuple[str, ...]
-    max_moves: int = DEFAULT_MAX_MOVES
+
+    @property
+    def max_moves(self) -> int:
+        return MOVE_ALLOWANCE * self.moves_to_goal
 
     @classmethod
     def load(cls, path: Path) -> Scenario:
@@ -33,15 +35,13 @@ class Scenario:
             board=Board.parse(data["map"]),
             rules=make_rules(data.get("rules", "compass")),
             moves_to_goal=int(data["moves_to_goal"]),
-            best_first_moves=tuple(data["best_first_moves"]),
-            max_moves=int(data.get("max_moves", DEFAULT_MAX_MOVES)),
         )
 
 
 def load_scenarios(folder: Path = SCENARIO_DIR) -> dict[str, Scenario]:
-    """Every scenario in a folder, easiest first."""
+    """Every scenario under a folder (one subfolder per level), easiest first."""
     scenarios = sorted(
-        (Scenario.load(path) for path in folder.glob("*.yaml")),
+        (Scenario.load(path) for path in folder.rglob("*.yaml")),
         key=lambda s: (s.moves_to_goal, s.name),
     )
     return {scenario.name: scenario for scenario in scenarios}

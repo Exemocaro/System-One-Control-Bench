@@ -1,6 +1,0 @@
-description: Just the map and what you carry, no rules.
-state: |
-  {map}
-
-  {legend}. {holding}
-question: Which way should A move to reach G?

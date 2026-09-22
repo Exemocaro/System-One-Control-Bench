@@ -1,0 +1,11 @@
+description: Full, and each option says what that move would do. Code looks one move ahead for the player.
+state: |
+  {rules}
+
+  Map, where coordinates are (column, row) counted from 0 at the top left ({legend}):
+  {map}
+
+  You are A at {position}. {holding}
+  Objects: {objects}.
+question: Which move gets you to the goal G in the fewest moves?
+show_outcomes: true

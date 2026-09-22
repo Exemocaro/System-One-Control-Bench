@@ -1,0 +1,10 @@
+description: A generated 10x7 room.
+moves_to_goal: 7
+map: |
+  ##########
+  #...#..#.#
+  #..#G#.#.#
+  #..#D...A#
+  #..#.K...#
+  #...#....#
+  ##########

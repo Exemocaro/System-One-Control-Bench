@@ -1,8 +1,0 @@
-description: The door is ahead of the key, so you have to step north for the key first.
-moves_to_goal: 3
-best_first_moves: [north]
-map: |
-  #####
-  #KDG#
-  #A###
-  #####

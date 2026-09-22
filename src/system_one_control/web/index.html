@@ -182,6 +182,7 @@
   <label>Player <select id="player"></select></label>
   <label>Prompt <select id="prompt"></select></label>
   <button id="new" class="primary">New game</button>
+  <button id="next-puzzle">Next puzzle</button>
 </header>
 
 <main>
@@ -249,7 +250,7 @@
     const groups = {};
     for (const s of catalog.scenarios) (groups[s.moves_to_goal] ||= []).push(s);
     $("scenario").innerHTML = Object.entries(groups).map(([distance, list]) =>
-      `<optgroup label="${distance} move${distance === "1" ? "" : "s"} from the goal">${
+      `<optgroup label="Level ${distance}: ${distance} move${distance === "1" ? "" : "s"} to the goal">${
         list.map((s) => `<option value="${s.name}">${s.name}</option>`).join("")}</optgroup>`).join("");
     $("player").innerHTML = catalog.players.map((p) =>
       `<option value="${p.name}">${p.name}${p.paid ? " (paid)" : ""}</option>`).join("");
@@ -393,6 +394,12 @@
     viewing = null;
   }
 
+  async function nextPuzzle() {
+    const select = $("scenario");
+    select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
+    await newGame();
+  }
+
   async function playOne() {
     game = await call("POST", `/api/games/${game.id}/step`);
     viewing = null;
@@ -410,6 +417,7 @@
   }
 
   $("new").addEventListener("click", () => run(newGame));
+  $("next-puzzle").addEventListener("click", () => run(nextPuzzle));
   $("step").addEventListener("click", () => run(playOne));
   $("play").addEventListener("click", () => run(playAll));
   for (const id of ["scenario", "player", "prompt"]) $(id).addEventListener("change", () => run(newGame));

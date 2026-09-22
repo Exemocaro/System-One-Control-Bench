@@ -1,0 +1,9 @@
+description: The door is right below you, but the key is one step to the west.
+moves_to_goal: 4
+map: |
+  #####
+  #...#
+  #KA.#
+  ##D##
+  ##G##
+  #####

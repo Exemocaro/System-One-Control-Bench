@@ -1,7 +1,0 @@
-description: Key, locked door and goal in a row; walking east picks up the key and opens the door.
-moves_to_goal: 3
-best_first_moves: [east]
-map: |
-  ######
-  #AKDG#
-  ######

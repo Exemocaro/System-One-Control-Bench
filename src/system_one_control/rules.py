@@ -57,8 +57,38 @@ class CompassRules(Rules):
         Move("west", "move west (left)"),
     )
 
+    NEIGHBOURS: ClassVar[dict[str, str]] = {
+        WALL: "a wall",
+        FLOOR: "open floor",
+        GOAL: "the goal",
+        KEY: "the key",
+        DOOR: "the locked door",
+    }
+
     def moves(self, board: Board) -> tuple[Move, ...]:
         return self.MOVES
+
+    def facts(self, board: Board) -> dict[str, str]:
+        around = " ".join(
+            f"{name.capitalize()} of you is {self.NEIGHBOURS[board.at(board.agent.moved(*step))]}."
+            for name, step in self.STEPS.items()
+        )
+        relative = " ".join(
+            f"The {thing} is {self._offset(position.x - board.agent.x, position.y - board.agent.y)}"
+            " of you."
+            for symbol, thing in ((GOAL, "goal"), (KEY, "key"), (DOOR, "locked door"))
+            for position in board.find(symbol)
+        )
+        return {"around": around, "relative": relative}
+
+    @staticmethod
+    def _offset(dx: int, dy: int) -> str:
+        parts = []
+        if dx:
+            parts.append(f"{abs(dx)} {'east' if dx > 0 else 'west'}")
+        if dy:
+            parts.append(f"{abs(dy)} {'south' if dy > 0 else 'north'}")
+        return " and ".join(parts) or "at the same place as you"
 
     def apply(self, board: Board, move: Move) -> Board:
         target = board.agent.moved(*self.STEPS[move.name])

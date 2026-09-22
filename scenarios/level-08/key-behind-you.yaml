@@ -1,0 +1,8 @@
+description: The door is ahead but the key is behind you, so the first moves go away from the goal.
+moves_to_goal: 8
+map: |
+  #######
+  #K.A..#
+  #####D#
+  #####G#
+  #######

@@ -1,0 +1,12 @@
+description: A big open room with the key off to one side and the goal locked away below.
+moves_to_goal: 9
+map: |
+  ############
+  #..........#
+  #..........#
+  #....A.....#
+  #.......K..#
+  #..........#
+  ######D#####
+  #.....G....#
+  ############

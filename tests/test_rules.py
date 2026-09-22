@@ -57,6 +57,27 @@ def test_standing_on_the_goal_wins():
     assert rules.is_won(move(board, "east"))
 
 
+def test_compass_rules_describe_what_is_next_to_you():
+    board = Board.parse("#####\n#.D.#\n#KAG#\n#####")
+    around = rules.facts(board)["around"]
+    assert around == (
+        "North of you is the locked door. South of you is a wall. "
+        "East of you is the goal. West of you is the key."
+    )
+
+
+def test_compass_rules_say_where_things_are_relative_to_you():
+    board = Board.parse("######\n#A...#\n#..K.#\n#...G#\n######")
+    assert rules.facts(board)["relative"] == (
+        "The goal is 3 east and 2 south of you. The key is 2 east and 1 south of you."
+    )
+
+
+def test_a_carried_key_is_no_longer_placed_relative_to_you():
+    board = move(Board.parse("#####\n#AKG#\n#####"), "east")
+    assert rules.facts(board)["relative"] == "The goal is 1 east of you."
+
+
 def test_rules_are_found_by_name():
     assert isinstance(make_rules("compass"), CompassRules)
     with pytest.raises(ValueError, match="unknown rules"):

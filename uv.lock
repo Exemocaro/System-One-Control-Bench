@@ -476,15 +476,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "typer" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-models = [
-    { name = "python-dotenv" },
     { name = "typesafe-sdk" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -499,13 +495,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110" },
-    { name = "python-dotenv", marker = "extra == 'models'", specifier = ">=1.0" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "typesafe-sdk", marker = "extra == 'models'", specifier = ">=0.1" },
+    { name = "typesafe-sdk", specifier = ">=0.7" },
     { name = "uvicorn", specifier = ">=0.29" },
 ]
-provides-extras = ["models"]
 
 [package.metadata.requires-dev]
 dev = [

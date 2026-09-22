@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 
 from system_one_control.board import Board
 from system_one_control.players import Choice, Player, Turn
-from system_one_control.prompt import Prompt, Request
+from system_one_control.prompt import Prompt, Request, describe_outcome
 from system_one_control.rules import Rules
 from system_one_control.scenario import Scenario
 from system_one_control.solver import Solver
@@ -51,7 +51,12 @@ class Game:
         return self.won or failed or len(self.steps) >= self.scenario.max_moves
 
     def next_request(self) -> Request:
-        return self.prompt.render(self.board, self.rules)
+        history = [
+            f"{step.choice.move}: {describe_outcome(step.board, step.after, self.rules)}"
+            for step in self.steps
+        ]
+        seed = f"{self.scenario.name}:{len(self.steps) + 1}"
+        return self.prompt.render(self.board, self.rules, shuffle_seed=seed, history=history)
 
     def step(self) -> Step:
         if self.over:

@@ -1,0 +1,7 @@
+description: The goal is one down and one across, so two first moves are equally good.
+moves_to_goal: 2
+map: |
+  #####
+  #A..#
+  #.G.#
+  #####

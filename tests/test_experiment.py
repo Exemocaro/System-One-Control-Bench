@@ -36,7 +36,7 @@ def test_results_are_saved_one_json_line_each(tmp_path):
 def test_the_summary_shows_each_player_and_prompt():
     table = summarize(list(run_experiment(SCENARIOS, PROMPTS[:1], [SolverPlayer()])))
     assert "solver" in table and PROMPTS[0].name in table
-    assert "3/3" in table
+    assert "10/10" in table
 
 
 def test_paid_calls_are_estimated_before_anything_runs():

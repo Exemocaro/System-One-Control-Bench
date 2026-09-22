@@ -1,0 +1,8 @@
+description: A generated 5x5 room.
+moves_to_goal: 6
+map: |
+  #####
+  ##K.#
+  #GD.#
+  ##A.#
+  #####

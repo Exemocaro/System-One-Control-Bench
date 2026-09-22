@@ -12,9 +12,10 @@ from system_one_control.experiment import (
     save,
     summarize,
 )
+from system_one_control.generator import write_level
 from system_one_control.players import PLAYERS, make_player
 from system_one_control.prompt import load_prompts
-from system_one_control.scenario import load_scenarios
+from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 T = TypeVar("T")
@@ -37,7 +38,7 @@ def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
 def experiment(
     players: str = typer.Option("solver,random", help="Comma-separated player names."),
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
-    prompts: str = typer.Option("all", help="Comma-separated prompt names, or all."),
+    prompts: str = typer.Option("full", help="Comma-separated prompt names, or all."),
     first_move_only: bool = typer.Option(False, help="Ask only for the first move."),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
     out: Path = typer.Option(DEFAULT_OUT, help="Where to save results."),
@@ -64,6 +65,18 @@ def experiment(
     save(results, out)
     typer.echo(summarize(results))
     typer.echo(f"\nSaved to {out}")
+
+
+@app.command()
+def generate(
+    per_level: int = typer.Option(10, help="Puzzles per level, hand-made ones included."),
+    seed: int = typer.Option(0, help="Change it for a fresh set of puzzles."),
+    folder: Path = typer.Option(SCENARIO_DIR, help="The scenarios folder."),
+) -> None:
+    """Top up every level from 1 to 10 with generated puzzles checked by the solver."""
+    for level in range(1, 11):
+        written = write_level(folder, level=level, target=per_level, seed=seed)
+        typer.echo(f"level {level:2}: {len(written)} generated")
 
 
 @app.command()

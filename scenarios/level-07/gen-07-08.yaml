@@ -1,0 +1,8 @@
+description: A generated 7x5 maze.
+moves_to_goal: 7
+map: |
+  #######
+  #A...K#
+  #####.#
+  #..#GD#
+  #######

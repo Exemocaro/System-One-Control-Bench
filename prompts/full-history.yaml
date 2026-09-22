@@ -1,0 +1,12 @@
+description: Full, plus every move so far and what it did.
+state: |
+  {rules}
+
+  Map, where coordinates are (column, row) counted from 0 at the top left ({legend}):
+  {map}
+
+  You are A at {position}. {holding}
+  Objects: {objects}.
+
+  {history}
+question: Which move gets you to the goal G in the fewest moves?

@@ -1,0 +1,8 @@
+description: The key is two steps down the hall, and the door is just past it.
+moves_to_goal: 5
+map: |
+  ######
+  #A.K.#
+  ####D#
+  ####G#
+  ######

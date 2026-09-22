@@ -1,0 +1,10 @@
+description: A generated 9x7 maze.
+moves_to_goal: 10
+map: |
+  #########
+  #.#.....#
+  #######.#
+  #G#....A#
+  #D#K###.#
+  #...#...#
+  #########

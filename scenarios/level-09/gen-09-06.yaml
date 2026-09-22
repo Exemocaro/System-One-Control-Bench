@@ -1,0 +1,8 @@
+description: A generated 11x5 room.
+moves_to_goal: 9
+map: |
+  ###########
+  ##.A......#
+  #G#.......#
+  #D...K...##
+  ###########

@@ -1,0 +1,7 @@
+description: A generated 8x4 room.
+moves_to_goal: 3
+map: |
+  ########
+  #AKDG###
+  #.#.#.##
+  ########
