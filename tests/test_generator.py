@@ -6,6 +6,7 @@ from system_one_control.board import Board
 from system_one_control.generator import (
     LONGER_ROUTE,
     NEEDS_PLANNING,
+    NEEDS_PLANNING_KEYLESS,
     PuzzleGenerator,
     greedy_wins,
     has_a_longer_route,
@@ -150,3 +151,10 @@ def test_no_puzzle_at_level_ten_can_be_won_by_walking_straight_at_the_target():
 
 def test_at_least_half_of_level_ten_has_a_second_longer_route():
     assert sum(LONGER_ROUTE.accepts(board) for board in at_level(10)) >= 5
+
+
+def test_a_keyless_kind_turns_down_a_puzzle_with_a_key():
+    with_key = Board.parse(POCKET.replace("#.....#", "#..K..#", 1))
+    assert NEEDS_PLANNING.accepts(with_key)
+    assert not NEEDS_PLANNING_KEYLESS.accepts(with_key)
+    assert NEEDS_PLANNING_KEYLESS.accepts(Board.parse(POCKET))

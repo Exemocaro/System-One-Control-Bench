@@ -3,14 +3,15 @@ from types import SimpleNamespace
 import pytest
 
 from system_one_control.board import Board
-from system_one_control.jev import JevPlayer
 from system_one_control.players import (
     PLAYERS,
     GreedyPlayer,
+    JevPlayer,
     RandomPlayer,
     SolverPlayer,
     Turn,
     WallAwareGreedyPlayer,
+    jev_body,
     make_player,
 )
 from system_one_control.rules import CompassRules
@@ -68,19 +69,15 @@ class FakeJevClient:
     def system_one(self, *, state, questions, model):
         if self.fail:
             raise self.fail
-        self.sent = {"state": state, "questions": questions, "model": model}
+        self.sent = {"state": state, "model": model, "questions": questions}
         probabilities = {"option_1": 0.1, "option_2": 0.1, "option_3": 0.7, "option_4": 0.1}
         answer = SimpleNamespace(choice=self.choice, probabilities=probabilities)
         usage = SimpleNamespace(input_tokens=120)
         return SimpleNamespace(choices={"move": answer}, usage=usage)
 
 
-def fake_question(*, instructions, criteria):
-    return {"instructions": instructions, "criteria": criteria}
-
-
 def jev(client: FakeJevClient) -> JevPlayer:
-    return JevPlayer(client=client, question_type=fake_question)
+    return JevPlayer(client=client)
 
 
 def test_jev_is_sent_exactly_the_request_and_its_answer_maps_back_to_a_move():
@@ -88,8 +85,10 @@ def test_jev_is_sent_exactly_the_request_and_its_answer_maps_back_to_a_move():
     t = turn("#####\n#A.G#\n#####")
     choice = jev(client).choose(t)
 
+    assert client.sent == jev_body(t.request)
     assert client.sent["state"] == t.request.state
     question = client.sent["questions"]["move"]
+    assert question["type"] == "choice"
     assert question["instructions"] == t.request.question
     assert question["criteria"] == {o.id: o.text for o in t.request.options}
     assert choice.move == "east"
@@ -97,10 +96,13 @@ def test_jev_is_sent_exactly_the_request_and_its_answer_maps_back_to_a_move():
     assert choice.input_tokens == 120
 
 
-def test_a_jev_error_becomes_a_choice_with_no_move():
-    choice = jev(FakeJevClient(fail=RuntimeError("rate limited"))).choose(turn("####\n#AG#\n####"))
-    assert choice.move is None
-    assert "rate limited" in choice.error
+def test_a_failed_jev_call_is_raised_for_the_game_to_record():
+    with pytest.raises(RuntimeError, match="rate limited"):
+        jev(FakeJevClient(fail=RuntimeError("rate limited"))).choose(turn("####\n#AG#\n####"))
+
+
+def test_jev_closes_only_a_client_it_opened_itself():
+    jev(FakeJevClient()).close()  # the fake has no close(), so closing it would raise
 
 
 def test_an_answer_outside_the_options_is_an_error():

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import os
 import random
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import Any, ClassVar
+
+from dotenv import load_dotenv
+from typesafe_sdk import RetryPolicy, TypeSafeClient
 
 from system_one_control.board import Board
 from system_one_control.request import Request
@@ -34,6 +38,9 @@ class Player(ABC):
 
     @abstractmethod
     def choose(self, turn: Turn) -> Choice: ...
+
+    def close(self) -> None:  # noqa: B027  (optional: most players hold nothing)
+        """Let go of anything held between moves, such as a connection."""
 
 
 class RandomPlayer(Player):
@@ -105,10 +112,65 @@ class WallAwareGreedyPlayer(GreedyPlayer):
     avoids_blocked_moves = True
 
 
-def _jev() -> Player:
-    from system_one_control.jev import JevPlayer
+JEV_MODEL = "jev-1.13.0"
+JEV_QUESTION = "move"
+API_KEY_NAMES = ("TYPESAFE_API_KEY", "JEV_API_KEY")
 
-    return JevPlayer()
+
+def api_key() -> str:
+    load_dotenv()
+    for name in API_KEY_NAMES:
+        if os.environ.get(name):
+            return os.environ[name]
+    raise RuntimeError(f"no Jev API key: set {' or '.join(API_KEY_NAMES)} in .env")
+
+
+def jev_body(request: Request, model: str = JEV_MODEL) -> dict[str, Any]:
+    """The JSON body sent to Jev for a request, exactly as it goes over the wire."""
+    return {
+        "state": request.state,
+        "model": model,
+        "questions": {
+            JEV_QUESTION: {
+                "type": "choice",
+                "instructions": request.question,
+                "criteria": {option.id: option.text for option in request.options},
+            }
+        },
+    }
+
+
+class JevPlayer(Player):
+    """Jev, through the TypeSafe SDK. Sees only the request, never the board.
+
+    A failed call raises, and the game records it as a move with no answer.
+    """
+
+    name = "jev"
+
+    def __init__(self, model: str = JEV_MODEL, client: Any = None) -> None:
+        self._owns_client = client is None
+        if client is None:
+            no_retries = RetryPolicy(max_retries=0)  # one move is exactly one paid call
+            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=no_retries)
+        self.model = model
+        self._client = client
+
+    def choose(self, turn: Turn) -> Choice:
+        request = turn.request
+        response = self._client.system_one(**jev_body(request, self.model))
+        answer = response.choices[JEV_QUESTION]
+        tokens = response.usage.input_tokens
+        moves = {option.id: option.move for option in request.options}
+        probabilities = {moves[id]: p for id, p in answer.probabilities.items() if id in moves}
+        if answer.choice not in moves:
+            problem = f"Jev answered {answer.choice!r}"
+            return Choice(None, probabilities, error=problem, input_tokens=tokens)
+        return Choice(moves[answer.choice], probabilities, input_tokens=tokens)
+
+    def close(self) -> None:
+        if self._owns_client:
+            self._client.close()
 
 
 @dataclass(frozen=True)
@@ -122,7 +184,7 @@ PLAYERS: dict[str, PlayerEntry] = {
     "greedy": PlayerEntry(GreedyPlayer),
     "greedy-walls": PlayerEntry(WallAwareGreedyPlayer),
     "solver": PlayerEntry(SolverPlayer),
-    "jev": PlayerEntry(_jev, paid=True),
+    "jev": PlayerEntry(JevPlayer, paid=True),
 }
 
 

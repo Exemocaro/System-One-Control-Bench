@@ -19,12 +19,27 @@ Jev reads its key from `TYPESAFE_API_KEY` or `JEV_API_KEY`, in the environment o
 ## Use
 
 ```bash
-uv run socb web                                   # the board viewer, at http://127.0.0.1:8000
-uv run socb benchmark                             # the free players on every puzzle, map condition
-uv run socb benchmark --players jev --allow-paid  # Jev on every puzzle, 8 games at a time
-uv run socb benchmark --players jev --conditions all --first-move-only --allow-paid
-uv run socb generate                              # top every level up to 10 puzzles
+uv run socb web          # the board viewer, at http://127.0.0.1:8000
+uv run socb generate     # top every level up to 10 puzzles
+uv run socb examples     # rewrite examples/ after changing a wording
+
+# The four free players, on all 100 puzzles, under the map condition only.
+uv run socb benchmark
+
+# Jev on all 100 puzzles, under the map condition only: up to 1,650 paid calls.
+uv run socb benchmark --players jev --allow-paid
+
+# Jev on levels 1 to 3 only, under the map condition: up to 180 calls. A cheap first check.
+uv run socb benchmark --players jev --levels 1-3 --allow-paid
+
+# Jev on all 100 puzzles under all 10 conditions: up to 16,500 calls.
+uv run socb benchmark --players jev --conditions all --allow-paid
+
+# Finish a run that stopped or had errors: the same command, plus --resume and its file.
+uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file>.jsonl
 ```
+
+`benchmark` plays every level and every puzzle unless `--levels` (such as `3`, `1,4` or `2-5`) or `--scenarios` (names) narrows it, and only the `map` condition unless `--conditions` names others or says `all`. The call counts above are worst cases, one per move with every game played to its move limit; a player that wins early costs less.
 
 In the viewer, pick a scenario, a player and a condition, then play one move at a time or play to the end. **Next puzzle** moves down the list. Beside the board is exactly what the player was shown, with the probability it gave each option.
 
@@ -33,15 +48,17 @@ A benchmark plays every game to the end, as the viewer's play-to-the-end button 
 | Score | What it is |
 | --- | --- |
 | `won` | games that reached the goal before running out of moves |
-| `optimal` | the share of all moves that started a shortest path from where the player stood |
+| `progress` | how much of the way to the goal a game covered at its closest, averaged: 1 for a win, 0.5 for a game that got halfway before losing its way, 0 for one that never got closer than the start |
 | `SPL` | success weighted by path length: a won game scores the fewest moves over the moves used, a lost one 0 |
-| `errors` | games that ended because the player failed to answer, such as a failed API call. They count as lost, so check this is 0 |
+| `errors` | games that ended because the player failed to answer, such as a failed API call. They count as lost, so check this is 0, and `--resume` plays them again |
 
-With `--first-move-only`, each level counts the optimal first moves instead, and won and SPL, which mean nothing after one move, are left out.
+`progress` gives lost games partial credit, where `won` and `SPL` give them none. Whether each single move started a shortest path is still saved with every move, as `optimal`.
 
 The rows run from worst to best of the simple players, random, greedy, greedy with walls, then the solver, and any other player below them. For a paid player it also prints the calls made and the input tokens billed (Jev does not charge for output tokens).
 
-A benchmark is saved to the `benchmarks/` folder, which is kept in git, as `<date>_<players>_<conditions>.jsonl`, with the scenarios and `first-move` added when they were chosen, and one line per game listing every move (the options in the order shown, the move chosen, the probability the player gave each move, the best moves and the tokens billed), and beside it the table as `.txt`. A run never overwrites an earlier file. It uses the `map` condition unless `--conditions` says otherwise. A paid player is refused without `--allow-paid`, and the refusal says the most calls the run could make: one per move.
+A benchmark is saved to the `benchmarks/` folder, which is kept in git, as `<date>_<time>_<players>_<conditions>.jsonl`, such as `2026-09-23_18-45_jev_map.jsonl`, with the levels and scenarios added when they were chosen. It has one line per game, with how close it got to the goal and every move (the options in the order shown, the move chosen, the probability the player gave each move, the best moves, whether it was one of them, and the tokens billed), and beside it the table as `.txt`. A paid player is refused without `--allow-paid`, and the refusal says the most calls the run could make.
+
+Each game is written to the file the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites an earlier file; instead, repeat the same command with `--resume --out <file>`, and it keeps the finished games and plays only the missing ones and those that ended in an error. A failed Jev call is not retried, so one move is always one call: it ends that game as an error, and `--resume` is the retry.
 
 The options are shuffled for every move, with a seed made from the scenario and the move number, so a run is repeatable but no direction always sits first.
 
@@ -55,8 +72,8 @@ The options are shuffled for every move, with a seed made from the scenario and 
 | `scenario.py` | `Scenario`: a board, its rules and how far the goal is, loaded from `scenarios/level-NN/*.yaml`, where the level is the number of moves to the goal |
 | `request.py` | `Request`: exactly what a player is shown, the state, the question and the options |
 | `conditions.py` | `Condition`: which ingredients a player gets, and `CONDITIONS`, the ablation |
-| `examples.py` | writes what each condition shows the player to `examples/` |
-| `players.py` | `Player`: anything that picks a move. `RandomPlayer`, `GreedyPlayer`, `WallAwareGreedyPlayer`, `SolverPlayer`, `ScriptedPlayer`, and `JevPlayer` in `jev.py` |
+| `examples.py` | writes the request each condition sends Jev to `examples/` |
+| `players.py` | `Player`: anything that picks a move. `RandomPlayer`, `GreedyPlayer`, `WallAwareGreedyPlayer`, `SolverPlayer`, `ScriptedPlayer` and `JevPlayer` |
 | `game.py` | `Game`: one player on one scenario, a `Step` per move |
 | `benchmark.py` | every scenario × condition × player, played side by side, summarized and saved |
 | `generator.py` | `PuzzleGenerator`: random rooms and mazes at an exact level, checked by the solver |
@@ -105,9 +122,9 @@ The conditions add each ingredient to the map alone (`map+surroundings`, `map+me
 (Condition("map+memory+lookahead", memory=True, lookahead=True),)
 ```
 
-**The `examples/` folder** holds, for every condition, exactly what the player is shown on `gen-10-01` after a move and a blocked move. It is the quickest way to read a condition. A test fails when the wording changes, and `uv run socb examples` rewrites the files, so every change of wording shows up in the diff.
+**The `examples/` folder** holds, for every condition, the exact JSON body sent to Jev on `gen-10-01` after a move and a blocked move: the `state`, the `model` and the `questions`, with the options as the question's `criteria`. It is the quickest way to read a condition. A test fails when the wording changes, and `uv run socb examples` rewrites the files, so every change of wording shows up in the diff.
 
-**A new player** subclasses `Player`, implements `choose(turn) -> Choice`, and is added to `PLAYERS` in `players.py`. A model player must read only `turn.request` — the text it is shown — never `turn.board`.
+**A new player** subclasses `Player`, implements `choose(turn) -> Choice`, and is added to `PLAYERS` in `players.py`. A model player must read only `turn.request` — the text it is shown — never `turn.board`. If it cannot answer it may simply raise: the game records the error and ends. A player that holds a connection releases it in `close()`, which is called after every game.
 
 **New rules** — MiniGrid's turn-and-step movement, say — subclass `Rules` and implement `moves`, `apply` and `is_won`. Scenarios select them with `rules: <name>`, and implement `describe_outcome`, `describe_surroundings` and `describe_next_target`, which the conditions use to put the board into words.
 

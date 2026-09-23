@@ -17,8 +17,3 @@ class Request:
     state: str
     question: str
     options: tuple[Option, ...]
-
-    def to_text(self) -> str:
-        """The request as one readable page, the way the examples folder shows it."""
-        options = "\n".join(f"{option.id}: {option.text}" for option in self.options)
-        return f"{self.state}\n\nQuestion: {self.question}\n\nOptions:\n{options}\n"

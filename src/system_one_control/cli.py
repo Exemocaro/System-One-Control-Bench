@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
 
@@ -8,7 +8,10 @@ import typer
 
 from system_one_control.benchmark import (
     BENCHMARK_DIR,
+    GameRecord,
     estimate_paid_calls,
+    game_keys,
+    load,
     run_benchmark,
     save,
     summarize,
@@ -36,61 +39,131 @@ def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
     return [catalog[name] for name in names]
 
 
+def _levels(spec: str) -> set[int] | None:
+    """Levels such as "3", "1,4" or "2-5", or None for all of them."""
+    if spec == "all":
+        return None
+    levels: set[int] = set()
+    try:
+        for part in spec.split(","):
+            first, _, last = part.strip().partition("-")
+            levels.update(range(int(first), int(last or first) + 1))
+    except ValueError:
+        raise typer.BadParameter(f"levels must look like 3, 1,4 or 2-5, not {spec!r}") from None
+    return levels
+
+
 @app.command()
 def benchmark(
     players: str = typer.Option(
         "random,greedy,greedy-walls,solver", help="Comma-separated player names."
     ),
+    levels: str = typer.Option("all", help="Levels to play, such as 3, 1,4 or 2-5, or all."),
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
     conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
-    first_move_only: bool = typer.Option(False, help="Ask only for the first move."),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
     workers: int = typer.Option(8, help="How many games to play at once."),
     out: Path | None = typer.Option(
         None,
-        help="Where to save every move. Default: benchmarks/<date>_<what was run>.jsonl",
+        help="Where to save every move. Default: benchmarks/<date>_<time>_<what was run>.jsonl",
+    ),
+    resume: bool = typer.Option(
+        False, help="Finish an earlier run in --out: replay its missing games and its errors."
     ),
 ) -> None:
     """Play every chosen player on every chosen scenario under every chosen condition."""
     chosen_scenarios = _pick(load_scenarios(), scenarios, "scenario")
+    chosen_levels = _levels(levels)
+    if chosen_levels is not None:
+        chosen_scenarios = [s for s in chosen_scenarios if s.moves_to_goal in chosen_levels]
+    if not chosen_scenarios:
+        raise typer.BadParameter("no scenario matches the chosen --levels and --scenarios")
     chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
+    keys = game_keys(chosen_scenarios, chosen_conditions, names)
 
     if out is None:
-        out = BENCHMARK_DIR / f"{_run_name(names, conditions, scenarios, first_move_only)}.jsonl"
+        out = BENCHMARK_DIR / f"{_run_name(names, conditions, levels, scenarios)}.jsonl"
+    kept: list[GameRecord] = []
     if out.exists():
-        raise typer.BadParameter(f"{out} already exists; delete it or choose another --out")
-    calls = estimate_paid_calls(
-        chosen_scenarios, chosen_conditions, names, first_move_only=first_move_only
-    )
+        if not resume:
+            raise typer.BadParameter(
+                f"{out} already exists; add --resume to finish it, or choose another --out"
+            )
+        kept = [record for record in load(out) if record.error is None]
+        wanted = set(keys)
+        strays = [record.key for record in kept if record.key not in wanted]
+        if strays:
+            raise typer.BadParameter(
+                f"{out} holds games this run would not play, such as {strays[0]}; "
+                "resume with the same --players, --levels, --scenarios and --conditions"
+            )
+    done = {record.key for record in kept}
+    calls = estimate_paid_calls(chosen_scenarios, chosen_conditions, names, done=done)
     if calls and not allow_paid:
         raise typer.BadParameter(f"this can make up to {calls} paid calls; add --allow-paid")
+    if resume:
+        typer.echo(f"Keeping {len(kept)} finished games, playing {len(keys) - len(kept)}")
 
-    records = run_benchmark(
-        chosen_scenarios,
-        chosen_conditions,
-        [PLAYERS[name].build for name in names],
-        first_move_only=first_move_only,
-        workers=workers,
-    )
+    save(kept, out)  # drops the games that ended in an error, so they are played again
+    try:
+        with out.open("a", encoding="utf-8", newline="") as file:
+
+            def write(record: GameRecord) -> None:
+                file.write(record.to_json() + "\n")
+                file.flush()
+
+            played = run_benchmark(
+                chosen_scenarios,
+                chosen_conditions,
+                {name: PLAYERS[name].build for name in names},
+                workers=workers,
+                done=done,
+                on_record=write,
+            )
+    except BaseException:
+        typer.echo(
+            f"\nStopped. Every finished game is saved in {out}; to finish the run, repeat the "
+            f"command with --resume --out {out}",
+            err=True,
+        )
+        raise
+
+    order = {key: index for index, key in enumerate(keys)}
+    records = sorted([*kept, *played], key=lambda record: order[record.key])
     save(records, out)
-    table = summarize(records, first_move_only=first_move_only)
-    out.with_suffix(".txt").write_text(table + "\n", encoding="utf-8")
+    table = summarize(records)
+    out.with_suffix(".txt").write_text(table + "\n", encoding="utf-8", newline="")
 
-    typer.echo(summarize(records, first_move_only=first_move_only, bold_best=True))
-    if usage(records):
-        typer.echo(f"\n{usage(records)}")
+    typer.echo(summarize(records, bold_best=True))
+    if usage(played):
+        typer.echo(f"\nPaid calls in this run:\n{usage(played)}")
+    errors = sum(record.error is not None for record in records)
+    if errors:
+        typer.echo(f"\n{errors} games ended in an error; --resume --out {out} plays them again")
     typer.echo(f"\nSaved to {out} and {out.with_suffix('.txt').name}")
 
 
-def _run_name(players: list[str], conditions: str, scenarios: str, first_move_only: bool) -> str:
-    """Today's date and what was run, so that no two different runs share a file."""
-    parts = [str(date.today()), "+".join(players), conditions.replace(",", "+")]
+def _run_name(
+    players: list[str],
+    conditions: str,
+    levels: str,
+    scenarios: str,
+    when: datetime | None = None,
+) -> str:
+    """The date, the time to the minute, and what was run, such as
+    2026-09-23_18-45_jev_all_levels-1-3."""
+    when = when or datetime.now()
+    parts = [when.strftime("%Y-%m-%d_%H-%M"), "+".join(players), _plus(conditions)]
+    if levels != "all":
+        parts.append(f"levels-{_plus(levels)}")
     if scenarios != "all":
-        parts.append(scenarios.replace(",", "+"))
-    if first_move_only:
-        parts.append("first-move")
+        parts.append(_plus(scenarios))
     return "_".join(parts)
+
+
+def _plus(spec: str) -> str:
+    return "+".join(part.strip() for part in spec.split(",") if part.strip())
 
 
 @app.command()

@@ -1,21 +1,24 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Sequence
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import typer
 
 from system_one_control.conditions import Condition
-from system_one_control.game import Game, Step
+from system_one_control.game import Game
 from system_one_control.players import PLAYERS, Player
 from system_one_control.scenario import Scenario
 
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "benchmarks"
 CEILING = "solver"  # plays perfectly, so it is never the best result worth pointing out
+
+GameKey = tuple[str, str, str]  # scenario, condition, player
 
 
 @dataclass(frozen=True)
@@ -29,17 +32,6 @@ class MoveRecord:
     optimal: bool
     input_tokens: int | None
 
-    @classmethod
-    def of(cls, step: Step) -> MoveRecord:
-        return cls(
-            options=tuple(option.move for option in step.request.options),
-            move=step.choice.move,
-            probabilities=step.choice.probabilities,
-            best_moves=step.best_moves,
-            optimal=step.optimal,
-            input_tokens=step.choice.input_tokens,
-        )
-
 
 @dataclass(frozen=True)
 class GameRecord:
@@ -50,47 +42,146 @@ class GameRecord:
     player: str
     moves_to_goal: int
     won: bool
+    closest: int | None  # the fewest moves to the goal from any board the player reached
     error: str | None
     moves: tuple[MoveRecord, ...]
 
+    @property
+    def key(self) -> GameKey:
+        return (self.scenario, self.condition, self.player)
+
+    @property
+    def progress(self) -> float:
+        """How much of the way to the goal the game covered at its closest: 1 for a win."""
+        if self.closest is None:
+            return 0.0
+        return 1 - self.closest / self.moves_to_goal
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    @classmethod
+    def from_json(cls, line: str) -> GameRecord:
+        data = json.loads(line)
+        moves = tuple(
+            MoveRecord(
+                **{
+                    **move,
+                    "options": tuple(move["options"]),
+                    "best_moves": tuple(move["best_moves"]),
+                }
+            )
+            for move in data.pop("moves")
+        )
+        return cls(**data, moves=moves)
+
+
+def game_keys(
+    scenarios: Sequence[Scenario], conditions: Sequence[Condition], players: Iterable[str]
+) -> list[GameKey]:
+    """Every game a benchmark plays, in the order its records are kept."""
+    names = list(players)
+    return [(s.name, c.name, name) for s in scenarios for c in conditions for name in names]
+
 
 def play(
-    scenario: Scenario, condition: Condition, player: Player, first_move_only: bool
-) -> GameRecord:
+    scenario: Scenario,
+    condition: Condition,
+    name: str,
+    player: Player,
+    stop: threading.Event | None = None,
+) -> GameRecord | None:
+    """One game, or None if `stop` was set before it finished."""
     game = Game(scenario, player, condition)
-    steps = [game.step()] if first_move_only else game.play()
+    try:
+        steps = game.play(stop)
+    finally:
+        player.close()
+    if not game.is_over:
+        return None
     errors = [step.choice.error for step in steps if step.choice.error]
     return GameRecord(
         scenario=scenario.name,
         condition=condition.name,
-        player=player.name,
+        player=name,
         moves_to_goal=scenario.moves_to_goal,
         won=game.won,
+        closest=game.closest,
         error=errors[0] if errors else None,
-        moves=tuple(MoveRecord.of(step) for step in steps),
+        moves=tuple(
+            MoveRecord(
+                options=tuple(option.move for option in step.request.options),
+                move=step.choice.move,
+                probabilities=step.choice.probabilities,
+                best_moves=step.best_moves,
+                optimal=step.optimal,
+                input_tokens=step.choice.input_tokens,
+            )
+            for step in steps
+        ),
     )
 
 
 def run_benchmark(
     scenarios: Sequence[Scenario],
     conditions: Sequence[Condition],
-    players: Sequence[Callable[[], Player]],
+    players: Mapping[str, Callable[[], Player]],
     *,
-    first_move_only: bool = False,
     workers: int = 1,
+    done: Collection[GameKey] = (),
+    on_record: Callable[[GameRecord], None] | None = None,
 ) -> list[GameRecord]:
     """Every player on every scenario under every condition, `workers` games at a time.
 
     Each game gets a fresh player, so games never share state and can run side by side.
+    Games in `done` are skipped. `on_record` gets each game as it finishes, so a caller can
+    save it straight away. A player's failed move ends only its own game, as an error. Any
+    other failure starts no more games, stops those under way after their current move
+    without recording them, hands over any that finished meanwhile, and is then raised.
+    Ctrl+C does the same, without waiting for the games under way.
+
+    Returns the games played, in the order of scenarios, then conditions, then players.
     """
-    games = [(s, c, build) for s in scenarios for c in conditions for build in players]
+    by_name = {s.name: s for s in scenarios}
+    by_condition = {c.name: c for c in conditions}
+    keys = [key for key in game_keys(scenarios, conditions, players) if key not in done]
+    stop = threading.Event()
 
-    def play_one(game: tuple[Scenario, Condition, Callable[[], Player]]) -> GameRecord:
-        scenario, condition, build = game
-        return play(scenario, condition, build(), first_move_only)
+    def play_one(key: GameKey) -> GameRecord | None:
+        if stop.is_set():
+            return None
+        scenario, condition, name = key
+        try:
+            player = players[name]()
+            return play(by_name[scenario], by_condition[condition], name, player, stop)
+        except BaseException:
+            stop.set()
+            raise
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(play_one, games))
+    pool = ThreadPoolExecutor(max_workers=workers)
+    futures = [pool.submit(play_one, key) for key in keys]
+    records: dict[GameKey, GameRecord] = {}
+    failure: BaseException | None = None
+    try:
+        for future in as_completed(futures):
+            try:
+                record = future.result()
+            except CancelledError:
+                continue
+            except Exception as error:
+                failure = failure or error
+                pool.shutdown(wait=False, cancel_futures=True)
+                continue
+            if record is not None:
+                records[record.key] = record
+                if on_record:
+                    on_record(record)
+        if failure:
+            raise failure
+    finally:
+        stop.set()
+        pool.shutdown(wait=False, cancel_futures=True)
+    return [records[key] for key in keys]
 
 
 def estimate_paid_calls(
@@ -98,58 +189,70 @@ def estimate_paid_calls(
     conditions: Sequence[Condition],
     player_names: Iterable[str],
     *,
-    first_move_only: bool,
+    done: Collection[GameKey] = (),
 ) -> int:
-    """The most calls paid players could make: one per move."""
-    paid = sum(1 for name in player_names if PLAYERS[name].paid)
-    moves = sum(1 if first_move_only else s.max_moves for s in scenarios)
-    return paid * moves * len(conditions)
+    """The most calls paid players could make on the games not yet done: one per move."""
+    moves = {s.name: s.max_moves for s in scenarios}
+    return sum(
+        moves[scenario]
+        for scenario, condition, name in game_keys(scenarios, conditions, player_names)
+        if PLAYERS[name].paid and (scenario, condition, name) not in done
+    )
 
 
 def save(records: Iterable[GameRecord], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as file:
+    with path.open("w", encoding="utf-8", newline="") as file:
         for record in records:
-            file.write(json.dumps(asdict(record)) + "\n")
+            file.write(record.to_json() + "\n")
     return path
 
 
-def summarize(
-    records: Sequence[GameRecord], *, first_move_only: bool = False, bold_best: bool = False
-) -> str:
-    """Per player and condition: how it did at each distance to the goal, then overall.
+def load(path: Path) -> list[GameRecord]:
+    """The games saved in a file. A cut-off last line, from a run that was killed, is skipped."""
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    records = []
+    for number, line in enumerate(lines, start=1):
+        try:
+            records.append(GameRecord.from_json(line))
+        except json.JSONDecodeError:
+            if number < len(lines):
+                raise
+    return records
 
-    For whole games, each distance counts the games won; optimal is the share of all moves that
-    started a shortest path; SPL (success weighted by path length) scores a won game as the
-    fewest moves over the moves used, and a lost one as 0. With `first_move_only`, each distance
-    counts the optimal first moves instead, and won and SPL, which mean nothing after one move,
-    are left out. Errors counts the games a player could not finish, such as a failed API call.
+
+def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
+    """Per player and condition: the games won at each level, then scores over all games.
+
+    Won counts the games that reached the goal; progress is how much of the way to the goal a
+    game covered at its closest, averaged; SPL (success weighted by path length) scores a won
+    game as the fewest moves over the moves used, and a lost one as 0. Errors counts the games
+    a player could not finish, such as a failed API call.
 
     Rows run from the simple players to the solver, then any other player. With `bold_best`,
     the best score in each column, the solver aside, is in bold.
     """
-    distances = sorted({r.moves_to_goal for r in records})
+    levels = sorted({r.moves_to_goal for r in records})
     groups: dict[tuple[str, str], list[GameRecord]] = defaultdict(list)
     for record in records:
         groups[(record.player, record.condition)].append(record)
     order = list(PLAYERS)
     ranked = sorted(groups, key=lambda key: order.index(key[0]) if key[0] in order else len(order))
 
-    totals = ["optimal"] if first_move_only else ["won", "optimal", "SPL"]
-    header = ["player", "condition", *(f"{d} away" for d in distances), *totals, "errors"]
+    header = ["player", "condition", *(f"{d} away" for d in levels), "won", "progress", "SPL"]
+    header.append("errors")
     rows: list[tuple[str, str, list[tuple[str, float]], str]] = []  # (text, value) per score
     for player, condition in ranked:
         group = groups[(player, condition)]
-        scores = [_level_score(group, distance, first_move_only) for distance in distances]
-        moves = [move for r in group for move in r.moves]
-        optimal = sum(m.optimal for m in moves) / len(moves)
-        if not first_move_only:
-            won = sum(r.won for r in group)
-            scores.append((f"{won}/{len(group)}", won))
-        scores.append((f"{optimal:.0%}", optimal))
-        if not first_move_only:
-            spl = sum(r.moves_to_goal / len(r.moves) if r.won else 0.0 for r in group) / len(group)
-            scores.append((f"{spl:.2f}", spl))
+        scores: list[tuple[str, float]] = []
+        for level in levels:
+            at_level = [r for r in group if r.moves_to_goal == level]
+            won = sum(r.won for r in at_level)
+            scores.append((f"{won}/{len(at_level)}", won))
+        won = sum(r.won for r in group)
+        progress = sum(r.progress for r in group) / len(group)
+        spl = sum(r.moves_to_goal / len(r.moves) if r.won else 0.0 for r in group) / len(group)
+        scores += [(f"{won}/{len(group)}", won), (f"{progress:.2f}", progress), (f"{spl:.2f}", spl)]
         errors = str(sum(r.error is not None for r in group))
         rows.append((player, condition, scores, errors))
 
@@ -174,18 +277,6 @@ def summarize(
         shown.append(errors.ljust(widths[-1]))
         lines.append("  ".join(shown))
     return "\n".join(lines)
-
-
-def _level_score(
-    group: Sequence[GameRecord], distance: int, first_move_only: bool
-) -> tuple[str, float]:
-    """Games won at this distance, or optimal first moves when only first moves were asked."""
-    at_distance = [r for r in group if r.moves_to_goal == distance]
-    if first_move_only:
-        count = sum(r.moves[0].optimal for r in at_distance)
-    else:
-        count = sum(r.won for r in at_distance)
-    return f"{count}/{len(at_distance)}", count
 
 
 def usage(records: Sequence[GameRecord]) -> str:

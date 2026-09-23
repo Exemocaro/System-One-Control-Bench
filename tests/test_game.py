@@ -1,8 +1,10 @@
+import threading
+
 import pytest
 
 from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game
-from system_one_control.players import SolverPlayer
+from system_one_control.players import Choice, Player, SolverPlayer, Turn
 from system_one_control.scenario import load_scenarios
 from tests.helpers import MAP, AlwaysPlayer, scenario
 
@@ -75,3 +77,27 @@ def test_the_history_lists_every_move_and_what_it_did():
     assert game.next_request().state.endswith(
         "Moves so far:\n1. west: blocked, you stay at (1, 1)\n2. west: blocked, you stay at (1, 1)"
     )
+
+
+class FailingPlayer(Player):
+    name = "failing"
+
+    def choose(self, turn: Turn) -> Choice:
+        raise ConnectionError("the API is down")
+
+
+def test_a_player_that_raises_ends_the_game_with_the_error_recorded():
+    game = Game(scenario("#####\n#A.G#\n#####", 2), FailingPlayer(), MAP)
+    step = game.step()
+    assert game.is_over and not game.won
+    assert step.choice.move is None
+    assert step.choice.error == "ConnectionError: the API is down"
+
+
+def test_a_game_asked_to_stop_stops_between_moves():
+    game = Game(scenario("########\n#A....G#\n########", 5), SolverPlayer(), MAP)
+    stop = threading.Event()
+    game.step()
+    stop.set()
+    assert len(game.play(stop)) == 1
+    assert not game.is_over

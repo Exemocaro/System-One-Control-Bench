@@ -58,6 +58,8 @@ class PuzzleKind:
     keyless: bool = False  # no key or door, even at a level that usually has them
 
     def accepts(self, board: Board) -> bool:
+        if self.keyless and (board.find(KEY) or board.find(DOOR)):
+            return False
         if self.needs_planning and greedy_wins(board):
             return False
         if self.greedy_can_win and not greedy_wins(board):
@@ -255,6 +257,6 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
             *(f"  {row}" for row in board.draw().splitlines()),
         ]
         path = folder / f"gen-{level:02d}-{number:02d}.yaml"
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
         written.append(path)
     return written

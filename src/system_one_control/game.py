@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, replace
 
@@ -47,6 +48,13 @@ class Game:
         return self.rules.is_won(self.board)
 
     @property
+    def closest(self) -> int | None:
+        """The fewest moves to the goal from any board reached so far, the start included."""
+        boards = {self.scenario.board, *(step.after for step in self.steps)}
+        distances = (self.solver.moves_to_goal(board) for board in boards)
+        return min((d for d in distances if d is not None), default=None)
+
+    @property
     def is_over(self) -> bool:
         failed = bool(self.steps) and self.steps[-1].choice.move is None
         return self.won or failed or len(self.steps) >= self.scenario.max_moves
@@ -64,7 +72,10 @@ class Game:
             raise RuntimeError("the game is over")
         request = self.next_request()
         started = time.perf_counter()
-        choice = self.player.choose(Turn(self.board, self.rules, request))
+        try:
+            choice = self.player.choose(Turn(self.board, self.rules, request))
+        except Exception as error:  # a player that fails has failed this move, not the run
+            choice = Choice(None, error=f"{type(error).__name__}: {error}")
         seconds = time.perf_counter() - started
 
         move = self.rules.find_move(self.board, choice.move)
@@ -85,7 +96,8 @@ class Game:
         self.board = after
         return step
 
-    def play(self) -> list[Step]:
-        while not self.is_over:
+    def play(self, stop: threading.Event | None = None) -> list[Step]:
+        """Play to the end, or until `stop` is set, which takes effect between moves."""
+        while not self.is_over and not (stop and stop.is_set()):
             self.step()
         return self.steps
