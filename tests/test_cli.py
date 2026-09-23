@@ -4,6 +4,7 @@ from datetime import datetime
 from typer.testing import CliRunner
 
 from system_one_control.cli import _run_name, app
+from system_one_control.generator import LEVELS
 
 runner = CliRunner()
 
@@ -108,7 +109,7 @@ def test_levels_that_cannot_be_read_are_refused(tmp_path):
 def test_generate_fills_every_level_to_the_requested_count(tmp_path):
     result = runner.invoke(app, ["generate", "--per-level", "2", "--folder", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    for level in range(1, 11):
+    for level in LEVELS:
         assert len(list((tmp_path / f"level-{level:02d}").glob("gen-*.yaml"))) == 2
 
 
@@ -123,3 +124,16 @@ def test_unknown_scenarios_are_refused(tmp_path):
     result = runner.invoke(app, ["benchmark", "--scenarios", "nowhere", "--out", str(out)])
     assert result.exit_code != 0
     assert "nowhere" in result.output
+
+
+def test_a_run_on_a_few_levels_can_be_extended_to_all_of_them_in_the_same_file(tmp_path):
+    out = tmp_path / "run.jsonl"
+    first = runner.invoke(
+        app, ["benchmark", "--players", "solver", "--levels", "1-3", "--out", str(out)]
+    )
+    assert first.exit_code == 0, first.output
+    rest = runner.invoke(app, ["benchmark", "--players", "solver", "--out", str(out), "--resume"])
+    assert rest.exit_code == 0, rest.output
+    assert "Keeping 20 finished games, playing 80" in rest.output
+    levels = [json.loads(line)["moves_to_goal"] for line in out.read_text().splitlines()]
+    assert len(levels) == 100 and levels == sorted(levels)

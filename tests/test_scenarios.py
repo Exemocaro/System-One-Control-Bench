@@ -2,6 +2,7 @@ from dataclasses import replace
 
 import pytest
 
+from system_one_control.generator import LEVELS
 from system_one_control.scenario import SCENARIO_DIR, Scenario, load_scenarios
 from system_one_control.solver import Solver
 
@@ -15,8 +16,8 @@ def test_the_solver_agrees_with_what_each_scenario_file_claims(name):
     assert solver.moves_to_goal(scenario.board) == scenario.moves_to_goal
 
 
-def test_every_level_from_one_to_ten_has_a_scenario():
-    assert {s.moves_to_goal for s in SCENARIOS.values()} == set(range(1, 11))
+def test_every_level_has_scenarios_and_there_are_no_others():
+    assert {s.moves_to_goal for s in SCENARIOS.values()} == set(LEVELS)
 
 
 @pytest.mark.parametrize("path", sorted(SCENARIO_DIR.rglob("*.yaml")), ids=lambda p: p.stem)
@@ -46,8 +47,8 @@ def test_a_scenario_file_can_choose_its_rules(tmp_path):
 
 
 @pytest.mark.parametrize("name", SCENARIOS)
-def test_a_game_allows_three_times_the_moves_the_solver_needs(name):
-    assert SCENARIOS[name].max_moves == 3 * SCENARIOS[name].moves_to_goal
+def test_a_game_allows_twice_the_moves_the_solver_needs(name):
+    assert SCENARIOS[name].max_moves == 2 * SCENARIOS[name].moves_to_goal
 
 
 def test_two_scenarios_may_not_share_a_name(tmp_path):

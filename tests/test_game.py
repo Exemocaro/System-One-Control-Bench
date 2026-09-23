@@ -30,10 +30,10 @@ def test_a_step_records_the_board_before_and_after_and_whether_it_was_best():
     assert "#A.G#" in step.request.state
 
 
-def test_a_game_stops_after_three_times_the_fewest_moves():
+def test_a_game_stops_after_twice_the_fewest_moves():
     short = scenario("#####\n#A.G#\n#####", 2)
     game = Game(short, AlwaysPlayer("west"), MAP)
-    assert len(game.play()) == 6
+    assert len(game.play()) == 4
     assert game.is_over and not game.won
 
 

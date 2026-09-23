@@ -1,9 +1,0 @@
-description: A generated 5x6 room that walking straight at the target cannot solve.
-moves_to_goal: 9
-map: |
-  #####
-  #KA.#
-  ###.#
-  #G#.#
-  #D..#
-  #####

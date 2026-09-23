@@ -4,7 +4,7 @@ import os
 import random
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
 from dotenv import load_dotenv
@@ -31,6 +31,9 @@ class Choice:
     probabilities: dict[str, float] = field(default_factory=dict)
     error: str | None = None
     input_tokens: int | None = None  # what a paid model billed for the question
+    output_tokens: int | None = None
+    confidence: float | None = None  # the model's own score, where it gives one
+    model: str | None = None  # the model version that answered, where it says
 
 
 class Player(ABC):
@@ -115,6 +118,16 @@ class WallAwareGreedyPlayer(GreedyPlayer):
 JEV_MODEL = "jev-1.13.0"
 JEV_QUESTION = "move"
 API_KEY_NAMES = ("TYPESAFE_API_KEY", "JEV_API_KEY")
+# A request the server turned away (busy, rate-limited, failing) or never received is tried
+# twice more, after about one second and then two. A timeout is not: the server may have
+# answered, and billed, a request that took too long.
+JEV_RETRY = RetryPolicy(
+    max_retries=2,
+    backoff_initial=1.0,
+    backoff_max=2.0,
+    http_statuses={429, *range(500, 600)},
+    api_timeout_error=False,
+)
 
 
 def api_key() -> str:
@@ -143,7 +156,8 @@ def jev_body(request: Request, model: str = JEV_MODEL) -> dict[str, Any]:
 class JevPlayer(Player):
     """Jev, through the TypeSafe SDK. Sees only the request, never the board.
 
-    A failed call raises, and the game records it as a move with no answer.
+    A call the server turned away is retried (`JEV_RETRY`). One that still fails raises, and
+    the game records it as a move with no answer.
     """
 
     name = "jev"
@@ -151,8 +165,7 @@ class JevPlayer(Player):
     def __init__(self, model: str = JEV_MODEL, client: Any = None) -> None:
         self._owns_client = client is None
         if client is None:
-            no_retries = RetryPolicy(max_retries=0)  # one move is exactly one paid call
-            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=no_retries)
+            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=JEV_RETRY)
         self.model = model
         self._client = client
 
@@ -160,13 +173,18 @@ class JevPlayer(Player):
         request = turn.request
         response = self._client.system_one(**jev_body(request, self.model))
         answer = response.choices[JEV_QUESTION]
-        tokens = response.usage.input_tokens
         moves = {option.id: option.move for option in request.options}
-        probabilities = {moves[id]: p for id, p in answer.probabilities.items() if id in moves}
+        choice = Choice(
+            moves.get(answer.choice),
+            {moves[id]: p for id, p in answer.probabilities.items() if id in moves},
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            confidence=answer.confidence,
+            model=response.model,
+        )
         if answer.choice not in moves:
-            problem = f"Jev answered {answer.choice!r}"
-            return Choice(None, probabilities, error=problem, input_tokens=tokens)
-        return Choice(moves[answer.choice], probabilities, input_tokens=tokens)
+            return replace(choice, error=f"Jev answered {answer.choice!r}")
+        return choice
 
     def close(self) -> None:
         if self._owns_client:

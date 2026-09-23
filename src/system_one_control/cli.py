@@ -19,7 +19,7 @@ from system_one_control.benchmark import (
 )
 from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
-from system_one_control.generator import write_level
+from system_one_control.generator import LEVELS, write_level
 from system_one_control.players import PLAYERS
 from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
@@ -62,7 +62,7 @@ def benchmark(
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
     conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
-    workers: int = typer.Option(8, help="How many games to play at once."),
+    workers: int = typer.Option(5, help="How many games to play at once."),
     out: Path | None = typer.Option(
         None,
         help="Where to save every move. Default: benchmarks/<date>_<time>_<what was run>.jsonl",
@@ -168,13 +168,15 @@ def _plus(spec: str) -> str:
 
 @app.command()
 def generate(
-    per_level: int = typer.Option(10, help="Puzzles per level, hand-made ones included."),
+    per_level: int | None = typer.Option(
+        None, help="Puzzles per level, hand-made ones included. Default: as LEVELS says."
+    ),
     seed: int = typer.Option(0, help="Change it for a fresh set of puzzles."),
     folder: Path = typer.Option(SCENARIO_DIR, help="The scenarios folder."),
 ) -> None:
-    """Top up every level from 1 to 10 with generated puzzles checked by the solver."""
-    for level in range(1, 11):
-        written = write_level(folder, level=level, target=per_level, seed=seed)
+    """Top up every level in LEVELS with generated puzzles checked by the solver."""
+    for level, count in LEVELS.items():
+        written = write_level(folder, level=level, target=per_level or count, seed=seed)
         typer.echo(f"level {level:2}: {len(written)} generated")
 
 

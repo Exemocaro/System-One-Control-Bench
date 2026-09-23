@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -115,7 +116,12 @@ def test_games_played_side_by_side_give_the_same_records_in_the_same_order():
     side_by_side = run_benchmark(
         SCENARIOS, MAP, {"random": RandomPlayer, "solver": SolverPlayer}, workers=8
     )
-    assert side_by_side == one_at_a_time
+    assert untimed(side_by_side) == untimed(one_at_a_time)
+
+
+def untimed(records: list[GameRecord]) -> list[GameRecord]:
+    """The records without how long each move took, which no two runs share."""
+    return [replace(r, moves=tuple(replace(m, seconds=None) for m in r.moves)) for r in records]
 
 
 def test_rows_run_from_random_to_the_solver_with_other_players_below():
@@ -140,7 +146,33 @@ def test_usage_counts_the_calls_and_tokens_of_paid_players_only():
     move = MoveRecord(("east",), "east", {}, ("east",), True, input_tokens=100)
     jev = GameRecord("s", "map", "jev", 1, True, 0, None, (move, move))
     free = GameRecord("s", "map", "random", 1, True, 0, None, (move,))
-    assert usage([jev, free]) == "jev: 2 calls, 200 input tokens"
+    assert usage([jev, free]) == "jev: 2 calls, 200 input tokens, 0 output tokens"
+
+
+def test_usage_gives_the_median_wait_when_moves_were_timed():
+    fast = MoveRecord(("east",), "east", {}, ("east",), True, 100, output_tokens=2, seconds=0.5)
+    slow = MoveRecord(("east",), "east", {}, ("east",), True, 100, output_tokens=2, seconds=3.0)
+    jev = GameRecord("s", "map", "jev", 1, True, 0, None, (fast, fast, slow))
+    assert usage([jev]) == (
+        "jev: 3 calls, 300 input tokens, 6 output tokens, 0.50 s per call (median)"
+    )
+
+
+def test_every_move_is_saved_with_how_long_it_took():
+    [record] = run_benchmark(SCENARIOS[:1], MAP, {"solver": SolverPlayer})
+    assert all(move.seconds is not None and move.seconds >= 0 for move in record.moves)
+
+
+def test_games_saved_before_the_newer_move_fields_still_load(tmp_path):
+    [record] = run_benchmark(SCENARIOS[:1], MAP, {"solver": SolverPlayer})
+    line = json.loads(record.to_json())
+    for move in line["moves"]:
+        for name in ("output_tokens", "confidence", "model", "seconds"):
+            del move[name]
+    path = tmp_path / "old.jsonl"
+    path.write_text(json.dumps(line) + "\n", encoding="utf-8")
+    [loaded] = load(path)
+    assert loaded.moves[0].seconds is None and loaded.moves[0].move == record.moves[0].move
 
 
 def test_each_game_is_handed_over_as_soon_as_it_finishes():

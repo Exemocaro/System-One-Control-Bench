@@ -31,6 +31,11 @@ class MoveRecord:
     best_moves: tuple[str, ...]
     optimal: bool
     input_tokens: int | None
+    # Added on 23 September; games saved before then load with these empty.
+    output_tokens: int | None = None
+    confidence: float | None = None  # the model's own score, which is not a probability
+    model: str | None = None  # the model version that answered
+    seconds: float | None = None  # how long the player took to answer, retries included
 
 
 @dataclass(frozen=True)
@@ -116,6 +121,10 @@ def play(
                 best_moves=step.best_moves,
                 optimal=step.optimal,
                 input_tokens=step.choice.input_tokens,
+                output_tokens=step.choice.output_tokens,
+                confidence=step.choice.confidence,
+                model=step.choice.model,
+                seconds=round(step.seconds, 3),
             )
             for step in steps
         ),
@@ -280,13 +289,18 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
 
 
 def usage(records: Sequence[GameRecord]) -> str:
-    """For each paid player: the calls made, one per move, and the input tokens billed."""
+    """For each paid player: the calls made (one per move), the tokens, and the typical wait."""
     lines = []
     for player in dict.fromkeys(r.player for r in records):
         if player not in PLAYERS or not PLAYERS[player].paid:
             continue
         moves = [move for r in records if r.player == player for move in r.moves]
         tokens = sum(move.input_tokens or 0 for move in moves)
+        output = sum(move.output_tokens or 0 for move in moves)
         calls = "1 call" if len(moves) == 1 else f"{len(moves)} calls"
-        lines.append(f"{player}: {calls}, {tokens:,} input tokens")
+        line = f"{player}: {calls}, {tokens:,} input tokens, {output:,} output tokens"
+        seconds = sorted(move.seconds for move in moves if move.seconds is not None)
+        if seconds:
+            line += f", {seconds[len(seconds) // 2]:.2f} s per call (median)"
+        lines.append(line)
     return "\n".join(lines)

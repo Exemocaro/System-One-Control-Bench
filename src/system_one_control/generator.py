@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from system_one_control.board import DOOR, FLOOR, GOAL, KEY, WALL, Board, Position
 from system_one_control.players import WallAwareGreedyPlayer
-from system_one_control.rules import CompassRules
+from system_one_control.rules import CompassRules, next_target
 from system_one_control.scenario import MOVE_ALLOWANCE, Scenario
 from system_one_control.solver import Solver
 
@@ -47,6 +47,38 @@ def has_a_longer_route(board: Board) -> bool:
     return detour is not None and detour > distance
 
 
+def detours(board: Board) -> int | None:
+    """The fewest moves away from the next target that any shortest route has to make.
+
+    The next target is the key, then the door, then the goal, as the greedy players see it.
+    A move away is one that ends further from it, as the crow walks, than it started. None
+    if the goal cannot be reached.
+    """
+    layer = {board: 0}  # every board first reached at this depth, and its fewest detours
+    seen = {board}
+    while layer:
+        won = [count for current, count in layer.items() if RULES.is_won(current)]
+        if won:
+            return min(won)
+        following: dict[Board, int] = {}
+        for current, count in layer.items():
+            _, target = next_target(current)
+            before = _walk(current.agent, target)
+            for move in RULES.moves(current):
+                after = RULES.apply(current, move)
+                if after in seen:  # reached sooner, or a blocked move
+                    continue
+                away = count + (_walk(after.agent, target) > before)
+                following[after] = min(away, following.get(after, away))
+        seen |= following.keys()
+        layer = following
+    return None
+
+
+def _walk(a: Position, b: Position) -> int:
+    return abs(a.x - b.x) + abs(a.y - b.y)
+
+
 @dataclass(frozen=True)
 class PuzzleKind:
     """What a puzzle must be, beyond sitting at its level."""
@@ -56,9 +88,12 @@ class PuzzleKind:
     greedy_can_win: bool = False  # the greedy player with walls wins it
     longer_route: bool = False  # a second, longer route to the goal exists
     keyless: bool = False  # no key or door, even at a level that usually has them
+    min_detours: int = 0  # moves away from the next target that every shortest route makes
 
     def accepts(self, board: Board) -> bool:
         if self.keyless and (board.find(KEY) or board.find(DOOR)):
+            return False
+        if self.min_detours and (detours(board) or 0) < self.min_detours:
             return False
         if self.needs_planning and greedy_wins(board):
             return False
@@ -81,16 +116,48 @@ LONGER_ROUTE = PuzzleKind(
     needs_planning=True,
     longer_route=True,
 )
+TIMES = {2: "twice", 3: "three times", 4: "four times", 5: "five times", 6: "six times"}
+
+
+def with_detours(least: int) -> PuzzleKind:
+    """Puzzles the greedy player cannot win, whose every shortest route turns away `least` times."""
+    return PuzzleKind(
+        "that walking straight at the target cannot solve, whose every shortest route turns away "
+        f"from its target at least {TIMES[least]}",
+        needs_planning=True,
+        min_detours=least,
+    )
+
+
+# The levels there are, and how many puzzles each holds, hand-made ones included. Spaced out
+# at the top, where every game costs the most calls; thin at the bottom, which is a sanity check.
+LEVELS = {1: 5, 2: 5, 3: 10, 4: 10, 5: 10, 6: 10, 8: 10, 10: 10, 12: 10, 15: 10, 20: 10}
 # How many of a level's puzzles must be of each kind, strictest first; the rest are ANY.
 LEVEL_KINDS: dict[int, dict[PuzzleKind, int]] = {
     4: {NEEDS_PLANNING_KEYLESS: 1, GREEDY_CAN_WIN: 9},
     5: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
     6: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
-    7: {NEEDS_PLANNING: 3, GREEDY_CAN_WIN: 7},
     8: {NEEDS_PLANNING: 5, GREEDY_CAN_WIN: 5},
-    9: {NEEDS_PLANNING: 5, GREEDY_CAN_WIN: 5},
     10: {LONGER_ROUTE: 5, NEEDS_PLANNING: 5},
+    12: {with_detours(2): 10},
+    15: {with_detours(4): 5, with_detours(3): 5},
+    20: {with_detours(6): 5, with_detours(5): 5},
 }
+# How thick the outer wall is on every other puzzle of a level, where it is not the usual one
+# wall. The extra rings change nothing about the puzzle, only how much map there is to read.
+LEVEL_WALLS: dict[int, tuple[int, ...]] = {
+    12: (2, 2, 3, 3, 3),
+    15: (2, 2, 3, 3, 5),
+    20: (2, 2, 3, 3, 5),
+}
+
+
+def thicken(board: Board, walls: int) -> Board:
+    """The same board inside more rings of wall, so its outer wall is `walls` thick."""
+    extra = walls - 1
+    ring = (WALL * (len(board.rows[0]) + 2 * extra),) * extra
+    rows = (*ring, *(WALL * extra + row + WALL * extra for row in board.rows), *ring)
+    return Board(rows, board.agent.moved(extra, extra), board.holding)
 
 
 @dataclass(frozen=True)
@@ -98,6 +165,7 @@ class Puzzle:
     style: str
     board: Board
     kind: PuzzleKind = ANY
+    walls: int = 1  # how thick the outer wall is
 
 
 class PuzzleGenerator:
@@ -242,6 +310,10 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
     for kind, count in wanted.items():
         puzzles += generator.puzzles(level, count, seen, kind)
         seen |= {puzzle.board.draw() for puzzle in puzzles}
+    for index, walls in zip(range(1, len(puzzles), 2), LEVEL_WALLS.get(level, ()), strict=False):
+        puzzles[index] = replace(
+            puzzles[index], board=thicken(puzzles[index].board, walls), walls=walls
+        )
 
     for old in folder.glob("gen-*.yaml"):
         old.unlink()
@@ -250,6 +322,8 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
         board = puzzle.board
         size = f"{len(board.rows[0])}x{len(board.rows)}"
         label = f" {puzzle.kind.description}" if puzzle.kind.description else ""
+        if puzzle.walls > 1:
+            label += f", inside an outer wall {puzzle.walls} thick"
         lines = [
             f"description: A generated {size} {puzzle.style}{label}.",
             f"moves_to_goal: {level}",

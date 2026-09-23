@@ -1,8 +1,0 @@
-description: The key is one step behind you and the door is at the far end of the hall.
-moves_to_goal: 7
-map: |
-  #######
-  #KA...#
-  #####D#
-  #####G#
-  #######

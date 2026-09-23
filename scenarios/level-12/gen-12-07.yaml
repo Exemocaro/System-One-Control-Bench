@@ -1,0 +1,10 @@
+description: A generated 10x7 room that walking straight at the target cannot solve, whose every shortest route turns away from its target at least twice.
+moves_to_goal: 12
+map: |
+  ##########
+  ###.#....#
+  ####.#...#
+  ##..DG#..#
+  #..###K..#
+  #....A..##
+  ##########
