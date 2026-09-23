@@ -1,8 +1,0 @@
-description: The door is ahead, but the key is one step behind you.
-moves_to_goal: 5
-map: |
-  #####
-  #KA.#
-  ###D#
-  ###G#
-  #####

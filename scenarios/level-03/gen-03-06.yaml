@@ -1,12 +1,7 @@
-description: A generated 9x9 maze.
+description: A generated 8x4 room.
 moves_to_goal: 3
 map: |
-  #########
-  #.#.....#
-  #.#####.#
-  #.....#A#
-  #####.#K#
-  #...#..D#
-  #.#.###G#
-  #.#....##
-  #########
+  ########
+  #AKDG###
+  #.#.#.##
+  ########

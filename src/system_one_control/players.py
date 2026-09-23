@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import os
 import random
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
 from dotenv import load_dotenv
-from typesafe_sdk import RetryPolicy, TypeSafeClient
+from typesafe_sdk import (
+    RetryPolicy,
+    TypeSafeAPIConnectionError,
+    TypeSafeAPITimeoutError,
+    TypeSafeClient,
+    TypeSafeInternalServerError,
+    TypeSafeRateLimitError,
+)
 
 from system_one_control.board import Board
 from system_one_control.request import Request
@@ -34,6 +42,8 @@ class Choice:
     output_tokens: int | None = None
     confidence: float | None = None  # the model's own score, where it gives one
     model: str | None = None  # the model version that answered, where it says
+    seconds: float | None = None  # the answering call alone, where the player times it
+    retried: tuple[str, ...] = ()  # why each earlier attempt was turned away
 
 
 class Player(ABC):
@@ -118,16 +128,19 @@ class WallAwareGreedyPlayer(GreedyPlayer):
 JEV_MODEL = "jev-1.13.0"
 JEV_QUESTION = "move"
 API_KEY_NAMES = ("TYPESAFE_API_KEY", "JEV_API_KEY")
-# A request the server turned away (busy, rate-limited, failing) or never received is tried
-# twice more, after about one second and then two. A timeout is not: the server may have
-# answered, and billed, a request that took too long.
-JEV_RETRY = RetryPolicy(
-    max_retries=2,
-    backoff_initial=1.0,
-    backoff_max=2.0,
-    http_statuses={429, *range(500, 600)},
-    api_timeout_error=False,
-)
+# Seconds to wait before each retry of a request the server turned away.
+JEV_RETRY_WAITS = (1.0, 2.0)
+
+
+def turned_away(error: Exception) -> bool:
+    """Whether the server refused the request (busy, rate-limited, failing) or never got it.
+
+    A timeout is not one of these: the server may have answered, and billed, a slow request.
+    """
+    if isinstance(error, TypeSafeAPITimeoutError):
+        return False
+    refused = (TypeSafeRateLimitError, TypeSafeInternalServerError, TypeSafeAPIConnectionError)
+    return isinstance(error, refused)
 
 
 def api_key() -> str:
@@ -156,22 +169,43 @@ def jev_body(request: Request, model: str = JEV_MODEL) -> dict[str, Any]:
 class JevPlayer(Player):
     """Jev, through the TypeSafe SDK. Sees only the request, never the board.
 
-    A call the server turned away is retried (`JEV_RETRY`). One that still fails raises, and
-    the game records it as a move with no answer.
+    A call the server turned away is tried again after each of `retry_waits`, and the choice
+    records why each earlier attempt failed. Its time is the answering call's alone. A call
+    that still fails raises, and the game records it as a move with no answer.
     """
 
     name = "jev"
 
-    def __init__(self, model: str = JEV_MODEL, client: Any = None) -> None:
+    def __init__(
+        self,
+        model: str = JEV_MODEL,
+        client: Any = None,
+        retry_waits: Sequence[float] = JEV_RETRY_WAITS,
+    ) -> None:
         self._owns_client = client is None
         if client is None:
-            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=JEV_RETRY)
+            no_retries = RetryPolicy(max_retries=0)  # retried here, so each attempt is seen
+            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=no_retries)
         self.model = model
         self._client = client
+        self._retry_waits = tuple(retry_waits)
 
     def choose(self, turn: Turn) -> Choice:
         request = turn.request
-        response = self._client.system_one(**jev_body(request, self.model))
+        body = jev_body(request, self.model)
+        retried: list[str] = []
+        for wait in (*self._retry_waits, None):
+            started = time.perf_counter()
+            try:
+                response = self._client.system_one(**body)
+            except Exception as error:
+                if wait is None or not turned_away(error):
+                    raise
+                retried.append(f"{type(error).__name__}: {error}")
+                time.sleep(wait)
+                continue
+            seconds = time.perf_counter() - started
+            break
         answer = response.choices[JEV_QUESTION]
         moves = {option.id: option.move for option in request.options}
         choice = Choice(
@@ -181,6 +215,8 @@ class JevPlayer(Player):
             output_tokens=response.usage.output_tokens,
             confidence=answer.confidence,
             model=response.model,
+            seconds=seconds,
+            retried=tuple(retried),
         )
         if answer.choice not in moves:
             return replace(choice, error=f"Jev answered {answer.choice!r}")

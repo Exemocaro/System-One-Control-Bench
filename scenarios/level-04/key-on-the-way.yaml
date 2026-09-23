@@ -1,8 +1,0 @@
-description: The key is on your way east; pick it up, then turn down through the door.
-moves_to_goal: 4
-map: |
-  #####
-  #AK.#
-  ###D#
-  ###G#
-  #####

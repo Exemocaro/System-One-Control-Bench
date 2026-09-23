@@ -1,9 +1,7 @@
-description: A generated 10x6 room.
+description: A generated 13x4 room without a key, that walking straight at the goal cannot solve.
 moves_to_goal: 3
 map: |
-  ##########
-  #AKDG#...#
-  #.#.#....#
-  #....#..##
-  #.......##
-  ##########
+  #############
+  #..#G.......#
+  #.A.........#
+  #############

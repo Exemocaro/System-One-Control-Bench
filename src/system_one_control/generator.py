@@ -75,6 +75,18 @@ def detours(board: Board) -> int | None:
     return None
 
 
+def wall_in_the_way(board: Board) -> bool:
+    """Whether a wall blocks one of the first steps that would bring you nearer your target."""
+    _, target = next_target(board)
+    nearer = [
+        move
+        for move in RULES.moves(board)
+        if _walk(board.agent.moved(*CompassRules.STEPS[move.name]), target)
+        < _walk(board.agent, target)
+    ]
+    return any(RULES.apply(board, move) == board for move in nearer)
+
+
 def _walk(a: Position, b: Position) -> int:
     return abs(a.x - b.x) + abs(a.y - b.y)
 
@@ -89,11 +101,14 @@ class PuzzleKind:
     longer_route: bool = False  # a second, longer route to the goal exists
     keyless: bool = False  # no key or door, even at a level that usually has them
     min_detours: int = 0  # moves away from the next target that every shortest route makes
+    wall_in_the_way: bool = False  # a wall blocks a first step toward the target
 
     def accepts(self, board: Board) -> bool:
         if self.keyless and (board.find(KEY) or board.find(DOOR)):
             return False
         if self.min_detours and (detours(board) or 0) < self.min_detours:
+            return False
+        if self.wall_in_the_way and not wall_in_the_way(board):
             return False
         if self.needs_planning and greedy_wins(board):
             return False
@@ -116,7 +131,7 @@ LONGER_ROUTE = PuzzleKind(
     needs_planning=True,
     longer_route=True,
 )
-TIMES = {2: "twice", 3: "three times", 4: "four times", 5: "five times", 6: "six times"}
+TIMES = {1: "once", 2: "twice", 3: "three times", 4: "four times", 5: "five times", 6: "six times"}
 
 
 def with_detours(least: int) -> PuzzleKind:
@@ -129,15 +144,40 @@ def with_detours(least: int) -> PuzzleKind:
     )
 
 
+# The way to the goal is blocked, as in a puzzle Jev lost at level 2: the goal is up and to
+# the left, north is a wall, and it walked north again and again. Any level from 2 can have it.
+WALL_IN_THE_WAY = PuzzleKind(
+    "without a key, with a wall in the way of walking straight at the goal",
+    keyless=True,
+    wall_in_the_way=True,
+)
+
+
+def around(least: int) -> PuzzleKind:
+    """Puzzles without a key that have to turn away from the goal `least` times to get round.
+
+    Turning away and back costs two moves, so this needs the goal at least two moves nearer
+    than the level, as the crow walks: from level 4 up.
+    """
+    return PuzzleKind(
+        f"without a key, whose every shortest route turns away from the goal at least "
+        f"{TIMES[least]} to get round a wall",
+        keyless=True,
+        min_detours=least,
+    )
+
+
 # The levels there are, and how many puzzles each holds, hand-made ones included. Spaced out
 # at the top, where every game costs the most calls; thin at the bottom, which is a sanity check.
 LEVELS = {1: 5, 2: 5, 3: 10, 4: 10, 5: 10, 6: 10, 8: 10, 10: 10, 12: 10, 15: 10, 20: 10}
 # How many of a level's puzzles must be of each kind, strictest first; the rest are ANY.
 LEVEL_KINDS: dict[int, dict[PuzzleKind, int]] = {
-    4: {NEEDS_PLANNING_KEYLESS: 1, GREEDY_CAN_WIN: 9},
-    5: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
-    6: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
-    8: {NEEDS_PLANNING: 5, GREEDY_CAN_WIN: 5},
+    2: {WALL_IN_THE_WAY: 3},
+    3: {NEEDS_PLANNING_KEYLESS: 1, WALL_IN_THE_WAY: 3},
+    4: {NEEDS_PLANNING_KEYLESS: 1, around(1): 3, GREEDY_CAN_WIN: 6},
+    5: {NEEDS_PLANNING: 2, around(1): 3, GREEDY_CAN_WIN: 5},
+    6: {NEEDS_PLANNING: 2, around(2): 3, GREEDY_CAN_WIN: 5},
+    8: {NEEDS_PLANNING: 5, around(2): 3, GREEDY_CAN_WIN: 2},
     10: {LONGER_ROUTE: 5, NEEDS_PLANNING: 5},
     12: {with_detours(2): 10},
     15: {with_detours(4): 5, with_detours(3): 5},

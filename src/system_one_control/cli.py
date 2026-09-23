@@ -62,7 +62,7 @@ def benchmark(
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
     conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
-    workers: int = typer.Option(5, help="How many games to play at once."),
+    workers: int = typer.Option(3, help="How many games to play at once."),
     out: Path | None = typer.Option(
         None,
         help="Where to save every move. Default: benchmarks/<date>_<time>_<what was run>.jsonl",

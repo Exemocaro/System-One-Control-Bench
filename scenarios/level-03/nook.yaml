@@ -1,7 +1,0 @@
-description: The goal is up and to the right, but stepping north leads into a dead-end nook; go east along the bottom, then north.
-moves_to_goal: 3
-map: |
-  #####
-  #.#G#
-  #A..#
-  #####

@@ -33,7 +33,7 @@ def test_where_there_is_a_key_the_goal_cannot_be_reached_without_it(name):
 
 
 def test_scenarios_are_named_after_their_file_and_sorted_by_difficulty():
-    assert "key-first" in SCENARIOS
+    assert "maze" in SCENARIOS and "gen-03-01" in SCENARIOS
     distances = [s.moves_to_goal for s in SCENARIOS.values()]
     assert distances == sorted(distances)
 

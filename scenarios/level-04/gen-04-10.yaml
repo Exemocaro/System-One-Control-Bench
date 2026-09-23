@@ -1,0 +1,8 @@
+description: A generated 15x5 maze that walking straight at the target solves.
+moves_to_goal: 4
+map: |
+  ###############
+  #.#...#.#GDA..#
+  #.#.#.#####K#.#
+  #...#.......#.#
+  ###############

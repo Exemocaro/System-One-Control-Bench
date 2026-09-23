@@ -1,7 +1,0 @@
-description: The goal is right next to you, to the north.
-moves_to_goal: 1
-map: |
-  #####
-  #.G.#
-  #.A.#
-  #####

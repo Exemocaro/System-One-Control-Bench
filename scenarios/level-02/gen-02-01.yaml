@@ -1,12 +1,9 @@
-description: A generated 11x9 room.
+description: A generated 6x6 room without a key, with a wall in the way of walking straight at the goal.
 moves_to_goal: 2
 map: |
-  ###########
-  #.........#
-  #..#####..#
-  #.........#
-  #.G.....#.#
-  #..A......#
-  #.........#
-  #.........#
-  ###########
+  ######
+  #G#.##
+  #.A..#
+  ##...#
+  ##...#
+  ######

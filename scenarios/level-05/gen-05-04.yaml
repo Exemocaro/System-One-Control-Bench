@@ -1,11 +1,8 @@
-description: A generated 8x8 room that walking straight at the target solves.
+description: A generated 11x5 maze without a key, whose every shortest route turns away from the goal at least once to get round a wall.
 moves_to_goal: 5
 map: |
-  ########
-  #...####
-  #......#
-  #..D...#
-  #K#G#..#
-  #A###..#
-  #..###.#
-  ########
+  ###########
+  #.#.....#G#
+  #.###.#A#.#
+  #.....#...#
+  ###########

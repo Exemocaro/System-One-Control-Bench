@@ -1,6 +1,0 @@
-description: The goal is two cells east along a corridor.
-moves_to_goal: 2
-map: |
-  ######
-  #A.G.#
-  ######

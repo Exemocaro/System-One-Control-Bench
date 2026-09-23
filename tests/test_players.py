@@ -1,4 +1,3 @@
-from dataclasses import replace
 from types import SimpleNamespace
 
 import httpx
@@ -6,14 +5,12 @@ import pytest
 from typesafe_sdk import (
     TypeSafeAPITimeoutError,
     TypeSafeBadRequestError,
-    TypeSafeError,
     TypeSafeInternalServerError,
 )
-from typesafe_sdk._core.retry import build_tenacity
 
 from system_one_control.board import Board
 from system_one_control.players import (
-    JEV_RETRY,
+    JEV_RETRY_WAITS,
     PLAYERS,
     GreedyPlayer,
     JevPlayer,
@@ -73,12 +70,21 @@ def test_players_are_built_by_name_and_only_jev_costs_money():
 
 
 class FakeJevClient:
-    def __init__(self, choice: str = "option_3", fail: Exception | None = None) -> None:
+    def __init__(
+        self,
+        choice: str = "option_3",
+        fail: Exception | None = None,
+        failures: list[Exception] | None = None,
+    ) -> None:
         self.choice, self.fail, self.sent = choice, fail, {}
+        self.failures, self.calls = failures or [], 0
 
     def system_one(self, *, state, questions, model):
+        self.calls += 1
         if self.fail:
             raise self.fail
+        if self.failures:
+            raise self.failures.pop(0)
         self.sent = {"state": state, "model": model, "questions": questions}
         probabilities = {"option_1": 0.1, "option_2": 0.1, "option_3": 0.7, "option_4": 0.1}
         answer = SimpleNamespace(choice=self.choice, probabilities=probabilities, confidence=0.6)
@@ -122,34 +128,46 @@ def test_an_answer_outside_the_options_is_an_error():
     assert "option_9" in choice.error
 
 
-def retry_until(error, succeed_on):
-    """Run JEV_RETRY, without waits, on a call that raises `error` until attempt `succeed_on`."""
-    attempts = []
-
-    def call():
-        attempts.append(error)
-        if len(attempts) < succeed_on:
-            raise error
-        return "answered"
-
-    retrying = build_tenacity(replace(JEV_RETRY, backoff_initial=0, backoff_max=0))
-    try:
-        return retrying(call), len(attempts)
-    except TypeSafeError:
-        return None, len(attempts)
+TINY = """
+####
+#AG#
+####
+"""
+BUSY = TypeSafeInternalServerError(529, {"error": "high traffic"}, httpx.Headers())
 
 
-def test_a_busy_server_is_tried_again_up_to_twice():
-    busy = TypeSafeInternalServerError(529, {"error": "high traffic"}, httpx.Headers())
-    assert retry_until(busy, succeed_on=3) == ("answered", 3)
-    assert retry_until(busy, succeed_on=4) == (None, 3)
+def retrying_jev(*failures: Exception) -> tuple[JevPlayer, FakeJevClient]:
+    """Jev on a client that raises each of `failures` in turn, then answers; no real waits."""
+    client = FakeJevClient(failures=list(failures))
+    return JevPlayer(client=client, retry_waits=(0, 0)), client
+
+
+def test_a_busy_server_is_tried_again_and_the_move_records_why():
+    player, client = retrying_jev(BUSY, BUSY)
+    choice = player.choose(turn(TINY))
+    assert choice.move == "east" and client.calls == 3
+    assert choice.retried == ("TypeSafeInternalServerError: 529 high traffic",) * 2
+
+
+def test_after_two_retries_the_failure_is_raised():
+    player, client = retrying_jev(BUSY, BUSY, BUSY)
+    with pytest.raises(TypeSafeInternalServerError):
+        player.choose(turn(TINY))
+    assert client.calls == 3
 
 
 def test_a_timeout_or_a_bad_request_is_not_tried_again():
-    assert retry_until(TypeSafeAPITimeoutError(60.0), succeed_on=2) == (None, 1)
     bad = TypeSafeBadRequestError(400, {"error": "bad"}, httpx.Headers())
-    assert retry_until(bad, succeed_on=2) == (None, 1)
+    for failure in (TypeSafeAPITimeoutError(60.0), bad):
+        player, client = retrying_jev(failure)
+        with pytest.raises(type(failure)):
+            player.choose(turn(TINY))
+        assert client.calls == 1
 
 
-def test_the_retries_wait_about_one_second_then_two():
-    assert (JEV_RETRY.backoff_initial, JEV_RETRY.backoff_max, JEV_RETRY.max_retries) == (1, 2, 2)
+def test_the_time_recorded_is_the_answering_call_alone():
+    player, _ = retrying_jev(BUSY)
+    player._retry_waits = (0.3, 0.3)
+    choice = player.choose(turn(TINY))
+    assert choice.seconds is not None and choice.seconds < 0.3
+    assert JEV_RETRY_WAITS == (1.0, 2.0)

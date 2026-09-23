@@ -67,7 +67,7 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 | `--scenarios` | `all` | comma-separated scenario names |
 | `--conditions` | `map` | comma-separated [condition](#conditions) names, or `all` |
 | `--allow-paid` | off | required for any player that costs money per move |
-| `--workers` | `5` | games played at once |
+| `--workers` | `3` | games played at once |
 | `--out` | `benchmarks/<date>_<time>_<what was run>.jsonl` | where the results go |
 | `--resume` | off | finish the run in `--out` |
 
@@ -75,10 +75,10 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 
 **Output.** Each run writes two files to `benchmarks/`, which is kept in git, named after the date, time and what was run, such as `2026-09-23_18-45_jev_map_levels-1-3`:
 
-- `.jsonl`: one line per game. Each line holds how close the game got to the goal and every move: the options in the order shown, the move chosen, the probability given each option, the best moves, whether the move was one of them, the input and output tokens, the model's own confidence score and version, and how many seconds the answer took.
+- `.jsonl`: one line per game. Each line holds how close the game got to the goal and every move: the options in the order shown, the move chosen, the probability given each option, the best moves, whether the move was one of them, the input and output tokens, the model's own confidence score and version, how many seconds the answer took (for Jev, the answering call alone), and why any earlier attempt was turned away.
 - `.txt`: the score table.
 
-**Stopping and resuming.** Each game is written the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites a file. Repeat the same command with `--resume --out <file>`: it keeps the finished games and plays the missing ones and those that ended in an error. A Jev call the server turns away (busy, rate-limited or failing) or never receives is tried twice more, after about one and then two seconds; a timeout is not, since the server may have answered and billed it. A call that still fails ends that game as an error, and `--resume` plays the game again.
+**Stopping and resuming.** Each game is written the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites a file. Repeat the same command with `--resume --out <file>`: it keeps the finished games and plays the missing ones and those that ended in an error. A Jev call the server turns away (busy, rate-limited or failing) or never receives is tried twice more, after one and then two seconds, and the move records why each earlier attempt failed; a timeout is not retried, since the server may have answered and billed it. A call that still fails ends that game as an error, and `--resume` plays the game again.
 
 **Growing a run.** A run on a few levels can be extended to all of them in the same file: run `--levels 1-3 --out <file>`, then the same command without `--levels` and with `--resume`. It keeps the games already played and plays the rest.
 
@@ -101,9 +101,9 @@ The free players on all 100 puzzles, under `map`:
 
 | Player | won | progress | SPL |
 | --- | --- | --- | --- |
-| random | 1/100 | 0.28 | 0.01 |
-| greedy | 36/100 | 0.44 | 0.36 |
-| greedy-walls | 49/100 | 0.58 | 0.49 |
+| random | 4/100 | 0.25 | 0.03 |
+| greedy | 28/100 | 0.36 | 0.28 |
+| greedy-walls | 37/100 | 0.47 | 0.37 |
 | solver | 100/100 | 1.00 | 1.00 |
 
 ## Conditions
@@ -140,16 +140,18 @@ There are 10 conditions:
 
 ## Scenarios
 
-A scenario is a YAML file in the folder for its level, such as `scenarios/level-03/key-first.yaml`. The level is the solver's distance to the goal. There are 100 puzzles over 11 levels, spaced out at the top, where each game costs the most calls: 1, 2, 3, 4, 5, 6, 8, 10, 12, 15 and 20. `LEVELS` in `generator.py` sets them.
+A scenario is a YAML file in the folder for its level, such as `scenarios/level-02/gen-02-01.yaml`. The level is the solver's distance to the goal. There are 100 puzzles over 11 levels, spaced out at the top, where each game costs the most calls: 1, 2, 3, 4, 5, 6, 8, 10, 12, 15 and 20. `LEVELS` in `generator.py` sets them.
 
 ```yaml
-description: The door is ahead of the key, so you have to step north for the key first.
-moves_to_goal: 3
+description: A generated 6x6 room without a key, with a wall in the way of walking straight at the goal.
+moves_to_goal: 2
 map: |
-  #####
-  #KDG#
-  #A###
-  #####
+  ######
+  #G#.##
+  #.A..#
+  ##...#
+  ##...#
+  ######
 ```
 
 | Symbol | Meaning |
@@ -163,21 +165,28 @@ map: |
 
 A game ends once it has used twice the moves the solver needs. The tests check that the solver agrees with each file's stated distance.
 
-Hand-made puzzles are topped up by `socb generate` with random rooms and mazes named `gen-*.yaml`. Generating again with a new `--seed` replaces only the generated ones. From level 3 up, every generated puzzle needs the key, except the one keyless puzzle at level 4 (see the table below).
+Every puzzle is generated by `socb generate`, as a random room or maze named `gen-*.yaml`, except `maze` at level 10, which is hand-made. Generating again with a new `--seed` replaces only the generated ones. From level 3 up, a generated puzzle needs the key unless its kind says otherwise.
 
-From level 3 up, a growing share of puzzles is built so that walking straight at the target is not enough: the wall-aware greedy player cannot win them. These are the puzzles that test planning. From level 12 up, every puzzle also has **detours**: moves away from the current target (the key, then the door, then the goal) that every shortest route has to make, like a zigzag through a maze. `LEVEL_KINDS` in `generator.py` sets the mix, and hand-made puzzles count toward the kind they fit.
+Each level mixes kinds of puzzle, set by `LEVEL_KINDS` in `generator.py`; a hand-made puzzle counts toward the kind it fits:
 
-| Level | Puzzles | Of which the wall-aware greedy player cannot win |
-| --- | :---: | --- |
-| 1 and 2 | 5 each | none required: a sanity check |
-| 3 | 10 | 1, the hand-made `nook` |
-| 4 | 10 | 1, without a key (with one, no wrong turn is possible this close to the goal) |
-| 5 and 6 | 10 each | 2 |
-| 8 | 10 | 5 |
-| 10 | 10 | all 10; 5 of them also have a second, longer route to the goal |
-| 12 | 10 | all 10, each with at least 2 detours |
-| 15 | 10 | all 10, each with at least 3 detours, and 5 of them at least 4 |
-| 20 | 10 | all 10, each with at least 5 detours, and 5 of them at least 6 |
+- **Needs planning**: walking straight at the target (the key, then the door, then the goal) is not enough, so the wall-aware greedy player cannot win it.
+- **Wall in the way**, without a key: a wall blocks one of the first steps toward the goal, so a player that does not check for walls walks into it.
+- **Goes round a wall**, without a key: every shortest route has to turn away from the goal to get round a wall. Turning away and back costs two moves, so this is possible from level 4.
+- **Detours**: the moves away from the current target that every shortest route has to make, like a zigzag through a maze.
+
+| Level | Puzzles | What they include | The wall-aware greedy player loses |
+| --- | :---: | --- | :---: |
+| 1 | 5 | anything: a sanity check | 0 |
+| 2 | 5 | 3 with a wall in the way | 0 |
+| 3 | 10 | 3 with a wall in the way; 1 that needs planning, without a key | 1 |
+| 4 | 10 | 3 that go round a wall; 1 that needs planning, without a key (with a key, no wrong turn is possible this close to the goal) | 4 |
+| 5 | 10 | 3 that go round a wall; 2 that need planning | 5 |
+| 6 | 10 | 3 that go round a wall twice; 2 that need planning | 5 |
+| 8 | 10 | 3 that go round a wall twice; 5 that need planning | 8 |
+| 10 | 10 | all need planning; 5 also have a second, longer route to the goal | 10 |
+| 12 | 10 | all need planning, each with at least 2 detours | 10 |
+| 15 | 10 | all need planning, each with at least 3 detours, and 5 of them at least 4 | 10 |
+| 20 | 10 | all need planning, each with at least 5 detours, and 5 of them at least 6 | 10 |
 
 Half the puzzles at levels 12, 15 and 20 are also walled in more thickly than usual: two or three rings of wall instead of one, and on one puzzle each at levels 15 and 20, five. The extra rings change nothing about the puzzle, only how much map there is to read, so they test whether a player is thrown by it. `LEVEL_WALLS` in `generator.py` sets them.
 

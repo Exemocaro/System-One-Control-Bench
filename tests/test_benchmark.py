@@ -250,3 +250,10 @@ def test_the_columns_line_up():
         SCENARIOS, MAP, {"random": RandomPlayer, "greedy-walls": WallAwareGreedyPlayer}
     )
     assert len({len(line) for line in summarize(records).splitlines()}) == 1
+
+
+def test_moves_turned_away_before_their_answer_are_counted_and_saved():
+    retried = MoveRecord(("east",), "east", {}, ("east",), True, 100, retried=("busy", "busy"))
+    jev = GameRecord("s", "map", "jev", 1, True, 0, None, (retried,))
+    assert usage([jev]).endswith(", 2 turned away and retried")
+    assert GameRecord.from_json(jev.to_json()) == jev

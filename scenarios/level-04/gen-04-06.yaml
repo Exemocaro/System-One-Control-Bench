@@ -1,8 +1,8 @@
-description: A generated 13x5 room that walking straight at the target solves.
+description: A generated 5x5 room that walking straight at the target solves.
 moves_to_goal: 4
 map: |
-  #############
-  #..###..K...#
-  #......#A#..#
-  #....##GD...#
-  #############
+  #####
+  #GD.#
+  ##AK#
+  #.#.#
+  #####

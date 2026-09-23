@@ -1,12 +1,10 @@
-description: A generated 7x9 maze.
+description: A generated 15x7 maze without a key, with a wall in the way of walking straight at the goal.
 moves_to_goal: 3
 map: |
-  #######
-  #.#...#
-  #.#####
-  #...#G#
-  ###.#D#
-  #.#.#K#
-  #.#.#A#
-  #.....#
-  #######
+  ###############
+  #...#...#A..#.#
+  ###.#.#.#.#.#.#
+  #.#.#.#.G.#...#
+  #.#.#.#######.#
+  #.....#.......#
+  ###############

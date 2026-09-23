@@ -8,11 +8,14 @@ from system_one_control.generator import (
     LONGER_ROUTE,
     NEEDS_PLANNING,
     NEEDS_PLANNING_KEYLESS,
+    WALL_IN_THE_WAY,
     PuzzleGenerator,
+    around,
     detours,
     greedy_wins,
     has_a_longer_route,
     thicken,
+    wall_in_the_way,
     with_detours,
     write_level,
 )
@@ -143,10 +146,32 @@ def at_level(level):
 
 
 @pytest.mark.parametrize(
-    ("level", "count"), [(1, 0), (2, 0), (3, 1), (4, 1), (5, 2), (6, 2), (8, 5)]
+    ("level", "least"), [(1, 0), (2, 0), (3, 1), (4, 1), (5, 2), (6, 2), (8, 5)]
 )
-def test_the_puzzles_that_need_planning_grow_steadily_with_the_level(level, count):
-    assert sum(NEEDS_PLANNING.accepts(board) for board in at_level(level)) == count
+def test_the_puzzles_that_need_planning_grow_with_the_level(level, least):
+    # At least as many as LEVEL_KINDS asks for: the puzzles that go round a wall may add more.
+    assert sum(NEEDS_PLANNING.accepts(board) for board in at_level(level)) >= least
+
+
+def test_levels_one_to_eight_are_all_generated():
+    names = [s.name for s in SCENARIOS.values() if s.moves_to_goal <= 8]
+    assert all(name.startswith("gen-") for name in names)
+
+
+@pytest.mark.parametrize(("level", "kind"), [(2, WALL_IN_THE_WAY), (3, WALL_IN_THE_WAY)])
+def test_levels_two_and_three_have_three_keyless_puzzles_with_a_wall_in_the_way(level, kind):
+    assert sum(kind.accepts(board) for board in at_level(level)) >= 3
+
+
+@pytest.mark.parametrize(("level", "least"), [(4, 1), (5, 1), (6, 2), (8, 2)])
+def test_levels_four_to_eight_have_three_keyless_puzzles_that_go_round_a_wall(level, least):
+    assert sum(around(least).accepts(board) for board in at_level(level)) >= 3
+
+
+def test_a_wall_in_the_way_blocks_a_first_step_toward_the_target():
+    # The goal is up and to the left, and north is a wall: the puzzle Jev lost at level 2.
+    assert wall_in_the_way(Board.parse("######\n#G#.##\n#.A..#\n######"))
+    assert not wall_in_the_way(Board.parse("#####\n#A.G#\n#####"))
 
 
 def test_no_puzzle_at_level_ten_can_be_won_by_walking_straight_at_the_target():

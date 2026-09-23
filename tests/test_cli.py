@@ -42,7 +42,7 @@ def test_a_benchmark_never_overwrites_an_earlier_one(tmp_path):
     assert out.read_text() == "earlier results\n"
 
 
-THREE = "goal-east,goal-north,dead-end"
+THREE = "gen-01-01,gen-01-02,gen-01-03"
 
 
 def test_resume_replays_the_missing_games_and_the_errors_and_keeps_the_rest(tmp_path):

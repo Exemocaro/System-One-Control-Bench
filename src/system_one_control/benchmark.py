@@ -11,7 +11,7 @@ from pathlib import Path
 import typer
 
 from system_one_control.conditions import Condition
-from system_one_control.game import Game
+from system_one_control.game import Game, Step
 from system_one_control.players import PLAYERS, Player
 from system_one_control.scenario import Scenario
 
@@ -35,7 +35,8 @@ class MoveRecord:
     output_tokens: int | None = None
     confidence: float | None = None  # the model's own score, which is not a probability
     model: str | None = None  # the model version that answered
-    seconds: float | None = None  # how long the player took to answer, retries included
+    seconds: float | None = None  # how long the answer took; for Jev, the answering call alone
+    retried: tuple[str, ...] = ()  # why each earlier attempt at this move was turned away
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,7 @@ class GameRecord:
                     **move,
                     "options": tuple(move["options"]),
                     "best_moves": tuple(move["best_moves"]),
+                    "retried": tuple(move.get("retried", ())),
                 }
             )
             for move in data.pop("moves")
@@ -124,11 +126,17 @@ def play(
                 output_tokens=step.choice.output_tokens,
                 confidence=step.choice.confidence,
                 model=step.choice.model,
-                seconds=round(step.seconds, 3),
+                seconds=answer_time(step),
+                retried=step.choice.retried,
             )
             for step in steps
         ),
     )
+
+
+def answer_time(step: Step) -> float:
+    """The player's own time for its answer where it keeps one, else the whole move's."""
+    return round(step.seconds if step.choice.seconds is None else step.choice.seconds, 3)
 
 
 def run_benchmark(
@@ -302,5 +310,8 @@ def usage(records: Sequence[GameRecord]) -> str:
         seconds = sorted(move.seconds for move in moves if move.seconds is not None)
         if seconds:
             line += f", {seconds[len(seconds) // 2]:.2f} s per call (median)"
+        retries = sum(len(move.retried) for move in moves)
+        if retries:
+            line += f", {retries} turned away and retried"
         lines.append(line)
     return "\n".join(lines)
