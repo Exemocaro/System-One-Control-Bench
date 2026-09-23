@@ -4,7 +4,15 @@ import pytest
 
 from system_one_control.board import Board
 from system_one_control.jev import JevPlayer
-from system_one_control.players import PLAYERS, RandomPlayer, SolverPlayer, Turn, make_player
+from system_one_control.players import (
+    PLAYERS,
+    GreedyPlayer,
+    RandomPlayer,
+    SolverPlayer,
+    Turn,
+    WallAwareGreedyPlayer,
+    make_player,
+)
 from system_one_control.rules import CompassRules
 from tests.helpers import PROMPT
 
@@ -24,6 +32,26 @@ def test_random_picks_an_offered_move_and_is_reproducible():
 
 def test_the_solver_picks_a_best_move():
     assert SolverPlayer().choose(turn("#####\n#A#.#\n#.G.#\n#####")).move == "south"
+
+
+def test_greedy_heads_for_the_key_first_then_the_goal():
+    assert GreedyPlayer().choose(turn("#######\n#K.A.G#\n#######")).move == "west"
+    assert GreedyPlayer().choose(turn("#######\n#..A.G#\n#######")).move == "east"
+
+
+def test_greedy_walks_into_a_wall_that_stands_between_it_and_the_goal():
+    assert GreedyPlayer().choose(turn("#####\n#A#G#\n#...#\n#####")).move == "east"
+
+
+def test_greedy_with_walls_steps_around_instead():
+    assert WallAwareGreedyPlayer().choose(turn("#####\n#A#G#\n#...#\n#####")).move == "south"
+
+
+def test_greedy_breaks_ties_the_same_way_whatever_the_option_order():
+    board = Board.parse("####\n#A.#\n#.G#\n####")
+    requests = [PROMPT.render(board, rules, shuffle_seed=seed) for seed in "abcd"]
+    moves = {GreedyPlayer().choose(Turn(board, rules, request)).move for request in requests}
+    assert moves == {"south"}  # south and east both close in; south comes first in the rules
 
 
 def test_players_are_built_by_name_and_only_jev_costs_money():

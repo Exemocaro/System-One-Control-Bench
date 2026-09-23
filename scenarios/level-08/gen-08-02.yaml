@@ -1,8 +1,8 @@
-description: A generated 21x5 maze.
+description: A generated 7x5 room that walking straight at the target cannot solve.
 moves_to_goal: 8
 map: |
-  #####################
-  #.....#...........#.#
-  #####.#######.###.#.#
-  #..KA....DG#..#.....#
-  #####################
+  #######
+  #...#G#
+  #K#..D#
+  #A....#
+  #######

@@ -1,8 +1,8 @@
-description: A generated 9x5 maze.
+description: A generated 9x5 maze that walking straight at the target solves.
 moves_to_goal: 6
 map: |
   #########
-  #.#.A..K#
-  #.#####.#
-  #....#GD#
+  #A#G#.#.#
+  #.#D#.#.#
+  #..K#...#
   #########

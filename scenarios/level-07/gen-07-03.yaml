@@ -1,8 +1,8 @@
-description: A generated 7x5 room.
+description: A generated 10x5 room that walking straight at the target cannot solve.
 moves_to_goal: 7
 map: |
-  #######
-  ##GD..#
-  #.#..K#
-  ##.A#.#
-  #######
+  ##########
+  #...#G#..#
+  #....DK..#
+  #.A......#
+  ##########

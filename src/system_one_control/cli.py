@@ -36,7 +36,9 @@ def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
 
 @app.command()
 def experiment(
-    players: str = typer.Option("solver,random", help="Comma-separated player names."),
+    players: str = typer.Option(
+        "random,greedy,greedy-walls,solver", help="Comma-separated player names."
+    ),
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
     prompts: str = typer.Option("full", help="Comma-separated prompt names, or all."),
     first_move_only: bool = typer.Option(False, help="Ask only for the first move."),

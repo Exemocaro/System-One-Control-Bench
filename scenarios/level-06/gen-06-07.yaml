@@ -1,11 +1,10 @@
-description: A generated 10x8 room.
+description: A generated 7x7 maze that walking straight at the target solves.
 moves_to_goal: 6
 map: |
-  ##########
-  #........#
-  #.......##
-  #..#.##.K#
-  #....#DA.#
-  #..###G#.#
-  #....##..#
-  ##########
+  #######
+  #.#...#
+  #.###.#
+  #....A#
+  #####.#
+  #GD.K.#
+  #######

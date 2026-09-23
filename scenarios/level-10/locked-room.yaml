@@ -1,9 +1,0 @@
-description: The goal is in a locked room next door; the key is in the far corner of yours.
-moves_to_goal: 10
-map: |
-  #########
-  #A..#...#
-  #...#.G.#
-  #...D...#
-  #K..#...#
-  #########

@@ -1,11 +1,8 @@
-description: A generated 9x8 room.
+description: A generated 9x5 maze that walking straight at the target solves.
 moves_to_goal: 9
 map: |
   #########
-  #..DG#..#
-  #...#...#
-  #..K....#
-  #....#..#
-  #......A#
-  ##..#.#.#
+  #GD.#...#
+  ###.###.#
+  #.K...A.#
   #########

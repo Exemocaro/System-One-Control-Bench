@@ -1,9 +1,11 @@
-description: A generated 11x6 room.
+description: A generated 7x8 room that walking straight at the target cannot solve, with a second, longer route.
 moves_to_goal: 10
 map: |
-  ###########
-  ####GD#...#
-  #...#...K.#
-  ##..A....##
-  #........##
-  ###########
+  #######
+  #..#..#
+  #.DG#.#
+  #..#..#
+  #A...K#
+  #.....#
+  #.....#
+  #######

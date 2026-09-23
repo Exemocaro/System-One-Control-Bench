@@ -2,7 +2,7 @@
 
 Can a bounded decision model — one that picks an answer from a list rather than writing one, like [Jev](https://docs.typesafe.ai/introduction) — steer an agent across a small grid to a goal?
 
-Each scenario is a tiny map. At every move the player is shown the board as text, asked which way to go, and given the allowed moves as options. A breadth-first solver knows the best moves, so every choice can be scored, and a random player shows what chance looks like.
+Each scenario is a tiny map. At every move the player is shown the board as text, asked which way to go, and given the allowed moves as options. A breadth-first solver knows the best moves, so every choice can be scored. Three simple players mark what a model has to beat: one picks at random, and two greedy ones walk straight at the next target, the second never bumping into a wall.
 
 ## Setup
 
@@ -11,6 +11,7 @@ Windows, Linux or WSL2, with [uv](https://docs.astral.sh/uv/), which installs Py
 ```bash
 uv sync
 uv run pytest
+uv run pre-commit install    # lint, format, type-check on commit; tests on push
 ```
 
 Jev reads its key from `TYPESAFE_API_KEY` or `JEV_API_KEY`, in the environment or in a gitignored `.env` file (copy `.env.example`).
@@ -19,14 +20,22 @@ Jev reads its key from `TYPESAFE_API_KEY` or `JEV_API_KEY`, in the environment o
 
 ```bash
 uv run socb web                                   # the board viewer, at http://127.0.0.1:8000
-uv run socb experiment                            # solver and random on every puzzle, full prompt
+uv run socb experiment                            # the free players on every puzzle, full prompt
 uv run socb experiment --players jev --first-move-only --allow-paid
 uv run socb generate                              # top every level up to 10 puzzles
 ```
 
 In the viewer, pick a scenario, a player and a prompt, then play one move at a time or play to the end. **Next puzzle** moves down the list. Beside the board is exactly what the player was shown, with the probability it gave each option.
 
-An experiment prints how many first moves each player got right, grouped by level, and saves one line per game to `results/latest.jsonl`. It uses the `full` prompt unless `--prompts` says otherwise. A paid player is refused without `--allow-paid`, and the refusal says the most calls the run could make: one per move.
+An experiment prints, for each player, the games it won at each level and three scores over all its games:
+
+| Score | What it is |
+| --- | --- |
+| `won` | games that reached the goal before running out of moves |
+| `optimal` | the share of all moves that started a shortest path from where the player stood |
+| `SPL` | success weighted by path length: a won game scores the fewest moves over the moves used, a lost one 0 |
+
+It saves one line per game to `results/latest.jsonl`, listing every move: the options in the order shown, the move chosen, the probability the player gave each move, and the best moves. It uses the `full` prompt unless `--prompts` says otherwise. A paid player is refused without `--allow-paid`, and the refusal says the most calls the run could make: one per move.
 
 The options are shuffled for every move, with a seed made from the scenario and the move number, so a run is repeatable but no direction always sits first.
 
@@ -39,13 +48,27 @@ The options are shuffled for every move, with a seed made from the scenario and 
 | `solver.py` | `Solver`: the fewest moves to the goal, and every move that starts such a path |
 | `scenario.py` | `Scenario`: a board, its rules and how far the goal is, loaded from `scenarios/level-NN/*.yaml`, where the level is the number of moves to the goal |
 | `prompt.py` | `Prompt`: a wording, loaded from `prompts/*.yaml`, that turns a board into the text a player sees |
-| `players.py` | `Player`: anything that picks a move. `RandomPlayer`, `SolverPlayer`, and `JevPlayer` in `jev.py` |
+| `players.py` | `Player`: anything that picks a move. `RandomPlayer`, `GreedyPlayer`, `WallAwareGreedyPlayer`, `SolverPlayer`, and `JevPlayer` in `jev.py` |
 | `game.py` | `Game`: one player on one scenario, a `Step` per move |
 | `experiment.py` | every scenario × prompt × player, summarized and saved |
 | `generator.py` | `PuzzleGenerator`: random rooms and mazes at an exact level, checked by the solver |
 | `web/` | the FastAPI viewer |
 
-**A scenario** is a YAML file in the folder for its level, such as `scenarios/level-03/key-first.yaml`. Every level from 1 to 10 has 10: the hand-made ones, topped up by `socb generate` with random rooms and mazes named `gen-*.yaml`. Generating again with a new `--seed` replaces only the generated ones. From level 3 up, every puzzle needs the key. The tests check that the solver agrees with each file's stated distance. A game ends once it has used twice the moves the solver needs:
+**A scenario** is a YAML file in the folder for its level, such as `scenarios/level-03/key-first.yaml`. Every level from 1 to 10 has 10: the hand-made ones, topped up by `socb generate` with random rooms and mazes named `gen-*.yaml`. Generating again with a new `--seed` replaces only the generated ones. From level 3 up, every generated puzzle needs the key, except the keyless ones at level 4 below. The tests check that the solver agrees with each file's stated distance. A game ends once it has used three times the moves the solver needs.
+
+From level 3 up, a growing share of puzzles is built so that walking straight at the target is not enough. `LEVEL_KINDS` in `generator.py` says how many of each kind a level gets, and hand-made puzzles count toward the kind they fit:
+
+| Level | Puzzles |
+| --- | --- |
+| 1 and 2 | any |
+| 3 | 1 that the wall-aware greedy player cannot win, the hand-made `nook` |
+| 4 | 1 that it cannot win, without a key, since with one no wrong turn is possible this close to the goal |
+| 5 and 6 | 2 that it cannot win, the rest it can |
+| 7 | 3 that it cannot win, the rest it can |
+| 8 and 9 | 5 that it cannot win, 5 that it can |
+| 10 | none that it can win; 5 of them also have a second, longer route to the goal (walling off one shortest route leaves another, longer one) |
+
+A scenario file:
 
 ```yaml
 description: The door is ahead of the key, so you have to step north for the key first.

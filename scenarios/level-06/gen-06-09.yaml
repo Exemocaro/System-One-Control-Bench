@@ -1,8 +1,10 @@
-description: A generated 5x5 room.
+description: A generated 6x7 room that walking straight at the target solves.
 moves_to_goal: 6
 map: |
-  #####
-  ##K.#
-  #GD.#
-  ##A.#
-  #####
+  ######
+  ####.#
+  #....#
+  #..KD#
+  #..#G#
+  #..A##
+  ######

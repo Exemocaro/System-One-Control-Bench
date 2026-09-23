@@ -6,9 +6,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from system_one_control.board import Board
+from system_one_control.board import DOOR, GOAL, KEY, Board, Position
 from system_one_control.prompt import Request
-from system_one_control.rules import Rules
+from system_one_control.rules import CompassRules, Move, Rules
 from system_one_control.solver import Solver
 
 
@@ -57,6 +57,49 @@ class SolverPlayer(Player):
         return Choice(best[0], {move: 1 / len(best) for move in best})
 
 
+class GreedyPlayer(Player):
+    """Steps straight toward the key, then the door, then the goal, and never plans.
+
+    It shows what heading for the next target is worth on its own. It ignores walls, and it
+    breaks ties by the rules' order of moves, so the option shuffle never changes its game.
+    Compass rules only.
+    """
+
+    name = "greedy"
+    avoids_blocked_moves = False
+
+    def choose(self, turn: Turn) -> Choice:
+        return Choice(self.pick(turn.board, turn.rules))
+
+    def pick(self, board: Board, rules: Rules) -> str:
+        moves = rules.moves(board)
+        if self.avoids_blocked_moves:
+            moves = tuple(m for m in moves if rules.apply(board, m) != board) or moves
+        target = next_target(board)
+
+        def distance_after(move: Move) -> int:
+            there = board.agent.moved(*CompassRules.STEPS[move.name])
+            return abs(there.x - target.x) + abs(there.y - target.y)
+
+        return min(moves, key=distance_after).name
+
+
+class WallAwareGreedyPlayer(GreedyPlayer):
+    """Greedy, but never picks a move that would leave it where it stands."""
+
+    name = "greedy-walls"
+    avoids_blocked_moves = True
+
+
+def next_target(board: Board) -> Position:
+    """The key while it lies on the map, then the locked door, then the goal."""
+    for symbol in (KEY, DOOR, GOAL):
+        found = board.find(symbol)
+        if found:
+            return found[0]
+    raise ValueError("the map has no goal")
+
+
 def _jev() -> Player:
     from system_one_control.jev import JevPlayer
 
@@ -71,6 +114,8 @@ class PlayerEntry:
 
 PLAYERS: dict[str, PlayerEntry] = {
     "random": PlayerEntry(RandomPlayer),
+    "greedy": PlayerEntry(GreedyPlayer),
+    "greedy-walls": PlayerEntry(WallAwareGreedyPlayer),
     "solver": PlayerEntry(SolverPlayer),
     "jev": PlayerEntry(_jev, paid=True),
 }

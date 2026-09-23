@@ -9,7 +9,7 @@ from system_one_control.board import Board
 from system_one_control.rules import Rules, make_rules
 
 SCENARIO_DIR = Path(__file__).resolve().parents[2] / "scenarios"
-MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest moves
+MOVE_ALLOWANCE = 3  # a game ends once it has used this many times the fewest moves
 
 
 @dataclass(frozen=True)
