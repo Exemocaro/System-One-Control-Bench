@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
@@ -21,6 +22,7 @@ from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
 from system_one_control.generator import LEVELS, write_level
 from system_one_control.players import PLAYERS
+from system_one_control.rules import RULES, make_rules
 from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -61,6 +63,11 @@ def benchmark(
     levels: str = typer.Option("all", help="Levels to play, such as 3, 1,4 or 2-5, or all."),
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
     conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
+    rules: str | None = typer.Option(
+        None,
+        help=f"Play every scenario under these rules: {', '.join(RULES)}. "
+        "Default: each scenario's own, which is compass.",
+    ),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
     workers: int = typer.Option(3, help="How many games to play at once."),
     out: Path | None = typer.Option(
@@ -78,12 +85,23 @@ def benchmark(
         chosen_scenarios = [s for s in chosen_scenarios if s.moves_to_goal in chosen_levels]
     if not chosen_scenarios:
         raise typer.BadParameter("no scenario matches the chosen --levels and --scenarios")
+    if rules is not None:
+        try:
+            chosen_rules = make_rules(rules)
+        except ValueError as error:
+            raise typer.BadParameter(str(error)) from None
+        chosen_scenarios = [replace(s, rules=chosen_rules) for s in chosen_scenarios]
     chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
+    compass_only = [n for n in names if PLAYERS[n].compass_only]
+    if compass_only and any(s.rules.name != "compass" for s in chosen_scenarios):
+        raise typer.BadParameter(f"{', '.join(compass_only)} can only play compass rules")
     keys = game_keys(chosen_scenarios, chosen_conditions, names)
+    rules_of = {s.name: s.rules.name for s in chosen_scenarios}
 
     if out is None:
-        out = BENCHMARK_DIR / f"{_run_name(names, conditions, levels, scenarios)}.jsonl"
+        name = _run_name(names, conditions, levels, scenarios, rules=rules)
+        out = BENCHMARK_DIR / f"{name}.jsonl"
     kept: list[GameRecord] = []
     if out.exists():
         if not resume:
@@ -97,6 +115,11 @@ def benchmark(
             raise typer.BadParameter(
                 f"{out} holds games this run would not play, such as {strays[0]}; "
                 "resume with the same --players, --levels, --scenarios and --conditions"
+            )
+        other = next((r for r in kept if r.rules != rules_of[r.scenario]), None)
+        if other:
+            raise typer.BadParameter(
+                f"{out} holds games played under {other.rules} rules; resume with the same --rules"
             )
     done = {record.key for record in kept}
     calls = estimate_paid_calls(chosen_scenarios, chosen_conditions, names, done=done)
@@ -150,11 +173,14 @@ def _run_name(
     levels: str,
     scenarios: str,
     when: datetime | None = None,
+    rules: str | None = None,
 ) -> str:
     """The date, the time to the minute, and what was run, such as
-    2026-09-23_18-45_jev_all_levels-1-3."""
+    2026-09-23_18-45_jev_all_levels-1-3 or 2026-09-24_10-00_jev_all_two-moves."""
     when = when or datetime.now()
     parts = [when.strftime("%Y-%m-%d_%H-%M"), "+".join(players), _plus(conditions)]
+    if rules is not None and rules != "compass":
+        parts.append(rules)
     if levels != "all":
         parts.append(f"levels-{_plus(levels)}")
     if scenarios != "all":
@@ -181,9 +207,17 @@ def generate(
 
 
 @app.command()
-def examples() -> None:
+def examples(
+    rules: str = typer.Option(
+        "compass", help=f"Show the requests under these rules: {', '.join(RULES)}."
+    ),
+) -> None:
     """Write what each condition shows the player to the examples folder."""
-    for path in write_examples():
+    try:
+        chosen = make_rules(rules)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
+    for path in write_examples(rules=chosen):
         typer.echo(f"wrote {path}")
 
 

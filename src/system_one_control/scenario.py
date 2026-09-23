@@ -14,7 +14,11 @@ MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest mo
 
 @dataclass(frozen=True)
 class Scenario:
-    """One starting board, the rules it is played under, and how far the goal is."""
+    """One starting board, the rules it is played under, and how far the goal is.
+
+    The distance, which is also the level, counts the moves of the rules' step_rules: compass
+    moves, even when a move under these rules is several of them.
+    """
 
     name: str
     description: str
@@ -23,8 +27,13 @@ class Scenario:
     moves_to_goal: int
 
     @property
+    def fewest_moves(self) -> int:
+        """The fewest moves that win under the scenario's own rules."""
+        return self.rules.moves_for(self.moves_to_goal)
+
+    @property
     def max_moves(self) -> int:
-        return MOVE_ALLOWANCE * self.moves_to_goal
+        return MOVE_ALLOWANCE * self.fewest_moves
 
     @classmethod
     def load(cls, path: Path) -> Scenario:

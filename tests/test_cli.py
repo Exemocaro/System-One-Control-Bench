@@ -137,3 +137,51 @@ def test_a_run_on_a_few_levels_can_be_extended_to_all_of_them_in_the_same_file(t
     assert "Keeping 20 finished games, playing 80" in rest.output
     levels = [json.loads(line)["moves_to_goal"] for line in out.read_text().splitlines()]
     assert len(levels) == 100 and levels == sorted(levels)
+
+
+def test_a_benchmark_can_play_every_scenario_under_other_rules(tmp_path):
+    out = tmp_path / "results.jsonl"
+    command = ["benchmark", "--players", "solver,random", "--scenarios", THREE]
+    result = runner.invoke(app, [*command, "--rules", "three-moves", "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    records = [json.loads(line) for line in out.read_text().splitlines()]
+    assert {record["rules"] for record in records} == {"three-moves"}
+    solver = [record for record in records if record["player"] == "solver"]
+    assert all(record["won"] and "," in record["moves"][0]["move"] for record in solver)
+
+
+def test_the_greedy_players_cannot_play_other_rules(tmp_path):
+    out = tmp_path / "results.jsonl"
+    command = ["benchmark", "--players", "greedy", "--rules", "two-moves", "--out", str(out)]
+    result = runner.invoke(app, command)
+    assert result.exit_code != 0
+    assert "compass" in result.output
+    assert not out.exists()
+
+
+def test_unknown_rules_are_refused(tmp_path):
+    out = tmp_path / "results.jsonl"
+    result = runner.invoke(app, ["benchmark", "--rules", "chess", "--out", str(out)])
+    assert result.exit_code != 0
+    assert "unknown rules" in result.output
+
+
+def test_resume_refuses_a_file_played_under_other_rules(tmp_path):
+    out = tmp_path / "results.jsonl"
+    command = ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+    runner.invoke(app, command)
+    before = out.read_text()
+    result = runner.invoke(app, [*command, "--rules", "two-moves", "--resume"])
+    assert result.exit_code != 0
+    assert "--rules" in result.output
+    assert out.read_text() == before
+
+
+def test_a_run_under_other_rules_says_so_in_its_file_name():
+    when = datetime(2026, 9, 24, 10, 0)
+    assert _run_name(["jev"], "all", "all", "all", when, rules="two-moves") == (
+        "2026-09-24_10-00_jev_all_two-moves"
+    )
+    assert _run_name(["jev"], "all", "all", "all", when, rules="compass") == (
+        "2026-09-24_10-00_jev_all"
+    )

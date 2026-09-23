@@ -1,5 +1,8 @@
+import pytest
+
 from system_one_control.board import Board
-from system_one_control.rules import CompassRules
+from system_one_control.rules import CompassRules, ThreeMoveRules
+from system_one_control.scenario import load_scenarios
 from system_one_control.solver import Solver
 
 solver = Solver(CompassRules())
@@ -29,3 +32,17 @@ def test_there_are_no_best_moves_once_the_goal_is_reached():
     start = Board.parse("####\n#AG#\n####")
     board = solver.rules.apply(start, solver.rules.find_move(start, "east"))
     assert solver.best_moves(board) == ()
+
+
+def test_there_are_no_best_moves_where_the_goal_cannot_be_reached():
+    assert solver.best_moves(Board.parse("#####\n#A#G#\n#####")) == ()
+
+
+@pytest.mark.parametrize("rules", [CompassRules(), ThreeMoveRules()], ids=lambda r: r.name)
+@pytest.mark.parametrize("name", ["gen-03-01", "gen-08-01", "maze", "gen-20-01"])
+def test_the_distances_from_a_board_agree_with_a_search_from_each_board(rules, name):
+    board = load_scenarios()[name].board
+    distances = Solver(rules).distances(board)
+    assert distances[board] == Solver(rules).moves_to_goal(board)
+    for after in {rules.apply(board, move) for move in rules.moves(board)}:
+        assert distances.get(after) == Solver(rules).moves_to_goal(after)

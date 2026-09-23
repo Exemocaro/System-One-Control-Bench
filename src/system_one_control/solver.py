@@ -27,13 +27,42 @@ class Solver:
                     frontier.append((after, moves + 1))
         return None
 
+    def distances(self, board: Board) -> dict[Board, int]:
+        """The fewest moves to win from every board reachable from this one that can win.
+
+        One search forward to map every move, then one back from the winning boards: much
+        cheaper than a search per board when there are many moves, as under sequence rules.
+        """
+        came_from: dict[Board, list[Board]] = {board: []}
+        frontier = deque([board])
+        while frontier:
+            current = frontier.popleft()
+            if self.rules.is_won(current):
+                continue  # the game ends here
+            for move in self.rules.moves(current):
+                after = self.rules.apply(current, move)
+                if after not in came_from:
+                    came_from[after] = []
+                    frontier.append(after)
+                came_from[after].append(current)
+        found = {b: 0 for b in came_from if self.rules.is_won(b)}
+        back = deque(found)
+        while back:
+            current = back.popleft()
+            for before in came_from[current]:
+                if before not in found:
+                    found[before] = found[current] + 1
+                    back.append(before)
+        return found
+
     def best_moves(self, board: Board) -> tuple[str, ...]:
         """Every move that starts a shortest path, ties included."""
-        distance = self.moves_to_goal(board)
+        distances = self.distances(board)
+        distance = distances.get(board)
         if not distance:
             return ()
         return tuple(
             move.name
             for move in self.rules.moves(board)
-            if self.moves_to_goal(self.rules.apply(board, move)) == distance - 1
+            if distances.get(self.rules.apply(board, move)) == distance - 1
         )

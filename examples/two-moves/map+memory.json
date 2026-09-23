@@ -1,0 +1,28 @@
+{
+  "state": "Each turn you choose a path of two steps, taken one after another. Each step goes one cell: north (up), south (down), east (right) or west (left). Walls (#) block you, and walking into one wastes that step. Stepping onto the key (K) picks it up. A locked door (D) opens when you walk into it carrying the key, and you step through; without the key it blocks you like a wall. Reaching the goal (G) wins at once, and any steps left are not taken.\n\nMap, with column numbers along the top and row numbers down the side (# = wall, . = floor, A = you, G = goal, D = locked door). A position (x, y) is column x, row y:\n   0123456789\n 0 ##########\n 1 #......A.#\n 2 #..##....#\n 3 #D....#..#\n 4 #G#.#...##\n 5 ##########\n\nYou are A at (7, 1). You are carrying: key.\nObjects: goal G at (1, 4); locked door D at (1, 3).\n\nMoves so far:\n1. east,south: you end at (7, 2) and pick up the key\n2. north,north: you end at (7, 1)",
+  "model": "jev-1.13.0",
+  "questions": {
+    "move": {
+      "type": "choice",
+      "instructions": "What is the best next move?",
+      "criteria": {
+        "option_1": "move south (down), then south (down)",
+        "option_2": "move south (down), then west (left)",
+        "option_3": "move south (down), then north (up)",
+        "option_4": "move north (up), then south (down)",
+        "option_5": "move north (up), then west (left)",
+        "option_6": "move west (left), then north (up)",
+        "option_7": "move south (down), then east (right)",
+        "option_8": "move west (left), then east (right)",
+        "option_9": "move west (left), then south (down)",
+        "option_10": "move north (up), then north (up)",
+        "option_11": "move east (right), then east (right)",
+        "option_12": "move east (right), then west (left)",
+        "option_13": "move north (up), then east (right)",
+        "option_14": "move east (right), then south (down)",
+        "option_15": "move west (left), then west (left)",
+        "option_16": "move east (right), then north (up)"
+      }
+    }
+  }
+}

@@ -12,6 +12,10 @@ QUESTION = "What is the best next move?"
 SUBGOAL_QUESTION = (
     "Your next target is {target}. Which move is the first step of the shortest path to it?"
 )
+# Where a move is several steps, "the first step" would be the wrong thing to ask for.
+SEVERAL_STEPS_SUBGOAL_QUESTION = (
+    "Your next target is {target}. Which move starts the shortest path to it?"
+)
 
 # Each ingredient hands the player one thing that code can work out for it.
 INGREDIENTS = {
@@ -58,7 +62,9 @@ class Condition:
 
         question = QUESTION
         if self.subgoal:
-            question = SUBGOAL_QUESTION.format(target=rules.describe_next_target(board))
+            one_step = rules.step_rules() is rules
+            template = SUBGOAL_QUESTION if one_step else SEVERAL_STEPS_SUBGOAL_QUESTION
+            question = template.format(target=rules.describe_next_target(board))
 
         moves = list(rules.moves(board))
         if shuffle_seed is not None:

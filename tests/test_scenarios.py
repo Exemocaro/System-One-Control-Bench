@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from system_one_control.generator import LEVELS
+from system_one_control.rules import ThreeMoveRules, TwoMoveRules
 from system_one_control.scenario import SCENARIO_DIR, Scenario, load_scenarios
 from system_one_control.solver import Solver
 
@@ -58,3 +59,17 @@ def test_two_scenarios_may_not_share_a_name(tmp_path):
         (tmp_path / level / "tiny.yaml").write_text(tiny)
     with pytest.raises(ValueError, match="tiny"):
         load_scenarios(tmp_path)
+
+
+@pytest.mark.parametrize("rules", [TwoMoveRules(), ThreeMoveRules()], ids=lambda r: r.name)
+def test_under_sequence_rules_every_scenario_is_won_in_its_fewest_moves(rules):
+    for scenario in SCENARIOS.values():
+        played = replace(scenario, rules=rules)
+        assert Solver(rules).moves_to_goal(played.board) == played.fewest_moves, scenario.name
+
+
+def test_under_sequence_rules_a_game_allows_twice_the_fewest_sequences():
+    scenario = replace(SCENARIOS["gen-05-01"], rules=TwoMoveRules())
+    assert scenario.moves_to_goal == 5
+    assert scenario.fewest_moves == 3
+    assert scenario.max_moves == 6

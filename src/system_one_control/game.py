@@ -36,6 +36,7 @@ class Game:
         self.player = player
         self.condition = condition
         self.solver = Solver(scenario.rules)
+        self.distance = Solver(scenario.rules.step_rules())  # counts the level's own moves
         self.board = scenario.board
         self.steps: list[Step] = []
 
@@ -49,9 +50,12 @@ class Game:
 
     @property
     def closest(self) -> int | None:
-        """The fewest moves to the goal from any board reached so far, the start included."""
+        """The fewest moves to the goal from any board reached so far, the start included.
+
+        Counted in the moves a level is counted in, so it compares across rules.
+        """
         boards = {self.scenario.board, *(step.after for step in self.steps)}
-        distances = (self.solver.moves_to_goal(board) for board in boards)
+        distances = (self.distance.moves_to_goal(board) for board in boards)
         return min((d for d in distances if d is not None), default=None)
 
     @property

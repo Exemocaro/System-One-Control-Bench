@@ -2,7 +2,7 @@ import pytest
 
 from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS, INGREDIENTS, Condition
-from system_one_control.rules import CompassRules
+from system_one_control.rules import CompassRules, TwoMoveRules
 from system_one_control.scenario import load_scenarios
 
 SCENARIOS = load_scenarios()
@@ -118,3 +118,11 @@ def test_different_seeds_give_different_orders_but_ids_stay_in_position():
 def test_a_condition_describes_itself_from_its_ingredients():
     assert MAP.description == "The map alone."
     assert Condition("m", memory=True).description == f"The map, plus {INGREDIENTS['memory']}."
+
+
+def test_under_sequence_rules_the_subgoal_asks_for_the_move_that_starts_the_path():
+    subgoal = CONDITIONS["map+subgoal"]
+    assert "first step" in subgoal.render(ROOM, rules).question
+    assert subgoal.render(ROOM, TwoMoveRules()).question == (
+        "Your next target is the goal G at (3, 1). Which move starts the shortest path to it?"
+    )

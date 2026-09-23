@@ -21,6 +21,7 @@ from system_one_control.players import (
     SolverPlayer,
     WallAwareGreedyPlayer,
 )
+from system_one_control.rules import TwoMoveRules
 from system_one_control.scenario import load_scenarios
 from tests.helpers import AlwaysPlayer, scenario
 
@@ -257,3 +258,20 @@ def test_moves_turned_away_before_their_answer_are_counted_and_saved():
     jev = GameRecord("s", "map", "jev", 1, True, 0, None, (retried,))
     assert usage([jev]).endswith(", 2 turned away and retried")
     assert GameRecord.from_json(jev.to_json()) == jev
+
+
+def test_a_game_records_its_rules_and_spl_counts_their_moves():
+    played = replace(scenario("#######\n#A...G#\n#######", 4), rules=TwoMoveRules())
+    [record] = run_benchmark([played], MAP, {"solver": SolverPlayer})
+    assert record.rules == "two-moves"
+    assert record.won and len(record.moves) == record.fewest_moves == 2
+    assert rows(summarize([record]))["solver"][-4:] == ["1/1", "1.00", "1.00", "0"]
+
+
+def test_games_saved_before_rules_were_recorded_load_as_compass(tmp_path):
+    [record] = run_benchmark(SCENARIOS[:1], MAP, {"solver": SolverPlayer})
+    line = json.loads(record.to_json())
+    del line["rules"]
+    path = tmp_path / "old.jsonl"
+    path.write_text(json.dumps(line) + "\n", encoding="utf-8")
+    assert load(path)[0].rules == "compass"

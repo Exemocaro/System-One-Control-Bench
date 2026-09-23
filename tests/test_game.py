@@ -1,10 +1,12 @@
 import threading
+from dataclasses import replace
 
 import pytest
 
 from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game
 from system_one_control.players import Choice, Player, SolverPlayer, Turn
+from system_one_control.rules import ThreeMoveRules, TwoMoveRules
 from system_one_control.scenario import load_scenarios
 from tests.helpers import MAP, AlwaysPlayer, scenario
 
@@ -101,3 +103,21 @@ def test_a_game_asked_to_stop_stops_between_moves():
     stop.set()
     assert len(game.play(stop)) == 1
     assert not game.is_over
+
+
+def test_under_sequence_rules_the_solver_wins_in_the_fewest_sequences():
+    played = replace(SCENARIOS["gen-10-01"], rules=ThreeMoveRules())
+    game = Game(played, SolverPlayer(), MAP)
+    steps = game.play()
+    assert game.won
+    assert len(steps) == played.fewest_moves == 4
+    assert all(step.optimal for step in steps)
+    assert "," in steps[0].choice.move
+
+
+def test_under_sequence_rules_the_closest_distance_counts_compass_moves():
+    played = replace(scenario("#######\n#A...G#\n#######", 4), rules=TwoMoveRules())
+    game = Game(played, AlwaysPlayer("east,north"), MAP)
+    game.step()
+    assert game.closest == 3  # one compass move nearer, though no sequence was saved
+    assert len(game.play()) == played.max_moves == 4

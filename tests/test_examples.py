@@ -4,6 +4,7 @@ import pytest
 
 from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import EXAMPLE_DIR, EXAMPLE_SCENARIO, example, write_examples
+from system_one_control.rules import ThreeMoveRules, TwoMoveRules
 from system_one_control.scenario import load_scenarios
 
 SCENARIO = load_scenarios()[EXAMPLE_SCENARIO]
@@ -28,3 +29,12 @@ def test_an_example_is_the_jev_request_after_a_move_and_a_blocked_move():
 def test_examples_are_written_one_file_per_condition(tmp_path):
     written = write_examples(tmp_path)
     assert sorted(path.stem for path in written) == sorted(CONDITIONS)
+
+
+@pytest.mark.parametrize(("rules", "options"), [(TwoMoveRules(), 16), (ThreeMoveRules(), 64)])
+def test_examples_under_sequence_rules_go_in_their_own_folder(tmp_path, rules, options):
+    written = write_examples(tmp_path, rules=rules)
+    assert {path.parent.name for path in written} == {rules.name}
+    body = json.loads((tmp_path / rules.name / "map+memory.json").read_text(encoding="utf-8"))
+    assert len(body["questions"]["move"]["criteria"]) == options
+    assert "you end" in body["state"]

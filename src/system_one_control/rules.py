@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import itertools
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
@@ -43,6 +45,15 @@ class Rules(ABC):
     def find_move(self, board: Board, name: str | None) -> Move | None:
         return next((move for move in self.moves(board) if move.name == name), None)
 
+    def step_rules(self) -> Rules:
+        """The rules a level's distance is counted in: these ones, unless a move here is
+        several of theirs."""
+        return self
+
+    def moves_for(self, level: int) -> int:
+        """The fewest moves here that win a puzzle this many of step_rules' moves away."""
+        return level
+
 
 class CompassRules(Rules):
     name = "compass"
@@ -79,14 +90,18 @@ class CompassRules(Rules):
     def describe_outcome(self, before: Board, after: Board) -> str:
         if after == before:
             return f"blocked, you stay at {before.agent}"
-        events = [f"you move to {after.agent}"]
+        return " and ".join([f"you move to {after.agent}", *self.events(before, after)])
+
+    def events(self, before: Board, after: Board) -> list[str]:
+        """What happened on the way, besides moving: the key, the door, the goal."""
+        events = []
         if len(after.holding) > len(before.holding):
             events.append(f"pick up the {after.holding[-1]}")
         if len(after.find(DOOR)) < len(before.find(DOOR)):
             events.append("unlock the door")
         if self.is_won(after):
             events.append("reach the goal")
-        return " and ".join(events)
+        return events
 
     def describe_surroundings(self, board: Board) -> str:
         """One line on the four cells next to you, one on where the goal, key and door are."""
@@ -132,6 +147,83 @@ class CompassRules(Rules):
         return board.at(board.agent) == GOAL
 
 
+def sequence_description(count: str) -> str:
+    return (
+        f"Each turn you choose a path of {count} steps, taken one after another. Each step goes "
+        "one cell: north (up), south (down), east (right) or west (left). Walls (#) block you, "
+        "and walking into one wastes that step. Stepping onto the key (K) picks it up. A locked "
+        "door (D) opens when you walk into it carrying the key, and you step through; without "
+        "the key it blocks you like a wall. Reaching the goal (G) wins at once, and any steps "
+        "left are not taken."
+    )
+
+
+class SequenceRules(Rules):
+    """Each move is `length` compass moves, chosen together. Reaching the goal ends it there.
+
+    Every sequence is offered, blocked or not, as the compass rules offer every direction.
+    """
+
+    length: ClassVar[int]
+
+    def __init__(self) -> None:
+        self.step = CompassRules()
+        self._steps: dict[str, tuple[Move, ...]] = {}
+        moves = []
+        for steps in itertools.product(CompassRules.MOVES, repeat=self.length):
+            name = ",".join(step.name for step in steps)
+            self._steps[name] = steps
+            ways = ", then ".join(step.description.removeprefix("move ") for step in steps)
+            moves.append(Move(name, f"move {ways}"))
+        self._moves = tuple(moves)
+
+    def moves(self, board: Board) -> tuple[Move, ...]:
+        return self._moves
+
+    def apply(self, board: Board, move: Move) -> Board:
+        for step in self._steps[move.name]:
+            board = self.step.apply(board, step)
+            if self.is_won(board):
+                break
+        return board
+
+    def is_won(self, board: Board) -> bool:
+        return self.step.is_won(board)
+
+    def describe_outcome(self, before: Board, after: Board) -> str:
+        if after.agent == before.agent:
+            where = f"you end where you started, at {before.agent}"
+        else:
+            where = f"you end at {after.agent}"
+        return " and ".join([where, *self.step.events(before, after)])
+
+    def describe_surroundings(self, board: Board) -> str:
+        return self.step.describe_surroundings(board)
+
+    def describe_next_target(self, board: Board) -> str:
+        return self.step.describe_next_target(board)
+
+    def step_rules(self) -> Rules:
+        return self.step
+
+    def moves_for(self, level: int) -> int:
+        # A path of `level` compass moves splits into this many sequences, the last cut short at
+        # the goal, and no sequence can bring the goal more than `length` compass moves nearer.
+        return math.ceil(level / self.length)
+
+
+class TwoMoveRules(SequenceRules):
+    name = "two-moves"
+    description = sequence_description("two")
+    length = 2
+
+
+class ThreeMoveRules(SequenceRules):
+    name = "three-moves"
+    description = sequence_description("three")
+    length = 3
+
+
 def next_target(board: Board) -> tuple[str, Position]:
     """The key while it lies on the map, then the locked door, then the goal."""
     for symbol in (KEY, DOOR, GOAL):
@@ -141,7 +233,9 @@ def next_target(board: Board) -> tuple[str, Position]:
     raise ValueError("the map has no goal")
 
 
-RULES: dict[str, type[Rules]] = {CompassRules.name: CompassRules}
+RULES: dict[str, type[Rules]] = {
+    rules.name: rules for rules in (CompassRules, TwoMoveRules, ThreeMoveRules)
+}
 
 
 def make_rules(name: str) -> Rules:

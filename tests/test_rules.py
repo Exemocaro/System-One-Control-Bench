@@ -1,7 +1,7 @@
 import pytest
 
 from system_one_control.board import Board, Position
-from system_one_control.rules import CompassRules, make_rules
+from system_one_control.rules import CompassRules, ThreeMoveRules, TwoMoveRules, make_rules
 
 rules = CompassRules()
 
@@ -116,3 +116,75 @@ def test_rules_are_found_by_name():
     assert isinstance(make_rules("compass"), CompassRules)
     with pytest.raises(ValueError, match="unknown rules"):
         make_rules("chess")
+
+
+two = TwoMoveRules()
+three = ThreeMoveRules()
+
+
+def sequence(rules, text: str, name: str) -> Board:
+    board = Board.parse(text)
+    return rules.apply(board, rules.find_move(board, name))
+
+
+def test_a_sequence_move_is_every_ordering_of_compass_moves():
+    board = Board.parse("###\n#A#\n###")
+    assert len(two.moves(board)) == 16
+    assert len(three.moves(board)) == 64
+    assert two.find_move(board, "north,north") is not None
+    assert two.find_move(board, "east,north").description == "move east (right), then north (up)"
+
+
+def test_a_sequence_takes_its_steps_in_order():
+    assert sequence(two, "#####\n#...#\n#A..#\n#####", "north,east").agent == Position(2, 1)
+    assert sequence(three, "######\n#A...#\n######", "east,east,west").agent == Position(2, 1)
+
+
+def test_a_blocked_step_is_wasted_and_the_rest_are_still_taken():
+    assert sequence(two, "#####\n#A..#\n#####", "north,east").agent == Position(2, 1)
+
+
+def test_reaching_the_goal_ends_the_sequence_there():
+    after = sequence(three, "######\n#AG..#\n######", "east,east,east")
+    assert after.agent == Position(2, 1)
+    assert two.is_won(after)
+
+
+def test_a_sequence_can_pick_up_the_key_and_open_the_door():
+    after = sequence(two, "#####\n#AKD#\n#####", "east,east")
+    assert after.agent == Position(3, 1)
+    assert after.holding == ("key",)
+
+
+@pytest.mark.parametrize(
+    ("before", "name", "expected"),
+    [
+        ("#####\n#A..#\n#####", "east,east", "you end at (3, 1)"),
+        ("#####\n#A..#\n#####", "east,west", "you end where you started, at (1, 1)"),
+        ("#####\n#A..#\n#####", "north,west", "you end where you started, at (1, 1)"),
+        ("#####\n#AK.#\n#####", "east,east", "you end at (3, 1) and pick up the key"),
+        ("#####\n#AG.#\n#####", "east,east", "you end at (2, 1) and reach the goal"),
+    ],
+)
+def test_a_sequence_is_described_by_where_it_ends_and_what_happened(before, name, expected):
+    board = Board.parse(before)
+    assert two.describe_outcome(board, two.apply(board, two.find_move(board, name))) == expected
+
+
+@pytest.mark.parametrize(("level", "two_moves", "three_moves"), [(1, 1, 1), (4, 2, 2), (10, 5, 4)])
+def test_a_level_needs_its_distance_over_the_sequence_length_rounded_up(
+    level, two_moves, three_moves
+):
+    assert rules.moves_for(level) == level
+    assert two.moves_for(level) == two_moves
+    assert three.moves_for(level) == three_moves
+
+
+def test_sequence_rules_count_levels_in_compass_moves():
+    assert isinstance(two.step_rules(), CompassRules)
+    assert rules.step_rules() is rules
+
+
+def test_sequence_rules_are_found_by_name():
+    assert isinstance(make_rules("two-moves"), TwoMoveRules)
+    assert isinstance(make_rules("three-moves"), ThreeMoveRules)

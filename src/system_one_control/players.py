@@ -231,12 +231,13 @@ class JevPlayer(Player):
 class PlayerEntry:
     build: Callable[[], Player]
     paid: bool = False
+    compass_only: bool = False  # it reads compass moves itself, so it cannot play other rules
 
 
 PLAYERS: dict[str, PlayerEntry] = {
     "random": PlayerEntry(RandomPlayer),
-    "greedy": PlayerEntry(GreedyPlayer),
-    "greedy-walls": PlayerEntry(WallAwareGreedyPlayer),
+    "greedy": PlayerEntry(GreedyPlayer, compass_only=True),
+    "greedy-walls": PlayerEntry(WallAwareGreedyPlayer, compass_only=True),
     "solver": PlayerEntry(SolverPlayer),
     "jev": PlayerEntry(JevPlayer, paid=True),
 }

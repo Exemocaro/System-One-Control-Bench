@@ -13,6 +13,7 @@ import typer
 from system_one_control.conditions import Condition
 from system_one_control.game import Game, Step
 from system_one_control.players import PLAYERS, Player
+from system_one_control.rules import make_rules
 from system_one_control.scenario import Scenario
 
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "benchmarks"
@@ -51,10 +52,16 @@ class GameRecord:
     closest: int | None  # the fewest moves to the goal from any board the player reached
     error: str | None
     moves: tuple[MoveRecord, ...]
+    rules: str = "compass"  # added on 24 September, when other rules came in
 
     @property
     def key(self) -> GameKey:
         return (self.scenario, self.condition, self.player)
+
+    @property
+    def fewest_moves(self) -> int:
+        """The fewest moves that win under the game's rules; moves_to_goal counts compass ones."""
+        return make_rules(self.rules).moves_for(self.moves_to_goal)
 
     @property
     def progress(self) -> float:
@@ -115,6 +122,7 @@ def play(
         won=game.won,
         closest=game.closest,
         error=errors[0] if errors else None,
+        rules=scenario.rules.name,
         moves=tuple(
             MoveRecord(
                 options=tuple(option.move for option in step.request.options),
@@ -243,8 +251,9 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
 
     Won counts the games that reached the goal; progress is how much of the way to the goal a
     game covered at its closest, averaged; SPL (success weighted by path length) scores a won
-    game as the fewest moves over the moves used, and a lost one as 0. Errors counts the games
-    a player could not finish, such as a failed API call.
+    game as the fewest moves over the moves used, and a lost one as 0. Levels and progress count
+    compass moves under any rules; SPL counts the moves of the game's own rules. Errors counts
+    the games a player could not finish, such as a failed API call.
 
     Rows run from the simple players to the solver, then any other player. With `bold_best`,
     the best score in each column, the solver aside, is in bold.
@@ -268,7 +277,7 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
             scores.append((f"{won}/{len(at_level)}", won))
         won = sum(r.won for r in group)
         progress = sum(r.progress for r in group) / len(group)
-        spl = sum(r.moves_to_goal / len(r.moves) if r.won else 0.0 for r in group) / len(group)
+        spl = sum(r.fewest_moves / len(r.moves) if r.won else 0.0 for r in group) / len(group)
         scores += [(f"{won}/{len(group)}", won), (f"{progress:.2f}", progress), (f"{spl:.2f}", spl)]
         errors = str(sum(r.error is not None for r in group))
         rows.append((player, condition, scores, errors))
