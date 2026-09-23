@@ -39,9 +39,16 @@ class Scenario:
 
 
 def load_scenarios(folder: Path = SCENARIO_DIR) -> dict[str, Scenario]:
-    """Every scenario under a folder (one subfolder per level), easiest first."""
+    """Every scenario under a folder (one subfolder per level), easiest first.
+
+    Scenarios are known by their file name, so two files may not share one.
+    """
+    paths = sorted(folder.rglob("*.yaml"))
+    names = [path.stem for path in paths]
+    repeated = sorted({name for name in names if names.count(name) > 1})
+    if repeated:
+        raise ValueError(f"scenario names used more than once: {', '.join(repeated)}")
     scenarios = sorted(
-        (Scenario.load(path) for path in folder.rglob("*.yaml")),
-        key=lambda s: (s.moves_to_goal, s.name),
+        (Scenario.load(path) for path in paths), key=lambda s: (s.moves_to_goal, s.name)
     )
     return {scenario.name: scenario for scenario in scenarios}

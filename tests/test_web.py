@@ -5,9 +5,9 @@ from system_one_control.web.app import create_app
 client = TestClient(create_app())
 
 
-def new_game(scenario="straight", player="solver", prompt="full"):
+def new_game(scenario="straight", player="solver", condition="map"):
     return client.post(
-        "/api/games", json={"scenario": scenario, "player": player, "prompt": prompt}
+        "/api/games", json={"scenario": scenario, "player": player, "condition": condition}
     )
 
 
@@ -15,11 +15,11 @@ def test_the_page_is_served():
     assert "<title>" in client.get("/").text
 
 
-def test_the_catalog_lists_scenarios_players_and_prompts():
+def test_the_catalog_lists_scenarios_players_and_conditions():
     catalog = client.get("/api/catalog").json()
     assert "key-first" in [s["name"] for s in catalog["scenarios"]]
     assert {"name": "jev", "paid": True} in catalog["players"]
-    assert "full" in [p["name"] for p in catalog["prompts"]]
+    assert "map" in [p["name"] for p in catalog["conditions"]]
 
 
 def test_a_new_game_shows_the_board_and_what_the_player_will_be_asked():
@@ -35,7 +35,7 @@ def test_one_step_plays_one_move():
     game = client.post(f"/api/games/{game_id}/step").json()
     assert len(game["steps"]) == 1
     assert game["steps"][0]["choice"]["move"] == "east"
-    assert game["steps"][0]["correct"]
+    assert game["steps"][0]["optimal"]
 
 
 def test_play_runs_the_game_to_the_end():

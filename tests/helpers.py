@@ -1,10 +1,10 @@
 from system_one_control.board import Board
+from system_one_control.conditions import CONDITIONS
 from system_one_control.players import Choice, Player, Turn
-from system_one_control.prompt import Prompt
 from system_one_control.rules import CompassRules
 from system_one_control.scenario import Scenario
 
-PROMPT = Prompt(name="plain", description="", state="{map}", question="Which way?")
+MAP = CONDITIONS["map"]
 
 
 def scenario(text: str, moves_to_goal: int) -> Scenario:

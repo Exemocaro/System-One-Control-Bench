@@ -180,7 +180,7 @@
   <h1>System-One Control Bench</h1>
   <label>Scenario <select id="scenario"></select></label>
   <label>Player <select id="player"></select></label>
-  <label>Prompt <select id="prompt"></select></label>
+  <label>Condition <select id="condition"></select></label>
   <button id="new" class="primary">New game</button>
   <button id="next-puzzle">Next puzzle</button>
 </header>
@@ -236,7 +236,7 @@
   function remember() {
     try {
       localStorage.setItem("socb", JSON.stringify({
-        scenario: $("scenario").value, player: $("player").value, prompt: $("prompt").value,
+        scenario: $("scenario").value, player: $("player").value, condition: $("condition").value,
       }));
     } catch (_) {}
   }
@@ -254,9 +254,9 @@
         list.map((s) => `<option value="${s.name}">${s.name}</option>`).join("")}</optgroup>`).join("");
     $("player").innerHTML = catalog.players.map((p) =>
       `<option value="${p.name}">${p.name}${p.paid ? " (paid)" : ""}</option>`).join("");
-    $("prompt").innerHTML = catalog.prompts.map((p) =>
+    $("condition").innerHTML = catalog.conditions.map((p) =>
       `<option value="${p.name}" title="${p.description}">${p.name}</option>`).join("");
-    for (const id of ["scenario", "player", "prompt"]) {
+    for (const id of ["scenario", "player", "condition"]) {
       if (saved[id] && [...$(id).options].some((o) => o.value === saved[id])) $(id).value = saved[id];
     }
   }
@@ -309,13 +309,13 @@
     const scenario = catalog.scenarios.find((s) => s.name === game.scenario);
     $("name").textContent = game.scenario;
     $("description").textContent = scenario.description;
-    $("status").innerHTML = `${outcome()}<span>${game.steps.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.moves_to_goal}</span><span>${game.player} · ${game.prompt}</span>`;
+    $("status").innerHTML = `${outcome()}<span>${game.steps.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.moves_to_goal}</span><span>${game.player} · ${game.condition}</span>`;
 
     const step = viewing === null ? null : game.steps[viewing];
-    $("board").innerHTML = drawBoard(step ? step.board : game.board, step?.choice.move);
+    $("board").innerHTML = drawBoard(step ? step.before : game.board, step?.choice.move);
 
     $("history").innerHTML = game.steps.map((s, i) =>
-      `<button class="chip ${s.correct ? "good" : "bad"} ${viewing === i ? "active" : ""}" data-i="${i}">${s.number} ${s.choice.move ?? "—"} ${s.correct ? "✓" : "✗"}</button>`).join("")
+      `<button class="chip ${s.optimal ? "good" : "bad"} ${viewing === i ? "active" : ""}" data-i="${i}">${s.number} ${s.choice.move ?? "—"} ${s.optimal ? "✓" : "✗"}</button>`).join("")
       + (game.over ? "" : `<button class="chip ${viewing === null ? "active" : ""}" data-i="now">next</button>`);
 
     const paid = catalog.players.find((p) => p.name === game.player)?.paid;
@@ -345,10 +345,9 @@
     $("options").innerHTML = request.options.map((o) => {
       const p = probabilities[o.move];
       const picked = step && step.choice.move === o.move;
-      const renamed = o.text !== o.move ? `<span class="tag">${o.move}</span>` : "";
       return `<li class="option ${picked ? "picked" : ""}">
         <span class="id">${o.id}</span>
-        <span class="text">${o.text} ${renamed} ${best.includes(o.move) ? '<span class="tag best">best</span>' : ""} ${picked ? '<span class="tag pick">picked</span>' : ""}</span>
+        <span class="text">${o.text} ${best.includes(o.move) ? '<span class="tag best">best</span>' : ""} ${picked ? '<span class="tag pick">picked</span>' : ""}</span>
         <span class="track"><span class="fill" style="display:block;width:${Math.round((p ?? 0) * 100)}%"></span></span>
         <span class="pct">${p === undefined ? "" : Math.round(p * 100) + "%"}</span>
       </li>`;
@@ -363,8 +362,8 @@
       verdict.className = "verdict bad";
       verdict.textContent = `No valid answer: ${step.choice.error}`;
     } else {
-      verdict.className = `verdict ${step.correct ? "good" : "bad"}`;
-      verdict.textContent = step.correct
+      verdict.className = `verdict ${step.optimal ? "good" : "bad"}`;
+      verdict.textContent = step.optimal
         ? `Picked ${step.choice.move}, a best move. Took ${step.seconds.toFixed(2)} s.`
         : `Picked ${step.choice.move}, but the best was ${step.best_moves.join(" or ")}. Took ${step.seconds.toFixed(2)} s.`;
     }
@@ -389,7 +388,7 @@
   async function newGame() {
     remember();
     game = await call("POST", "/api/games", {
-      scenario: $("scenario").value, player: $("player").value, prompt: $("prompt").value,
+      scenario: $("scenario").value, player: $("player").value, condition: $("condition").value,
     });
     viewing = null;
   }
@@ -420,7 +419,7 @@
   $("next-puzzle").addEventListener("click", () => run(nextPuzzle));
   $("step").addEventListener("click", () => run(playOne));
   $("play").addEventListener("click", () => run(playAll));
-  for (const id of ["scenario", "player", "prompt"]) $(id).addEventListener("change", () => run(newGame));
+  for (const id of ["scenario", "player", "condition"]) $(id).addEventListener("change", () => run(newGame));
   $("history").addEventListener("click", (event) => {
     const i = event.target.closest("[data-i]")?.dataset.i;
     if (i === undefined) return;

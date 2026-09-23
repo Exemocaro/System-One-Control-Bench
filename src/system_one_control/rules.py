@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-from system_one_control.board import DOOR, FLOOR, GOAL, KEY, WALL, Board
+from system_one_control.board import DOOR, FLOOR, GOAL, KEY, SYMBOL_NAMES, WALL, Board, Position
 
 
 @dataclass(frozen=True)
@@ -14,7 +14,7 @@ class Move:
 
 
 class Rules(ABC):
-    """How a board changes. Swap this class to change the game; prompts adapt to it."""
+    """How a board changes, and how to put that into words. Swap it to change the game."""
 
     name: ClassVar[str]
     description: ClassVar[str]
@@ -28,9 +28,17 @@ class Rules(ABC):
     @abstractmethod
     def is_won(self, board: Board) -> bool: ...
 
-    def facts(self, board: Board) -> dict[str, str]:
-        """Extra placeholders these rules offer to prompts, beyond the board's own."""
-        return {}
+    @abstractmethod
+    def describe_outcome(self, before: Board, after: Board) -> str:
+        """What a move did, such as "you move to (2, 1) and pick up the key"."""
+
+    @abstractmethod
+    def describe_surroundings(self, board: Board) -> str:
+        """What is next to the player, and where the things that matter are."""
+
+    @abstractmethod
+    def describe_next_target(self, board: Board) -> str:
+        """The next thing to reach on the way to winning, such as "the key K at (7, 2)"."""
 
     def find_move(self, board: Board, name: str | None) -> Move | None:
         return next((move for move in self.moves(board) if move.name == name), None)
@@ -68,18 +76,35 @@ class CompassRules(Rules):
     def moves(self, board: Board) -> tuple[Move, ...]:
         return self.MOVES
 
-    def facts(self, board: Board) -> dict[str, str]:
+    def describe_outcome(self, before: Board, after: Board) -> str:
+        if after == before:
+            return f"blocked, you stay at {before.agent}"
+        events = [f"you move to {after.agent}"]
+        if len(after.holding) > len(before.holding):
+            events.append(f"pick up the {after.holding[-1]}")
+        if len(after.find(DOOR)) < len(before.find(DOOR)):
+            events.append("unlock the door")
+        if self.is_won(after):
+            events.append("reach the goal")
+        return " and ".join(events)
+
+    def describe_surroundings(self, board: Board) -> str:
+        """One line on the four cells next to you, one on where the goal, key and door are."""
         around = " ".join(
             f"{name.capitalize()} of you is {self.NEIGHBOURS[board.at(board.agent.moved(*step))]}."
             for name, step in self.STEPS.items()
         )
         relative = " ".join(
-            f"The {thing} is {self._offset(position.x - board.agent.x, position.y - board.agent.y)}"
-            " of you."
-            for symbol, thing in ((GOAL, "goal"), (KEY, "key"), (DOOR, "locked door"))
+            f"The {SYMBOL_NAMES[symbol]} is "
+            f"{self._offset(position.x - board.agent.x, position.y - board.agent.y)} of you."
+            for symbol in (GOAL, KEY, DOOR)
             for position in board.find(symbol)
         )
-        return {"around": around, "relative": relative}
+        return f"{around}\n{relative}"
+
+    def describe_next_target(self, board: Board) -> str:
+        symbol, position = next_target(board)
+        return f"the {SYMBOL_NAMES[symbol]} {symbol} at {position}"
 
     @staticmethod
     def _offset(dx: int, dy: int) -> str:
@@ -100,11 +125,20 @@ class CompassRules(Rules):
                 return board
             board = board.with_cell(target, FLOOR)
         if cell == KEY:
-            board = board.with_cell(target, FLOOR).carrying("key")
+            board = board.with_cell(target, FLOOR).pick_up("key")
         return board.with_agent(target)
 
     def is_won(self, board: Board) -> bool:
         return board.at(board.agent) == GOAL
+
+
+def next_target(board: Board) -> tuple[str, Position]:
+    """The key while it lies on the map, then the locked door, then the goal."""
+    for symbol in (KEY, DOOR, GOAL):
+        found = board.find(symbol)
+        if found:
+            return symbol, found[0]
+    raise ValueError("the map has no goal")
 
 
 RULES: dict[str, type[Rules]] = {CompassRules.name: CompassRules}

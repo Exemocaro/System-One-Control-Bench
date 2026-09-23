@@ -51,8 +51,10 @@ class JevPlayer(Player):
             return Choice(None, error=f"{type(error).__name__}: {error}")
 
         answer = response.choices[QUESTION]
+        tokens = response.usage.input_tokens
         moves = {option.id: option.move for option in request.options}
         probabilities = {moves[id]: p for id, p in answer.probabilities.items() if id in moves}
         if answer.choice not in moves:
-            return Choice(None, probabilities, error=f"Jev answered {answer.choice!r}")
-        return Choice(moves[answer.choice], probabilities)
+            problem = f"Jev answered {answer.choice!r}"
+            return Choice(None, probabilities, error=problem, input_tokens=tokens)
+        return Choice(moves[answer.choice], probabilities, input_tokens=tokens)

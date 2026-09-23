@@ -75,7 +75,7 @@ class Board:
     def with_agent(self, position: Position) -> Board:
         return replace(self, agent=position)
 
-    def carrying(self, item: str) -> Board:
+    def pick_up(self, item: str) -> Board:
         return replace(self, holding=(*self.holding, item))
 
     def draw(self) -> str:

@@ -40,16 +40,16 @@ LOOP = """
 
 @pytest.mark.parametrize("level", range(1, 11))
 def test_a_generated_puzzle_is_exactly_its_level_away_from_the_goal(level):
-    board = PuzzleGenerator(seed=level).puzzle(level).board
-    assert solver.distance(board) == level
+    board = PuzzleGenerator(seed=level).puzzles(level, 1)[0].board
+    assert solver.moves_to_goal(board) == level
 
 
 @pytest.mark.parametrize("level", range(3, 11))
 def test_from_level_three_every_puzzle_needs_the_key(level):
-    board = PuzzleGenerator(seed=level).puzzle(level).board
+    board = PuzzleGenerator(seed=level).puzzles(level, 1)[0].board
     keyless = replace(board, rows=tuple(r.replace("K", ".") for r in board.rows))
     assert board.find("K") and board.find("D")
-    assert solver.distance(keyless) is None
+    assert solver.moves_to_goal(keyless) is None
 
 
 def test_the_same_seed_gives_the_same_puzzles():
@@ -79,7 +79,21 @@ def test_a_level_is_topped_up_to_the_target_and_hand_made_puzzles_are_kept(tmp_p
     assert names == ["gen-02-01", "gen-02-02", "gen-02-03", "straight"]
     generated = Scenario.load(folder / "gen-02-01.yaml")
     assert generated.moves_to_goal == 2
-    assert solver.distance(generated.board) == 2
+    assert solver.moves_to_goal(generated.board) == 2
+
+
+def test_a_failed_generation_keeps_the_puzzles_already_there(tmp_path, monkeypatch):
+    write_level(tmp_path, level=2, target=3, seed=0)
+    before = {path.name: path.read_text() for path in (tmp_path / "level-02").glob("*.yaml")}
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("could not generate")
+
+    monkeypatch.setattr(PuzzleGenerator, "puzzles", fail)
+    with pytest.raises(RuntimeError):
+        write_level(tmp_path, level=2, target=3, seed=1)
+    after = {path.name: path.read_text() for path in (tmp_path / "level-02").glob("*.yaml")}
+    assert after == before
 
 
 def test_the_repository_has_ten_puzzles_at_every_level():
@@ -101,8 +115,8 @@ def test_a_longer_route_must_exist_and_be_longer():
 
 
 def test_a_puzzle_of_a_harder_kind_is_generated_to_order():
-    board = PuzzleGenerator(seed=0).puzzle(10, LONGER_ROUTE).board
-    assert solver.distance(board) == 10
+    board = PuzzleGenerator(seed=0).puzzles(10, 1, kind=LONGER_ROUTE)[0].board
+    assert solver.moves_to_goal(board) == 10
     assert not greedy_wins(board) and has_a_longer_route(board)
 
 

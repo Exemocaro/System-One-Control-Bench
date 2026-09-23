@@ -12,6 +12,7 @@ repos:
       - id: check-toml
       - id: check-merge-conflict
       - id: check-added-large-files
+        exclude: ^benchmarks/  # saved runs are large text files on purpose
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.8

@@ -12,7 +12,7 @@ class Solver:
     def __init__(self, rules: Rules) -> None:
         self.rules = rules
 
-    def distance(self, board: Board) -> int | None:
+    def moves_to_goal(self, board: Board) -> int | None:
         """Fewest moves to win from this board, or None if the goal cannot be reached."""
         frontier = deque([(board, 0)])
         seen = {board}
@@ -29,11 +29,11 @@ class Solver:
 
     def best_moves(self, board: Board) -> tuple[str, ...]:
         """Every move that starts a shortest path, ties included."""
-        distance = self.distance(board)
+        distance = self.moves_to_goal(board)
         if not distance:
             return ()
         return tuple(
             move.name
             for move in self.rules.moves(board)
-            if self.distance(self.rules.apply(board, move)) == distance - 1
+            if self.moves_to_goal(self.rules.apply(board, move)) == distance - 1
         )

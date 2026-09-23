@@ -4,8 +4,9 @@ import time
 from dataclasses import dataclass, replace
 
 from system_one_control.board import Board
+from system_one_control.conditions import Condition
 from system_one_control.players import Choice, Player, Turn
-from system_one_control.prompt import Prompt, Request, describe_outcome
+from system_one_control.request import Request
 from system_one_control.rules import Rules
 from system_one_control.scenario import Scenario
 from system_one_control.solver import Solver
@@ -14,7 +15,7 @@ from system_one_control.solver import Solver
 @dataclass(frozen=True)
 class Step:
     number: int
-    board: Board
+    before: Board
     request: Request
     choice: Choice
     best_moves: tuple[str, ...]
@@ -22,17 +23,17 @@ class Step:
     seconds: float
 
     @property
-    def correct(self) -> bool:
+    def optimal(self) -> bool:
         return self.choice.move in self.best_moves
 
 
 class Game:
     """One player working through one scenario, a move at a time."""
 
-    def __init__(self, scenario: Scenario, player: Player, prompt: Prompt) -> None:
+    def __init__(self, scenario: Scenario, player: Player, condition: Condition) -> None:
         self.scenario = scenario
         self.player = player
-        self.prompt = prompt
+        self.condition = condition
         self.solver = Solver(scenario.rules)
         self.board = scenario.board
         self.steps: list[Step] = []
@@ -46,20 +47,20 @@ class Game:
         return self.rules.is_won(self.board)
 
     @property
-    def over(self) -> bool:
+    def is_over(self) -> bool:
         failed = bool(self.steps) and self.steps[-1].choice.move is None
         return self.won or failed or len(self.steps) >= self.scenario.max_moves
 
     def next_request(self) -> Request:
         history = [
-            f"{step.choice.move}: {describe_outcome(step.board, step.after, self.rules)}"
+            f"{step.choice.move}: {self.rules.describe_outcome(step.before, step.after)}"
             for step in self.steps
         ]
         seed = f"{self.scenario.name}:{len(self.steps) + 1}"
-        return self.prompt.render(self.board, self.rules, shuffle_seed=seed, history=history)
+        return self.condition.render(self.board, self.rules, shuffle_seed=seed, history=history)
 
     def step(self) -> Step:
-        if self.over:
+        if self.is_over:
             raise RuntimeError("the game is over")
         request = self.next_request()
         started = time.perf_counter()
@@ -73,7 +74,7 @@ class Game:
 
         step = Step(
             number=len(self.steps) + 1,
-            board=self.board,
+            before=self.board,
             request=request,
             choice=choice,
             best_moves=self.solver.best_moves(self.board),
@@ -85,6 +86,6 @@ class Game:
         return step
 
     def play(self) -> list[Step]:
-        while not self.over:
+        while not self.is_over:
             self.step()
         return self.steps

@@ -1,25 +1,27 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import TypeVar
 
 import typer
 
-from system_one_control.experiment import (
-    RESULTS_DIR,
+from system_one_control.benchmark import (
+    BENCHMARK_DIR,
     estimate_paid_calls,
-    run_experiment,
+    run_benchmark,
     save,
     summarize,
+    usage,
 )
+from system_one_control.conditions import CONDITIONS
+from system_one_control.examples import write_examples
 from system_one_control.generator import write_level
-from system_one_control.players import PLAYERS, make_player
-from system_one_control.prompt import load_prompts
+from system_one_control.players import PLAYERS
 from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 T = TypeVar("T")
-DEFAULT_OUT = RESULTS_DIR / "latest.jsonl"
 
 
 def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
@@ -35,38 +37,60 @@ def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
 
 
 @app.command()
-def experiment(
+def benchmark(
     players: str = typer.Option(
         "random,greedy,greedy-walls,solver", help="Comma-separated player names."
     ),
     scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
-    prompts: str = typer.Option("full", help="Comma-separated prompt names, or all."),
+    conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
     first_move_only: bool = typer.Option(False, help="Ask only for the first move."),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
-    out: Path = typer.Option(DEFAULT_OUT, help="Where to save results."),
+    workers: int = typer.Option(8, help="How many games to play at once."),
+    out: Path | None = typer.Option(
+        None,
+        help="Where to save every move. Default: benchmarks/<date>_<what was run>.jsonl",
+    ),
 ) -> None:
-    """Play every chosen player on every chosen scenario under every chosen prompt."""
+    """Play every chosen player on every chosen scenario under every chosen condition."""
     chosen_scenarios = _pick(load_scenarios(), scenarios, "scenario")
-    chosen_prompts = _pick(load_prompts(), prompts, "prompt")
+    chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
 
+    if out is None:
+        out = BENCHMARK_DIR / f"{_run_name(names, conditions, scenarios, first_move_only)}.jsonl"
+    if out.exists():
+        raise typer.BadParameter(f"{out} already exists; delete it or choose another --out")
     calls = estimate_paid_calls(
-        chosen_scenarios, chosen_prompts, names, first_move_only=first_move_only
+        chosen_scenarios, chosen_conditions, names, first_move_only=first_move_only
     )
     if calls and not allow_paid:
         raise typer.BadParameter(f"this can make up to {calls} paid calls; add --allow-paid")
 
-    results = list(
-        run_experiment(
-            chosen_scenarios,
-            chosen_prompts,
-            [make_player(name) for name in names],
-            first_move_only=first_move_only,
-        )
+    records = run_benchmark(
+        chosen_scenarios,
+        chosen_conditions,
+        [PLAYERS[name].build for name in names],
+        first_move_only=first_move_only,
+        workers=workers,
     )
-    save(results, out)
-    typer.echo(summarize(results))
-    typer.echo(f"\nSaved to {out}")
+    save(records, out)
+    table = summarize(records, first_move_only=first_move_only)
+    out.with_suffix(".txt").write_text(table + "\n", encoding="utf-8")
+
+    typer.echo(summarize(records, first_move_only=first_move_only, bold_best=True))
+    if usage(records):
+        typer.echo(f"\n{usage(records)}")
+    typer.echo(f"\nSaved to {out} and {out.with_suffix('.txt').name}")
+
+
+def _run_name(players: list[str], conditions: str, scenarios: str, first_move_only: bool) -> str:
+    """Today's date and what was run, so that no two different runs share a file."""
+    parts = [str(date.today()), "+".join(players), conditions.replace(",", "+")]
+    if scenarios != "all":
+        parts.append(scenarios.replace(",", "+"))
+    if first_move_only:
+        parts.append("first-move")
+    return "_".join(parts)
 
 
 @app.command()
@@ -79,6 +103,13 @@ def generate(
     for level in range(1, 11):
         written = write_level(folder, level=level, target=per_level, seed=seed)
         typer.echo(f"level {level:2}: {len(written)} generated")
+
+
+@app.command()
+def examples() -> None:
+    """Write what each condition shows the player to the examples folder."""
+    for path in write_examples():
+        typer.echo(f"wrote {path}")
 
 
 @app.command()

@@ -14,14 +14,14 @@ from system_one_control.players import (
     make_player,
 )
 from system_one_control.rules import CompassRules
-from tests.helpers import PROMPT
+from tests.helpers import MAP
 
 rules = CompassRules()
 
 
 def turn(text: str) -> Turn:
     board = Board.parse(text)
-    return Turn(board, rules, PROMPT.render(board, rules))
+    return Turn(board, rules, MAP.render(board, rules))
 
 
 def test_random_picks_an_offered_move_and_is_reproducible():
@@ -49,7 +49,7 @@ def test_greedy_with_walls_steps_around_instead():
 
 def test_greedy_breaks_ties_the_same_way_whatever_the_option_order():
     board = Board.parse("####\n#A.#\n#.G#\n####")
-    requests = [PROMPT.render(board, rules, shuffle_seed=seed) for seed in "abcd"]
+    requests = [MAP.render(board, rules, shuffle_seed=seed) for seed in "abcd"]
     moves = {GreedyPlayer().choose(Turn(board, rules, request)).move for request in requests}
     assert moves == {"south"}  # south and east both close in; south comes first in the rules
 
@@ -71,7 +71,8 @@ class FakeJevClient:
         self.sent = {"state": state, "questions": questions, "model": model}
         probabilities = {"option_1": 0.1, "option_2": 0.1, "option_3": 0.7, "option_4": 0.1}
         answer = SimpleNamespace(choice=self.choice, probabilities=probabilities)
-        return SimpleNamespace(choices={"move": answer})
+        usage = SimpleNamespace(input_tokens=120)
+        return SimpleNamespace(choices={"move": answer}, usage=usage)
 
 
 def fake_question(*, instructions, criteria):
@@ -93,6 +94,7 @@ def test_jev_is_sent_exactly_the_request_and_its_answer_maps_back_to_a_move():
     assert question["criteria"] == {o.id: o.text for o in t.request.options}
     assert choice.move == "east"
     assert choice.probabilities["east"] == 0.7
+    assert choice.input_tokens == 120
 
 
 def test_a_jev_error_becomes_a_choice_with_no_move():

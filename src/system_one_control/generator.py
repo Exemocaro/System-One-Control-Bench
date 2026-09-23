@@ -12,7 +12,6 @@ from system_one_control.solver import Solver
 
 KEY_FROM_LEVEL = 3  # key, door and goal need at least three moves
 MAX_ATTEMPTS = 20000
-STEPS = ((0, -1), (0, 1), (1, 0), (-1, 0))
 RULES = CompassRules()
 SOLVER = Solver(RULES)
 
@@ -20,7 +19,7 @@ SOLVER = Solver(RULES)
 def greedy_wins(board: Board) -> bool:
     """Whether walking straight at each target, around nothing, reaches the goal in time."""
     player = WallAwareGreedyPlayer()
-    distance = SOLVER.distance(board)
+    distance = SOLVER.moves_to_goal(board)
     if distance is None:
         return False
     for _ in range(MOVE_ALLOWANCE * distance):
@@ -34,7 +33,7 @@ def greedy_wins(board: Board) -> bool:
 
 def has_a_longer_route(board: Board) -> bool:
     """Whether walling off the floor of one shortest route leaves another, longer one."""
-    distance = SOLVER.distance(board)
+    distance = SOLVER.moves_to_goal(board)
     if distance is None:
         return False
     walled, current = board, board
@@ -44,12 +43,12 @@ def has_a_longer_route(board: Board) -> bool:
         current = RULES.apply(current, move)
         if board.at(current.agent) == FLOOR:
             walled = walled.with_cell(current.agent, WALL)
-    detour = SOLVER.distance(walled)
+    detour = SOLVER.moves_to_goal(walled)
     return detour is not None and detour > distance
 
 
 @dataclass(frozen=True)
-class Kind:
+class PuzzleKind:
     """What a puzzle must be, beyond sitting at its level."""
 
     description: str
@@ -66,22 +65,22 @@ class Kind:
         return not self.longer_route or has_a_longer_route(board)
 
 
-ANY = Kind("")
-NEEDS_PLANNING = Kind("that walking straight at the target cannot solve", needs_planning=True)
+ANY = PuzzleKind("")
+NEEDS_PLANNING = PuzzleKind("that walking straight at the target cannot solve", needs_planning=True)
 # Up to level 4, a key leaves no room for a wrong turn: every target is at most two steps away.
-NEEDS_PLANNING_KEYLESS = Kind(
+NEEDS_PLANNING_KEYLESS = PuzzleKind(
     "without a key, that walking straight at the goal cannot solve",
     needs_planning=True,
     keyless=True,
 )
-GREEDY_CAN_WIN = Kind("that walking straight at the target solves", greedy_can_win=True)
-LONGER_ROUTE = Kind(
+GREEDY_CAN_WIN = PuzzleKind("that walking straight at the target solves", greedy_can_win=True)
+LONGER_ROUTE = PuzzleKind(
     "that walking straight at the target cannot solve, with a second, longer route",
     needs_planning=True,
     longer_route=True,
 )
 # How many of a level's puzzles must be of each kind, strictest first; the rest are ANY.
-LEVEL_KINDS: dict[int, dict[Kind, int]] = {
+LEVEL_KINDS: dict[int, dict[PuzzleKind, int]] = {
     4: {NEEDS_PLANNING_KEYLESS: 1, GREEDY_CAN_WIN: 9},
     5: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
     6: {NEEDS_PLANNING: 2, GREEDY_CAN_WIN: 8},
@@ -96,7 +95,7 @@ LEVEL_KINDS: dict[int, dict[Kind, int]] = {
 class Puzzle:
     style: str
     board: Board
-    kind: Kind = ANY
+    kind: PuzzleKind = ANY
 
 
 class PuzzleGenerator:
@@ -105,11 +104,8 @@ class PuzzleGenerator:
     def __init__(self, seed: int) -> None:
         self._rng = random.Random(seed)
 
-    def puzzle(self, level: int, kind: Kind = ANY) -> Puzzle:
-        return self.puzzles(level, 1, kind=kind)[0]
-
     def puzzles(
-        self, level: int, count: int, avoid: set[str] | None = None, kind: Kind = ANY
+        self, level: int, count: int, avoid: set[str] | None = None, kind: PuzzleKind = ANY
     ) -> list[Puzzle]:
         seen = set(avoid or ())
         found: list[Puzzle] = []
@@ -151,7 +147,7 @@ class PuzzleGenerator:
         starts = [
             board
             for position in _cells(grid, FLOOR)
-            if SOLVER.distance(board := Board(rows, position)) == level
+            if SOLVER.moves_to_goal(board := Board(rows, position)) == level
         ]
         return Puzzle(style, self._rng.choice(starts)) if starts else None
 
@@ -199,7 +195,7 @@ def _cells(grid: list[list[str]], symbol: str) -> list[Position]:
 
 
 def _neighbours(position: Position) -> list[Position]:
-    return [position.moved(dx, dy) for dx, dy in STEPS]
+    return [position.moved(dx, dy) for dx, dy in CompassRules.STEPS.values()]
 
 
 def _get(grid: list[list[str]], position: Position) -> str:
@@ -215,12 +211,15 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
 
     Hand-made puzzles count toward the kinds the level asks for, when they qualify.
     A level asked for fewer puzzles than its kinds add up to fills them strictest first.
+    The old generated puzzles are only deleted once the new ones are ready.
     """
     folder = root / f"level-{level:02d}"
     folder.mkdir(parents=True, exist_ok=True)
-    for old in folder.glob("gen-*.yaml"):
-        old.unlink()
-    hand_made = [Scenario.load(path).board for path in folder.glob("*.yaml")]
+    hand_made = [
+        Scenario.load(path).board
+        for path in folder.glob("*.yaml")
+        if not path.name.startswith("gen-")
+    ]
 
     kinds = dict(LEVEL_KINDS.get(level, {}))
     for board in hand_made:
@@ -229,7 +228,7 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
             kinds[kind] -= 1
 
     room = max(target - len(hand_made), 0)
-    wanted: dict[Kind, int] = {}
+    wanted: dict[PuzzleKind, int] = {}
     for kind, count in kinds.items():  # strictest first, as far as there is room
         wanted[kind] = min(count, room)
         room -= wanted[kind]
@@ -242,6 +241,8 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
         puzzles += generator.puzzles(level, count, seen, kind)
         seen |= {puzzle.board.draw() for puzzle in puzzles}
 
+    for old in folder.glob("gen-*.yaml"):
+        old.unlink()
     written = []
     for number, puzzle in enumerate(puzzles, start=1):
         board = puzzle.board

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from system_one_control.board import DOOR, GOAL, KEY, Board, Position
-from system_one_control.prompt import Request
-from system_one_control.rules import CompassRules, Move, Rules
+from system_one_control.board import Board
+from system_one_control.request import Request
+from system_one_control.rules import CompassRules, Move, Rules, next_target
 from system_one_control.solver import Solver
 
 
@@ -26,6 +26,7 @@ class Choice:
     move: str | None
     probabilities: dict[str, float] = field(default_factory=dict)
     error: str | None = None
+    input_tokens: int | None = None  # what a paid model billed for the question
 
 
 class Player(ABC):
@@ -43,6 +44,19 @@ class RandomPlayer(Player):
 
     def choose(self, turn: Turn) -> Choice:
         return Choice(self._rng.choice(turn.request.options).move)
+
+
+class ScriptedPlayer(Player):
+    """Plays a fixed list of moves, then gives up. For examples and tests."""
+
+    name = "scripted"
+
+    def __init__(self, moves: Sequence[str]) -> None:
+        self._moves = iter(moves)
+
+    def choose(self, turn: Turn) -> Choice:
+        move = next(self._moves, None)
+        return Choice(move, error=None if move else "out of scripted moves")
 
 
 class SolverPlayer(Player):
@@ -75,7 +89,7 @@ class GreedyPlayer(Player):
         moves = rules.moves(board)
         if self.avoids_blocked_moves:
             moves = tuple(m for m in moves if rules.apply(board, m) != board) or moves
-        target = next_target(board)
+        _, target = next_target(board)
 
         def distance_after(move: Move) -> int:
             there = board.agent.moved(*CompassRules.STEPS[move.name])
@@ -89,15 +103,6 @@ class WallAwareGreedyPlayer(GreedyPlayer):
 
     name = "greedy-walls"
     avoids_blocked_moves = True
-
-
-def next_target(board: Board) -> Position:
-    """The key while it lies on the map, then the locked door, then the goal."""
-    for symbol in (KEY, DOOR, GOAL):
-        found = board.find(symbol)
-        if found:
-            return found[0]
-    raise ValueError("the map has no goal")
 
 
 def _jev() -> Player:
