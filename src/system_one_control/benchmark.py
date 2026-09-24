@@ -12,7 +12,8 @@ import typer
 
 from system_one_control.conditions import Condition
 from system_one_control.game import Game, Step
-from system_one_control.players import PLAYERS, Player
+from system_one_control.players import Player
+from system_one_control.roster import PLAYERS
 from system_one_control.rules import make_rules
 from system_one_control.scenario import Scenario
 
@@ -38,6 +39,7 @@ class MoveRecord:
     model: str | None = None  # the model version that answered
     seconds: float | None = None  # how long the answer took; for Jev, the answering call alone
     retried: tuple[str, ...] = ()  # why each earlier attempt at this move was turned away
+    cost: float | None = None  # in US dollars, where the provider reports it; added 24 September
 
 
 @dataclass(frozen=True)
@@ -136,6 +138,7 @@ def play(
                 model=step.choice.model,
                 seconds=answer_time(step),
                 retried=step.choice.retried,
+                cost=step.choice.cost,
             )
             for step in steps
         ),
@@ -319,6 +322,9 @@ def usage(records: Sequence[GameRecord]) -> str:
         seconds = sorted(move.seconds for move in moves if move.seconds is not None)
         if seconds:
             line += f", {seconds[len(seconds) // 2]:.2f} s per call (median)"
+        costs = [move.cost for move in moves if move.cost is not None]
+        if costs:
+            line += f", ${sum(costs):.2f}"
         retries = sum(len(move.retried) for move in moves)
         if retries:
             line += f", {retries} turned away and retried"

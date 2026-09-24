@@ -6,7 +6,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 from dotenv import load_dotenv
 from typesafe_sdk import (
@@ -44,6 +44,52 @@ class Choice:
     model: str | None = None  # the model version that answered, where it says
     seconds: float | None = None  # the answering call alone, where the player times it
     retried: tuple[str, ...] = ()  # why each earlier attempt was turned away
+    cost: float | None = None  # in US dollars, where the provider reports it
+
+
+def answer_choice(
+    request: Request,
+    option_id: str | None,
+    probabilities: dict[str, float],
+    **details: Any,
+) -> Choice:
+    """A model's answer, given by option id, as a move: an answer outside the options is an
+    error. `probabilities` are by option id too; `details` are the rest of the Choice."""
+    moves = {option.id: option.move for option in request.options}
+    choice = Choice(
+        moves.get(option_id or ""),
+        {moves[id]: p for id, p in probabilities.items() if id in moves},
+        **details,
+    )
+    if option_id not in moves:
+        return replace(choice, error=f"the answer {option_id!r} is not one of the options")
+    return choice
+
+
+T = TypeVar("T")
+
+
+def with_retries(
+    call: Callable[[], T], waits: Sequence[float], retryable: Callable[[Exception], bool]
+) -> tuple[T, float, tuple[str, ...]]:
+    """Make a call, trying again after each of `waits` while it fails in a way worth retrying.
+
+    Returns what the call returned, how many seconds the answering call alone took, and why
+    each earlier attempt failed. The last failure, or any not worth retrying, is raised.
+    """
+    retried: list[str] = []
+    for wait in (*waits, None):
+        started = time.perf_counter()
+        try:
+            result = call()
+        except Exception as error:
+            if wait is None or not retryable(error):
+                raise
+            retried.append(f"{type(error).__name__}: {error}")
+            time.sleep(wait)
+            continue
+        return result, time.perf_counter() - started, tuple(retried)
+    raise AssertionError("unreachable: the last attempt returns or raises")
 
 
 class Player(ABC):
@@ -202,59 +248,23 @@ class JevPlayer(Player):
         self._retry_waits = tuple(retry_waits)
 
     def choose(self, turn: Turn) -> Choice:
-        request = turn.request
-        body = jev_body(request, self.model)
-        retried: list[str] = []
-        for wait in (*self._retry_waits, None):
-            started = time.perf_counter()
-            try:
-                response = self._client.system_one(**body)
-            except Exception as error:
-                if wait is None or not turned_away(error):
-                    raise
-                retried.append(f"{type(error).__name__}: {error}")
-                time.sleep(wait)
-                continue
-            seconds = time.perf_counter() - started
-            break
+        body = jev_body(turn.request, self.model)
+        response, seconds, retried = with_retries(
+            lambda: self._client.system_one(**body), self._retry_waits, turned_away
+        )
         answer = response.choices[JEV_QUESTION]
-        moves = {option.id: option.move for option in request.options}
-        choice = Choice(
-            moves.get(answer.choice),
-            {moves[id]: p for id, p in answer.probabilities.items() if id in moves},
+        return answer_choice(
+            turn.request,
+            answer.choice,
+            answer.probabilities,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
             confidence=answer.confidence,
             model=response.model,
             seconds=seconds,
-            retried=tuple(retried),
+            retried=retried,
         )
-        if answer.choice not in moves:
-            return replace(choice, error=f"Jev answered {answer.choice!r}")
-        return choice
 
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
-
-
-@dataclass(frozen=True)
-class PlayerEntry:
-    build: Callable[[], Player]
-    paid: bool = False
-    compass_only: bool = False  # it reads compass moves itself, so it cannot play other rules
-
-
-PLAYERS: dict[str, PlayerEntry] = {
-    "random": PlayerEntry(RandomPlayer),
-    "greedy": PlayerEntry(GreedyPlayer, compass_only=True),
-    "greedy-walls": PlayerEntry(WallAwareGreedyPlayer, compass_only=True),
-    "solver": PlayerEntry(SolverPlayer),
-    "jev": PlayerEntry(JevPlayer, paid=True),
-}
-
-
-def make_player(name: str) -> Player:
-    if name not in PLAYERS:
-        raise ValueError(f"unknown player {name!r}; known: {', '.join(PLAYERS)}")
-    return PLAYERS[name].build()

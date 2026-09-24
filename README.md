@@ -27,7 +27,8 @@ Needs [uv](https://docs.astral.sh/uv/), which installs Python 3.11 itself. Works
 uv sync                      # install
 uv run pytest                # run the tests
 uv run pre-commit install    # lint, format and type-check on commit; tests on push
-cp .env.example .env         # then fill in TYPESAFE_API_KEY (or JEV_API_KEY) for Jev
+cp .env.example .env         # then fill in TYPESAFE_API_KEY for Jev, OPENROUTER_API_KEY for chat models
+uv sync --extra local        # only for laya and gliclass: installs PyTorch (several GB)
 ```
 
 | Command | What it does |
@@ -80,7 +81,7 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 
 **Output.** Each run writes two files to `benchmarks/`, which is kept in git, named after the date, time and what was run, such as `2026-09-23_18-45_jev_map_levels-1-3`, with the rules at the end unless they are `compass`:
 
-- `.jsonl`: one line per game. Each line holds the rules, how close the game got to the goal and every move: the options in the order shown, the move chosen, the probability given each option, the best moves, whether the move was one of them, the input and output tokens, the model's own confidence score and version, how many seconds the answer took (for Jev, the answering call alone), and why any earlier attempt was turned away.
+- `.jsonl`: one line per game. Each line holds the rules, how close the game got to the goal and every move: the options in the order shown, the move chosen, the probability given each option, the best moves, whether the move was one of them, the input and output tokens, the cost where the provider reports it, the model's own confidence score and version, how many seconds the answer took (for Jev, the answering call alone), and why any earlier attempt was turned away.
 - `.txt`: the score table.
 
 **Stopping and resuming.** Each game is written the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites a file. Repeat the same command with `--resume --out <file>`: it keeps the finished games and plays the missing ones and those that ended in an error. A Jev call the server turns away (busy, rate-limited or failing) or never receives is tried twice more, after one and then two seconds, and the move records why each earlier attempt failed; a timeout (120 seconds) is not retried, since the server may have answered and billed it. `--resume` plays a game that ended in an error again from its first move, so its earlier calls are paid for twice. A call that still fails ends that game as an error, and `--resume` plays the game again.
@@ -235,7 +236,17 @@ Half the puzzles at levels 12, 15 and 20 are also walled in more thickly than us
 | `greedy-walls` | | like `greedy`, but never into a wall |
 | `solver` | | always a best move: the ceiling |
 | `jev` | ✓ | asks Jev (`jev-1.13.0`), sending the condition's request |
+| `laya` | | asks [Laya](https://huggingface.co/convaiinnovations/laya)'s `typed-decisions` checkpoint, an open-weight model built to answer as Jev does, on this machine |
+| `gliclass` | | asks [GLiClass](https://huggingface.co/knowledgator/gliclass-modern-large-v3.0) (`gliclass-modern-large-v3.0`), an open-weight zero-shot classifier, on this machine |
+| `ling-3.0-flash`, `qwen3.7-flash`, `deepseek-v4-flash`, `nemotron-3.5-lightning`, `gemma-4-26b`, `gpt-6-luna` | ✓ | asks a chat model on OpenRouter for an option id, with its reasoning off |
+| the same, ending `-think`, such as `qwen3.7-flash-think` | ✓ | the same model, thinking first |
 | `ScriptedPlayer` | | a fixed list of moves; used by the tests and by `examples/`, not in the CLI |
+
+**Local models.** `laya` and `gliclass` need `uv sync --extra local`, which installs PyTorch. A plain `uv sync` afterwards removes it again, so run them with `uv run --extra local socb benchmark --players laya`. Each model downloads from Hugging Face the first time it plays (about 800 MB), loads once and is shared by every game, and answers one move at a time: it already uses every core, or the GPU. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`.
+- Laya is asked the condition's question with the option texts alone, since their ids carry nothing and Laya gives each option only 48 tokens. Its token budget is stretched to fit the whole request (it defaults to 1,024 tokens, and would otherwise cut the state short without saying so). An option longer than 48 tokens ends the game as an error rather than being cut.
+- GLiClass reads the state as its text, the question as its task prompt and the option texts as its labels. It scores each option from 0 to 1 on its own; the scores are scaled to add up to 1.
+
+**Chat models.** Six of the cheapest recent models on OpenRouter whose reasoning can be switched off, at $0.02 to $0.10 per million input tokens (September 2026); `LLM_MODELS` in `llm_players.py` lists them. Each gets the same state, question and options as Jev, and replies with an option id. Without reasoning it may use only 64 tokens, so a model that thinks anyway ends the game as an error rather than running up a bill. A chat answer has no probabilities, so none are saved. The cost of every call is saved with the move.
 
 ## Project layout
 
@@ -248,7 +259,10 @@ src/system_one_control/
 ├── scenario.py     Scenario: a board, its rules and its level, loaded from scenarios/
 ├── request.py      Request: exactly what a player is shown (state, question, options)
 ├── conditions.py   Condition and CONDITIONS, the ablation
-├── players.py      Player and every player, including JevPlayer
+├── players.py      Player, the simple players and JevPlayer
+├── llm_players.py  LLMPlayer: chat models on OpenRouter
+├── local_players.py LayaPlayer and GLiClassPlayer, which run on this machine
+├── roster.py       PLAYERS: every player by name
 ├── game.py         Game: one player on one scenario, a Step per move
 ├── benchmark.py    every scenario × condition × player, played side by side, scored and saved
 ├── generator.py    PuzzleGenerator: random rooms and mazes at an exact level
@@ -259,7 +273,7 @@ src/system_one_control/
 
 ## Extending
 
-**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `players.py`.
+**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `roster.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS`.
 - A model player must read only `turn.request`, the text it is shown, never `turn.board`.
 - If it cannot answer, it may raise: the game records the error and ends.
 - A player that holds a connection releases it in `close()`, which is called after every game.

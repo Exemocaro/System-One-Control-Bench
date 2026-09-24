@@ -9,9 +9,9 @@ from typesafe_sdk import (
 )
 
 from system_one_control.board import Board
+from system_one_control.llm_players import LLM_MODELS
 from system_one_control.players import (
     JEV_RETRY_WAITS,
-    PLAYERS,
     GreedyPlayer,
     JevPlayer,
     RandomPlayer,
@@ -19,8 +19,8 @@ from system_one_control.players import (
     Turn,
     WallAwareGreedyPlayer,
     jev_body,
-    make_player,
 )
+from system_one_control.roster import PLAYERS, make_player
 from system_one_control.rules import CompassRules
 from tests.helpers import MAP
 
@@ -62,9 +62,11 @@ def test_greedy_breaks_ties_the_same_way_whatever_the_option_order():
     assert moves == {"south"}  # south and east both close in; south comes first in the rules
 
 
-def test_players_are_built_by_name_and_only_jev_costs_money():
+def test_players_are_built_by_name_and_only_jev_and_the_chat_models_cost_money():
     assert isinstance(make_player("random"), RandomPlayer)
-    assert {name for name, entry in PLAYERS.items() if entry.paid} == {"jev"}
+    paid = {name for name, entry in PLAYERS.items() if entry.paid}
+    assert paid == {"jev", *LLM_MODELS, *(f"{name}-think" for name in LLM_MODELS)}
+    assert not PLAYERS["laya"].paid and not PLAYERS["gliclass"].paid
     with pytest.raises(ValueError, match="unknown player"):
         make_player("chess-engine")
 

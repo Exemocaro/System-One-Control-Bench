@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game, Step
-from system_one_control.players import PLAYERS, make_player
 from system_one_control.request import Request
+from system_one_control.roster import PLAYERS, make_player
 from system_one_control.scenario import load_scenarios
 
 PAGE = Path(__file__).with_name("index.html")

@@ -21,7 +21,7 @@ from system_one_control.benchmark import (
 from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
 from system_one_control.generator import LEVELS, write_level
-from system_one_control.players import PLAYERS
+from system_one_control.roster import PLAYERS
 from system_one_control.rules import RULES, make_rules
 from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
