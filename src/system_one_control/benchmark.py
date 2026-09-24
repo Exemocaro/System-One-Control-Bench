@@ -324,7 +324,7 @@ def usage(records: Sequence[GameRecord]) -> str:
             line += f", {seconds[len(seconds) // 2]:.2f} s per call (median)"
         costs = [move.cost for move in moves if move.cost is not None]
         if costs:
-            line += f", ${sum(costs):.2f}"
+            line += f", ${sum(costs):.4f}"
         retries = sum(len(move.retried) for move in moves)
         if retries:
             line += f", {retries} turned away and retried"

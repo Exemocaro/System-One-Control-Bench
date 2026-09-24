@@ -92,6 +92,21 @@ def test_without_reasoning_the_model_must_answer_at_once_and_with_it_may_think()
     assert "max_tokens" not in reasoned
 
 
+def test_the_answer_must_be_json_naming_one_of_the_options():
+    t = turn()
+    body = llm(answering()[0]).body(t.request)
+    schema = body["response_format"]["json_schema"]["schema"]
+    assert schema["properties"]["option"]["enum"] == [option.id for option in t.request.options]
+    assert schema["required"] == ["option"]
+    assert body["provider"] == {"require_parameters": True}
+
+
+def test_an_answer_in_json_maps_back_to_a_move():
+    t = turn()
+    client, _ = answering(json.dumps({"option": option_for(t, "east")}))
+    assert llm(client).choose(t).move == "east"
+
+
 def test_the_last_option_id_in_the_answer_is_the_one_taken():
     t = turn()
     assert parse_answer("option_1, no: option_3", t.request) == "option_3"

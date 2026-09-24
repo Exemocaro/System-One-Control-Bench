@@ -15,27 +15,24 @@ from system_one_control.request import Request
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_KEY_NAME = "OPENROUTER_API_KEY"
 
-# Short names for OpenRouter models. Chosen in September 2026 as the cheapest recent chat models
-# whose reasoning can be switched off, so each plays both with and without it. Pinned versions
-# rather than "latest" aliases, so a run can be repeated. Prices are per million tokens.
+# Short names for chat models on OpenRouter; each plays with its reasoning off and on. Pinned
+# versions rather than "latest" aliases, so a run can be repeated. Gemma 4 26B was among the
+# cheapest recent models whose reasoning can be switched off in September 2026, at $0.09 per
+# million input tokens and $0.30 per million output tokens; `openrouter.ai/models` has others.
 LLM_MODELS = {
-    "ling-3.0-flash": "inclusionai/ling-3.0-flash",  # $0.021 in, $0.063 out
-    "qwen3.7-flash": "qwen/qwen3.7-flash",  # $0.03 in, $0.13 out
-    "deepseek-v4-flash": "deepseek/deepseek-v4-flash-0731",  # $0.03 in, $0.32 out
-    "nemotron-3.5-lightning": "nvidia/nemotron-3.5-lightning",  # $0.08 in, $0.20 out
-    "gemma-4-26b": "google/gemma-4-26b-a4b-it",  # $0.09 in, $0.30 out
-    "gpt-6-luna": "openai/gpt-6-luna",  # $0.10 in, $0.50 out
+    "gemma-4-26b": "google/gemma-4-26b-a4b-it",
 }
 
 LLM_SYSTEM = (
     "You are playing a puzzle on a grid. You are given the state of the game, a question and "
     "a list of options, each with an id such as option_3. Reply with the id of the one option "
-    "you choose, and nothing else."
+    "you choose."
 )
-# Seconds to wait before each retry of a request the provider turned away.
-LLM_RETRY_WAITS = (1.0, 2.0)
-# Answering without reasoning is a few tokens, such as "option_12"; the cap stops a model that
-# reasons anyway from running up a bill, and its answer then comes back empty, as an error.
+# Seconds to wait before each retry of a request the provider turned away. Longer than Jev's:
+# OpenRouter shares each model's capacity, and a rate limit there lasts tens of seconds.
+LLM_RETRY_WAITS = (5.0, 15.0, 30.0, 60.0)
+# Answering without reasoning is a few tokens, such as {"option": "option_12"}; the cap stops a
+# model that reasons anyway from running up a bill, and its answer then comes back cut, as an error.
 ANSWER_TOKENS = 64
 # Seconds a call may take: reasoning can take minutes on a long puzzle.
 LLM_TIMEOUT = 120.0
@@ -85,6 +82,21 @@ def llm_messages(request: Request) -> list[dict[str, str]]:
     return [{"role": "system", "content": LLM_SYSTEM}, {"role": "user", "content": user}]
 
 
+def answer_format(request: Request) -> dict[str, Any]:
+    """A JSON schema that allows only an answer naming one of the options."""
+    option = {"type": "string", "enum": [option.id for option in request.options]}
+    schema = {
+        "type": "object",
+        "properties": {"option": option},
+        "required": ["option"],
+        "additionalProperties": False,
+    }
+    return {
+        "type": "json_schema",
+        "json_schema": {"name": "answer", "strict": True, "schema": schema},
+    }
+
+
 def parse_answer(text: str, request: Request) -> str | None:
     """The last option id in the answer that is one of the request's, or None."""
     ids = {option.id for option in request.options}
@@ -127,6 +139,10 @@ class LLMPlayer(Player):
             # The reasoning is billed either way; leaving its text out only saves the transfer.
             "reasoning": {"enabled": self.reasoning, "exclude": True},
             "usage": {"include": True},  # adds the cost to the answer
+            # The answer must be JSON naming one of the options, so a model cannot answer in
+            # prose, or think aloud when its reasoning is off; only providers that enforce it.
+            "response_format": answer_format(request),
+            "provider": {"require_parameters": True},
         }
         if not self.reasoning:
             body["max_tokens"] = ANSWER_TOKENS
