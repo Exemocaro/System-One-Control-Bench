@@ -165,16 +165,21 @@ def sequence_description(count: str) -> str:
 class SequenceRules(Rules):
     """Each move is `length` compass moves, chosen together. Reaching the goal ends it there.
 
-    Every sequence is offered, blocked or not, as the compass rules offer every direction.
+    With `shortest` set, a move may also be fewer compass moves, down to that many. Every
+    sequence is offered, blocked or not, as the compass rules offer every direction.
     """
 
-    length: ClassVar[int]
+    length: ClassVar[int]  # the most compass moves in a move
+    shortest: ClassVar[int | None] = None  # the fewest, where a move may be shorter than length
 
     def __init__(self) -> None:
         self.step = CompassRules()
         self._steps: dict[str, tuple[Move, ...]] = {}
         moves = []
-        for steps in itertools.product(CompassRules.MOVES, repeat=self.length):
+        counts = range(self.shortest or self.length, self.length + 1)
+        for steps in itertools.chain.from_iterable(
+            itertools.product(CompassRules.MOVES, repeat=count) for count in counts
+        ):
             name = ",".join(step.name for step in steps)
             self._steps[name] = steps
             ways = ", then ".join(step.description.removeprefix("move ") for step in steps)
@@ -233,6 +238,20 @@ class ThreeMoveRules(SequenceRules):
     length = 3
 
 
+class UpToTwoMoveRules(SequenceRules):
+    name = "up-to-two-moves"
+    description = sequence_description("one or two")
+    length = 2
+    shortest = 1
+
+
+class UpToThreeMoveRules(SequenceRules):
+    name = "up-to-three-moves"
+    description = sequence_description("one, two or three")
+    length = 3
+    shortest = 1
+
+
 def next_target(board: Board) -> tuple[str, Position]:
     """The key while it lies on the map, then the locked door, then the goal."""
     for symbol in (KEY, DOOR, GOAL):
@@ -243,7 +262,14 @@ def next_target(board: Board) -> tuple[str, Position]:
 
 
 RULES: dict[str, type[Rules]] = {
-    rules.name: rules for rules in (CompassRules, TwoMoveRules, ThreeMoveRules)
+    rules.name: rules
+    for rules in (
+        CompassRules,
+        TwoMoveRules,
+        ThreeMoveRules,
+        UpToTwoMoveRules,
+        UpToThreeMoveRules,
+    )
 }
 
 

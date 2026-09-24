@@ -1,7 +1,14 @@
 import pytest
 
 from system_one_control.board import Board, Position
-from system_one_control.rules import CompassRules, ThreeMoveRules, TwoMoveRules, make_rules
+from system_one_control.rules import (
+    CompassRules,
+    ThreeMoveRules,
+    TwoMoveRules,
+    UpToThreeMoveRules,
+    UpToTwoMoveRules,
+    make_rules,
+)
 
 rules = CompassRules()
 
@@ -188,3 +195,33 @@ def test_sequence_rules_count_levels_in_compass_moves():
 def test_sequence_rules_are_found_by_name():
     assert isinstance(make_rules("two-moves"), TwoMoveRules)
     assert isinstance(make_rules("three-moves"), ThreeMoveRules)
+
+
+up_to_two = UpToTwoMoveRules()
+up_to_three = UpToThreeMoveRules()
+
+
+def test_up_to_rules_offer_every_shorter_sequence_too():
+    board = Board.parse("###\n#A#\n###")
+    assert len(up_to_two.moves(board)) == 4 + 16
+    assert len(up_to_three.moves(board)) == 4 + 16 + 64
+    assert up_to_three.find_move(board, "east").description == "move east (right)"
+    assert up_to_three.find_move(board, "east,north") is not None
+    assert up_to_three.find_move(board, "east,north,west") is not None
+
+
+def test_under_up_to_rules_a_single_step_goes_one_cell():
+    assert sequence(up_to_three, "######\n#A...#\n######", "east").agent == Position(2, 1)
+
+
+@pytest.mark.parametrize(("level", "two_moves", "three_moves"), [(1, 1, 1), (4, 2, 2), (10, 5, 4)])
+def test_shorter_moves_do_not_change_the_fewest_moves_a_level_needs(level, two_moves, three_moves):
+    assert up_to_two.moves_for(level) == two_moves
+    assert up_to_three.moves_for(level) == three_moves
+
+
+def test_up_to_rules_say_a_move_may_be_shorter_and_are_found_by_name():
+    assert "a path of one, two or three steps" in up_to_three.description
+    assert "a path of one or two steps" in up_to_two.description
+    assert isinstance(make_rules("up-to-two-moves"), UpToTwoMoveRules)
+    assert isinstance(make_rules("up-to-three-moves"), UpToThreeMoveRules)

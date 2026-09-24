@@ -70,13 +70,13 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 | `--levels` | `all` | levels to play, such as `3`, `1,4` or `2-5` |
 | `--scenarios` | `all` | comma-separated scenario names |
 | `--conditions` | `map` | comma-separated [condition](#conditions) names, or `all` |
-| `--rules` | each scenario's own: `compass` | play every puzzle under these [rules](#rules-one-step-per-move-or-several): `compass`, `two-moves` or `three-moves` |
+| `--rules` | each scenario's own: `compass` | play every puzzle under these [rules](#rules-one-step-per-move-or-several): `compass`, `two-moves`, `three-moves`, `up-to-two-moves` or `up-to-three-moves` |
 | `--allow-paid` | off | required for any player that costs money per move |
 | `--workers` | `3` | games played at once |
 | `--out` | `benchmarks/<date>_<time>_<what was run>.jsonl` | where the results go |
 | `--resume` | off | finish the run in `--out` |
 
-**Cost.** Call counts are worst cases: one call per move, every game played to its move limit. A player that wins early costs less. A paid player is refused without `--allow-paid`, and the refusal gives the worst case. Jev takes about 600 input tokens per call under `map` and about 830 under `everything` (measured on level 10). It does not charge for output tokens. Under `two-moves` a condition takes at most 880 calls on all 100 puzzles, and under `three-moves` 620, but each request is longer, because every option is a sequence: about 1.8 times the compass request under `two-moves`, and about 5 times under `three-moves` (measured in characters on level 10).
+**Cost.** Call counts are worst cases: one call per move, every game played to its move limit. A player that wins early costs less. A paid player is refused without `--allow-paid`, and the refusal gives the worst case. Jev takes about 600 input tokens per call under `map` and about 830 under `everything` (measured on level 10). It does not charge for output tokens. Under `two-moves` a condition takes at most 880 calls on all 100 puzzles, and under `three-moves` 620, but each request is longer, because every option is a sequence: about 1.8 times the compass request under `two-moves`, and about 5 times under `three-moves` (measured in characters on level 10). The `up-to-…` rules take as many calls at most as the rules they extend, and add a tenth (`up-to-two-moves`) to a fifth (`up-to-three-moves`) to each request. Measured on one level-10 puzzle under `three-moves`, Jev took about 2,400 input tokens per call under `map` and 3,100 under `everything`.
 
 **Output.** Each run writes two files to `benchmarks/`, which is kept in git, named after the date, time and what was run, such as `2026-09-23_18-45_jev_map_levels-1-3`, with the rules at the end unless they are `compass`:
 
@@ -156,8 +156,10 @@ The rules say what a move is. They are chosen for a whole run with `--rules`, an
 | `compass` | one step north, south, east or west | 4 | 20 |
 | `two-moves` | two steps, chosen together, such as `north,east` | 16 | 10 |
 | `three-moves` | three steps, chosen together, such as `north,east,east` | 64 | 7 |
+| `up-to-two-moves` | one or two steps, chosen together | 20 | 10 |
+| `up-to-three-moves` | one, two or three steps, chosen together | 84 | 7 |
 
-Under `two-moves` and `three-moves`:
+Under all but `compass`:
 
 - Every sequence is offered, blocked or not, just as the compass rules always offer all four directions.
 - A blocked step is wasted and the rest are still taken. Reaching the goal ends the move there, so no puzzle is out of reach.
@@ -166,7 +168,9 @@ Under `two-moves` and `three-moves`:
 - The subgoal question asks which move *starts* the shortest path to the goal through the target, rather than which is its first step. A move that reaches the key with steps to spare should spend them heading on, and it is scored that way. When the target is the goal, it asks for the shortest path to it.
 - Many sequences do the same thing, such as `north,south` and `east,west`: at the start of a puzzle the 64 three-step options have a median of 8 different outcomes, and the 16 two-step ones 5. They are all offered, since merging them would tell the player where the walls are, so a model's probability is split across them. Add it up by outcome before comparing it with `compass`.
 
-`examples/two-moves/` and `examples/three-moves/` hold the requests under each, written by `uv run socb examples --rules <rules>`.
+The `up-to-…` rules also offer every shorter sequence, so a player can take a single careful step next to a wall and a long stride in the open. A shorter move never wins in fewer moves, so the fewest moves, the move limit and the scores are those of the rules they extend; compare the two to see whether choosing how far to commit helps.
+
+`examples/<rules>/` holds the requests under each rules but `compass`, written by `uv run socb examples --rules <rules>`.
 
 The sequences test whether Jev does better when one decision covers several steps. A slide (walk until something stops you) was tried first and dropped: with nothing to stop on in open rooms and mazes, 21 of the 100 puzzles could not be won.
 

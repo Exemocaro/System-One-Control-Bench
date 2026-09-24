@@ -17,6 +17,8 @@ EXAMPLE_MOVES = {
     "compass": ("east", "north"),
     "two-moves": ("east,south", "north,north"),
     "three-moves": ("east,south,west", "north,north,north"),
+    "up-to-two-moves": ("east", "north,north"),
+    "up-to-three-moves": ("east,south", "north,north,north"),
 }
 
 

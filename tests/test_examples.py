@@ -5,14 +5,16 @@ import pytest
 
 from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import EXAMPLE_DIR, EXAMPLE_SCENARIO, example, write_examples
-from system_one_control.rules import ThreeMoveRules, TwoMoveRules
+from system_one_control.rules import RULES, ThreeMoveRules, TwoMoveRules
 from system_one_control.scenario import load_scenarios
 
 SCENARIO = load_scenarios()[EXAMPLE_SCENARIO]
 
 
 @pytest.mark.parametrize(
-    "rules", [None, TwoMoveRules(), ThreeMoveRules()], ids=lambda r: r.name if r else "compass"
+    "rules",
+    [None, *(rules() for name, rules in RULES.items() if name != "compass")],
+    ids=lambda r: r.name if r else "compass",
 )
 @pytest.mark.parametrize("name", CONDITIONS)
 def test_the_saved_example_is_what_the_condition_sends_today(name, rules):
