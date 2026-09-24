@@ -121,3 +121,19 @@ def test_under_sequence_rules_the_closest_distance_counts_compass_moves():
     game.step()
     assert game.closest == 3  # one compass move nearer, though no sequence was saved
     assert len(game.play()) == played.max_moves == 4
+
+
+def test_under_sequence_rules_the_closest_distance_takes_in_the_cells_passed_through():
+    played = replace(scenario("#######\n#A...G#\n#######", 4), rules=TwoMoveRules())
+    game = Game(played, AlwaysPlayer("east,west"), MAP)
+    step = game.step()
+    assert step.after == step.before
+    assert game.closest == 3  # one compass move nearer halfway through the move
+
+
+@pytest.mark.parametrize("rules", [TwoMoveRules(), ThreeMoveRules()], ids=lambda r: r.name)
+def test_the_best_moves_worked_out_once_agree_with_a_fresh_search_at_every_move(rules):
+    played = replace(SCENARIOS["gen-10-01"], rules=rules)
+    game = Game(played, AlwaysPlayer("east," * (rules.length - 1) + "south"), MAP)
+    for step in game.play():
+        assert step.best_moves == game.solver.best_moves(step.before)

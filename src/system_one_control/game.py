@@ -36,8 +36,11 @@ class Game:
         self.player = player
         self.condition = condition
         self.solver = Solver(scenario.rules)
-        self.distance = Solver(scenario.rules.step_rules())  # counts the level's own moves
         self.board = scenario.board
+        # Worked out once: the distances from the start cover every board the game can reach.
+        self._distances = self.solver.distances(self.board)
+        # Counted in the moves a level is counted in, which may be shorter than these rules'.
+        self._step_distances = Solver(scenario.rules.step_rules()).distances(self.board)
         self.steps: list[Step] = []
 
     @property
@@ -52,11 +55,20 @@ class Game:
     def closest(self) -> int | None:
         """The fewest moves to the goal from any board reached so far, the start included.
 
-        Counted in the moves a level is counted in, so it compares across rules.
+        Counted in the moves a level is counted in, so it compares across rules, and taking in
+        every board a move passed through, not only the one it ended on.
         """
-        boards = {self.scenario.board, *(step.after for step in self.steps)}
-        distances = (self.distance.moves_to_goal(board) for board in boards)
+        boards = {self.scenario.board}
+        for step in self.steps:
+            move = self.rules.find_move(step.before, step.choice.move)
+            if move is not None:
+                boards.update(self.rules.passes(step.before, move))
+        distances = (self._step_distances.get(board) for board in boards)
         return min((d for d in distances if d is not None), default=None)
+
+    def best_moves(self, board: Board) -> tuple[str, ...]:
+        """Every move from a board of this game that starts a shortest path."""
+        return self.solver.best_moves(board, self._distances)
 
     @property
     def is_over(self) -> bool:
@@ -92,7 +104,7 @@ class Game:
             before=self.board,
             request=request,
             choice=choice,
-            best_moves=self.solver.best_moves(self.board),
+            best_moves=self.best_moves(self.board),
             after=after,
             seconds=seconds,
         )

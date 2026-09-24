@@ -83,7 +83,7 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 - `.jsonl`: one line per game. Each line holds the rules, how close the game got to the goal and every move: the options in the order shown, the move chosen, the probability given each option, the best moves, whether the move was one of them, the input and output tokens, the model's own confidence score and version, how many seconds the answer took (for Jev, the answering call alone), and why any earlier attempt was turned away.
 - `.txt`: the score table.
 
-**Stopping and resuming.** Each game is written the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites a file. Repeat the same command with `--resume --out <file>`: it keeps the finished games and plays the missing ones and those that ended in an error. A Jev call the server turns away (busy, rate-limited or failing) or never receives is tried twice more, after one and then two seconds, and the move records why each earlier attempt failed; a timeout is not retried, since the server may have answered and billed it. A call that still fails ends that game as an error, and `--resume` plays the game again.
+**Stopping and resuming.** Each game is written the moment it finishes, so a run that crashes or is stopped with Ctrl+C keeps every game it paid for. A run never overwrites a file. Repeat the same command with `--resume --out <file>`: it keeps the finished games and plays the missing ones and those that ended in an error. A Jev call the server turns away (busy, rate-limited or failing) or never receives is tried twice more, after one and then two seconds, and the move records why each earlier attempt failed; a timeout (120 seconds) is not retried, since the server may have answered and billed it. `--resume` plays a game that ended in an error again from its first move, so its earlier calls are paid for twice. A call that still fails ends that game as an error, and `--resume` plays the game again.
 
 **Growing a run.** A run on a few levels can be extended to all of them in the same file: run `--levels 1-3 --out <file>`, then the same command without `--levels` and with `--resume`. It keeps the games already played and plays the rest.
 
@@ -102,7 +102,7 @@ For each player and condition, the table gives the games won at each level, then
 
 `progress` gives lost games partial credit, and `won` and `SPL` do not. Each move is still saved with `optimal`, which says whether it started a shortest path.
 
-Levels and `progress` always count single steps, so they compare across rules. `SPL` and `optimal` count the moves of the game's own rules.
+Levels and `progress` always count single steps, so they compare across rules; under several-step rules, `progress` takes in every cell a move passed through, not only where it ended. `SPL` and `optimal` count the moves of the game's own rules, so the rate of `optimal` moves does not compare across rules: under `three-moves`, about 4 of the 64 options are best, against 1 or 2 of 4 under `compass`.
 
 The free players on all 100 puzzles, under `map`:
 
@@ -163,7 +163,8 @@ Under `two-moves` and `three-moves`:
 - A blocked step is wasted and the rest are still taken. Reaching the goal ends the move there, so no puzzle is out of reach.
 - A puzzle `n` steps away takes `n / 2` or `n / 3` moves, rounded up, and a game still ends at twice that.
 - Memory and lookahead describe a move by where it ends and what it picked up, opened or reached, not step by step.
-- The subgoal question asks which move *starts* the shortest path rather than which is its first step.
+- The subgoal question asks which move *starts* the shortest path to the goal through the target, rather than which is its first step. A move that reaches the key with steps to spare should spend them heading on, and it is scored that way. When the target is the goal, it asks for the shortest path to it.
+- Many sequences do the same thing, such as `north,south` and `east,west`: at the start of a puzzle the 64 three-step options have a median of 8 different outcomes, and the 16 two-step ones 5. They are all offered, since merging them would tell the player where the walls are, so a model's probability is split across them. Add it up by outcome before comparing it with `compass`.
 
 `examples/two-moves/` and `examples/three-moves/` hold the requests under each, written by `uv run socb examples --rules <rules>`.
 

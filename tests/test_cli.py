@@ -185,3 +185,18 @@ def test_a_run_under_other_rules_says_so_in_its_file_name():
     assert _run_name(["jev"], "all", "all", "all", when, rules="compass") == (
         "2026-09-24_10-00_jev_all"
     )
+
+
+def test_resume_refuses_a_file_played_under_other_rules_even_if_its_games_ended_in_errors(
+    tmp_path,
+):
+    out = tmp_path / "results.jsonl"
+    command = ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+    runner.invoke(app, command)
+    errored = [json.loads(line) | {"error": "down"} for line in out.read_text().splitlines()]
+    out.write_text("".join(json.dumps(record) + "\n" for record in errored))
+    before = out.read_text()
+    result = runner.invoke(app, [*command, "--rules", "two-moves", "--resume"])
+    assert result.exit_code != 0
+    assert "--rules" in result.output
+    assert out.read_text() == before

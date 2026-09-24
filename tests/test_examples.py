@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -10,11 +11,18 @@ from system_one_control.scenario import load_scenarios
 SCENARIO = load_scenarios()[EXAMPLE_SCENARIO]
 
 
+@pytest.mark.parametrize(
+    "rules", [None, TwoMoveRules(), ThreeMoveRules()], ids=lambda r: r.name if r else "compass"
+)
 @pytest.mark.parametrize("name", CONDITIONS)
-def test_the_saved_example_is_what_the_condition_sends_today(name):
-    """If this fails, the wording changed: check the change, then run `socb examples`."""
-    saved = (EXAMPLE_DIR / f"{name}.json").read_text(encoding="utf-8")
-    assert saved == example(CONDITIONS[name], SCENARIO)
+def test_the_saved_example_is_what_the_condition_sends_today(name, rules):
+    """If this fails, the wording changed: check the change, then run `socb examples` (with
+    `--rules` for the rules that failed)."""
+    folder, scenario = EXAMPLE_DIR, SCENARIO
+    if rules is not None:
+        folder, scenario = EXAMPLE_DIR / rules.name, replace(SCENARIO, rules=rules)
+    saved = (folder / f"{name}.json").read_text(encoding="utf-8")
+    assert saved == example(CONDITIONS[name], scenario)
 
 
 def test_an_example_is_the_jev_request_after_a_move_and_a_blocked_move():

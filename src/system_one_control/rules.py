@@ -42,6 +42,10 @@ class Rules(ABC):
     def describe_next_target(self, board: Board) -> str:
         """The next thing to reach on the way to winning, such as "the key K at (7, 2)"."""
 
+    def passes(self, board: Board, move: Move) -> tuple[Board, ...]:
+        """Every board the move passes through, ending with the one it ends on."""
+        return (self.apply(board, move),)
+
     def find_move(self, board: Board, name: str | None) -> Move | None:
         return next((move for move in self.moves(board) if move.name == name), None)
 
@@ -181,11 +185,16 @@ class SequenceRules(Rules):
         return self._moves
 
     def apply(self, board: Board, move: Move) -> Board:
+        return self.passes(board, move)[-1]
+
+    def passes(self, board: Board, move: Move) -> tuple[Board, ...]:
+        boards = []
         for step in self._steps[move.name]:
             board = self.step.apply(board, step)
+            boards.append(board)
             if self.is_won(board):
                 break
-        return board
+        return tuple(boards)
 
     def is_won(self, board: Board) -> bool:
         return self.step.is_won(board)

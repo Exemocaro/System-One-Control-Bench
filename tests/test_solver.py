@@ -46,3 +46,9 @@ def test_the_distances_from_a_board_agree_with_a_search_from_each_board(rules, n
     assert distances[board] == Solver(rules).moves_to_goal(board)
     for after in {rules.apply(board, move) for move in rules.moves(board)}:
         assert distances.get(after) == Solver(rules).moves_to_goal(after)
+
+
+def test_best_moves_can_reuse_the_distances_from_an_earlier_board():
+    start = Board.parse("#####\n#A..#\n#.G.#\n#####")
+    later = CompassRules().apply(start, CompassRules.MOVES[2])  # east
+    assert solver.best_moves(later, solver.distances(start)) == solver.best_moves(later)

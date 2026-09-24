@@ -108,19 +108,22 @@ def benchmark(
             raise typer.BadParameter(
                 f"{out} already exists; add --resume to finish it, or choose another --out"
             )
-        kept = [record for record in load(out) if record.error is None]
+        # Every game in the file is checked, those that ended in an error too, though only the
+        # finished ones are kept.
+        loaded = load(out)
         wanted = set(keys)
-        strays = [record.key for record in kept if record.key not in wanted]
+        strays = [record.key for record in loaded if record.key not in wanted]
         if strays:
             raise typer.BadParameter(
                 f"{out} holds games this run would not play, such as {strays[0]}; "
                 "resume with the same --players, --levels, --scenarios and --conditions"
             )
-        other = next((r for r in kept if r.rules != rules_of[r.scenario]), None)
+        other = next((r for r in loaded if r.rules != rules_of[r.scenario]), None)
         if other:
             raise typer.BadParameter(
                 f"{out} holds games played under {other.rules} rules; resume with the same --rules"
             )
+        kept = [record for record in loaded if record.error is None]
     done = {record.key for record in kept}
     calls = estimate_paid_calls(chosen_scenarios, chosen_conditions, names, done=done)
     if calls and not allow_paid:

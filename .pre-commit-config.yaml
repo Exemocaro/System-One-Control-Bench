@@ -1,6 +1,3 @@
-# Checks run on every commit. Set up once with: uv run pre-commit install
-# Run them by hand on every file with: uv run pre-commit run --all-files
-# The tests are slower, so they run before a push rather than every commit.
 default_install_hook_types: [pre-commit, pre-push]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

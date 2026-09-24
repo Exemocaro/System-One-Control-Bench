@@ -84,8 +84,16 @@ class SolverPlayer(Player):
 
     name = "solver"
 
+    def __init__(self) -> None:
+        # The distances from the first board of a game cover every later one.
+        self._rules: Rules | None = None
+        self._distances: dict[Board, int] = {}
+
     def choose(self, turn: Turn) -> Choice:
-        best = Solver(turn.rules).best_moves(turn.board)
+        solver = Solver(turn.rules)
+        if turn.rules is not self._rules or turn.board not in self._distances:
+            self._rules, self._distances = turn.rules, solver.distances(turn.board)
+        best = solver.best_moves(turn.board, self._distances)
         if not best:
             return Choice(None, error="the goal cannot be reached")
         return Choice(best[0], {move: 1 / len(best) for move in best})
@@ -130,6 +138,9 @@ JEV_QUESTION = "move"
 API_KEY_NAMES = ("TYPESAFE_API_KEY", "JEV_API_KEY")
 # Seconds to wait before each retry of a request the server turned away.
 JEV_RETRY_WAITS = (1.0, 2.0)
+# Seconds a call may take. A timeout is not retried and ends the game, so this is generous:
+# the slowest compass call took 39 s, and a three-moves request is about 5 times as long.
+JEV_TIMEOUT = 120.0
 
 
 def turned_away(error: Exception) -> bool:
@@ -185,7 +196,7 @@ class JevPlayer(Player):
         self._owns_client = client is None
         if client is None:
             no_retries = RetryPolicy(max_retries=0)  # retried here, so each attempt is seen
-            client = TypeSafeClient(api_key=api_key(), timeout=60.0, retry=no_retries)
+            client = TypeSafeClient(api_key=api_key(), timeout=JEV_TIMEOUT, retry=no_retries)
         self.model = model
         self._client = client
         self._retry_waits = tuple(retry_waits)

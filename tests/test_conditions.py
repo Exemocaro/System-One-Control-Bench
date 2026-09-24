@@ -126,3 +126,12 @@ def test_under_sequence_rules_the_subgoal_asks_for_the_move_that_starts_the_path
     assert subgoal.render(ROOM, TwoMoveRules()).question == (
         "Your next target is the goal G at (3, 1). Which move starts the shortest path to it?"
     )
+
+
+def test_under_sequence_rules_a_subgoal_before_the_goal_asks_for_the_path_to_the_goal():
+    # A move that reaches the key with steps to spare should spend them on the way onward.
+    question = CONDITIONS["map+subgoal"].render(LEVEL_TEN, TwoMoveRules()).question
+    assert question == (
+        "Your next target is the key K at (7, 2). "
+        "Which move starts the shortest path to the goal through it?"
+    )

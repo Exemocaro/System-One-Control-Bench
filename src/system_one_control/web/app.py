@@ -123,7 +123,7 @@ def game_json(game_id: str, game: Game) -> dict[str, Any]:
     if not game.is_over:
         upcoming = {
             "request": request_json(game.next_request()),
-            "best_moves": list(game.solver.best_moves(game.board)),
+            "best_moves": list(game.best_moves(game.board)),
         }
     return {
         "id": game_id,

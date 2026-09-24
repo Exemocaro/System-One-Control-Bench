@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Mapping
 
 from system_one_control.board import Board
 from system_one_control.rules import Rules
@@ -55,9 +56,17 @@ class Solver:
                     back.append(before)
         return found
 
-    def best_moves(self, board: Board) -> tuple[str, ...]:
-        """Every move that starts a shortest path, ties included."""
-        distances = self.distances(board)
+    def best_moves(
+        self, board: Board, distances: Mapping[Board, int] | None = None
+    ) -> tuple[str, ...]:
+        """Every move that starts a shortest path, ties included.
+
+        `distances` may come from any earlier board this one was reached from, since the
+        distances from a board cover every board reachable from it; by default they are worked
+        out from this board.
+        """
+        if distances is None:
+            distances = self.distances(board)
         distance = distances.get(board)
         if not distance:
             return ()
