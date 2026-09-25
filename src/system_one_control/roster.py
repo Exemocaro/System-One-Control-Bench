@@ -35,8 +35,8 @@ def _gliclass() -> Player:
     return GLiClassPlayer()
 
 
-def _llm(model: str, *, reasoning: bool) -> PlayerEntry:
-    return PlayerEntry(lambda: LLMPlayer(model, reasoning=reasoning), paid=True)
+def _llm(model: str, host: str, *, reasoning: bool) -> PlayerEntry:
+    return PlayerEntry(lambda: LLMPlayer(model, host=host, reasoning=reasoning), paid=True)
 
 
 PLAYERS: dict[str, PlayerEntry] = {
@@ -48,8 +48,8 @@ PLAYERS: dict[str, PlayerEntry] = {
     "laya": PlayerEntry(_laya),
     "gliclass": PlayerEntry(_gliclass),
     # Each chat model twice: answering at once, as Jev does, and thinking first.
-    **{name: _llm(model, reasoning=False) for name, model in LLM_MODELS.items()},
-    **{f"{name}-think": _llm(model, reasoning=True) for name, model in LLM_MODELS.items()},
+    **{name: _llm(*model, reasoning=False) for name, model in LLM_MODELS.items()},
+    **{f"{name}-think": _llm(*model, reasoning=True) for name, model in LLM_MODELS.items()},
 }
 
 

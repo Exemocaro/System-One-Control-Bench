@@ -101,6 +101,16 @@ def test_the_answer_must_be_json_naming_one_of_the_options():
     assert body["provider"] == {"require_parameters": True}
 
 
+def test_a_model_can_be_pinned_to_one_host():
+    t = turn()
+    player = LLMPlayer("m", reasoning=False, host="deepinfra", client=answering()[0])
+    assert player.body(t.request)["provider"] == {
+        "require_parameters": True,
+        "order": ["deepinfra"],
+        "allow_fallbacks": False,
+    }
+
+
 def test_an_answer_in_json_maps_back_to_a_move():
     t = turn()
     client, _ = answering(json.dumps({"option": option_for(t, "east")}))

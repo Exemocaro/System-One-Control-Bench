@@ -15,12 +15,14 @@ from system_one_control.request import Request
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_KEY_NAME = "OPENROUTER_API_KEY"
 
-# Short names for chat models on OpenRouter; each plays with its reasoning off and on. Pinned
-# versions rather than "latest" aliases, so a run can be repeated. Gemma 4 26B was among the
-# cheapest recent models whose reasoning can be switched off in September 2026, at $0.09 per
-# million input tokens and $0.30 per million output tokens; `openrouter.ai/models` has others.
+# Short names for chat models on OpenRouter, each with the one host that runs it; each plays
+# with its reasoning off and on. Pinned versions rather than "latest" aliases, and one host
+# rather than whichever is free, as hosts may run a model differently: a run can be repeated.
+# Gemma 4 26B was among the cheapest recent models whose reasoning can be switched off in
+# September 2026, at $0.09 per million input tokens and $0.30 per million output tokens;
+# `openrouter.ai/models` has others.
 LLM_MODELS = {
-    "gemma-4-26b": "google/gemma-4-26b-a4b-it",
+    "gemma-4-26b": ("google/gemma-4-26b-a4b-it", "deepinfra"),
 }
 
 LLM_SYSTEM = (
@@ -119,6 +121,7 @@ class LLMPlayer(Player):
         model: str,
         *,
         reasoning: bool,
+        host: str | None = None,
         client: Any = None,
         retry_waits: Sequence[float] = LLM_RETRY_WAITS,
     ) -> None:
@@ -128,6 +131,7 @@ class LLMPlayer(Player):
             headers = {"Authorization": f"Bearer {openrouter_key()}"}
             client = httpx.Client(headers=headers, timeout=timeout)
         self.model = model
+        self.host = host
         self.reasoning = reasoning
         self._client = client
         self._retry_waits = tuple(retry_waits)
@@ -144,6 +148,8 @@ class LLMPlayer(Player):
             "response_format": answer_format(request),
             "provider": {"require_parameters": True},
         }
+        if self.host:
+            body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
         if not self.reasoning:
             body["max_tokens"] = ANSWER_TOKENS
         return body
