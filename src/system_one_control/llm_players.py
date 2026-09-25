@@ -20,9 +20,11 @@ OPENROUTER_KEY_NAME = "OPENROUTER_API_KEY"
 # rather than whichever is free, as hosts may run a model differently: a run can be repeated.
 # Gemma 4 26B was among the cheapest recent models whose reasoning can be switched off in
 # September 2026, at $0.09 per million input tokens and $0.30 per million output tokens;
-# `openrouter.ai/models` has others.
+# DeepSeek V4.1 Flash is a bigger model at $0.14 and $0.42 on DeepInfra. `openrouter.ai/models`
+# has others.
 LLM_MODELS = {
     "gemma-4-26b": ("google/gemma-4-26b-a4b-it", "deepinfra"),
+    "deepseek-v4.1-flash": ("deepseek/deepseek-v4.1-flash", "deepinfra"),
 }
 
 LLM_SYSTEM = (
