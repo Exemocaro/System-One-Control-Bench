@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -13,6 +14,7 @@ from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game, Step
 from system_one_control.request import Request
 from system_one_control.roster import PLAYERS, make_player
+from system_one_control.rules import RULES, make_rules
 from system_one_control.scenario import load_scenarios
 
 PAGE = Path(__file__).with_name("index.html")
@@ -22,11 +24,13 @@ class NewGame(BaseModel):
     scenario: str
     player: str
     condition: str
+    rules: str = "compass"
 
 
 def create_app() -> FastAPI:
     scenarios = load_scenarios()
     games: dict[str, Game] = {}
+    player_names: dict[str, str] = {}  # by game: the name it was chosen by, as the page lists it
     app = FastAPI(title="System-One Control Bench")
 
     def find_game(game_id: str) -> Game:
@@ -45,10 +49,14 @@ def create_app() -> FastAPI:
                 {"name": s.name, "description": s.description, "moves_to_goal": s.moves_to_goal}
                 for s in scenarios.values()
             ],
-            "players": [{"name": name, "paid": entry.paid} for name, entry in PLAYERS.items()],
+            "players": [
+                {"name": name, "paid": entry.paid, "compass_only": entry.compass_only}
+                for name, entry in PLAYERS.items()
+            ],
             "conditions": [
                 {"name": c.name, "description": c.description} for c in CONDITIONS.values()
             ],
+            "rules": [{"name": name, "description": r.description} for name, r in RULES.items()],
         }
 
     @app.post("/api/games")
@@ -57,16 +65,21 @@ def create_app() -> FastAPI:
             ("scenario", body.scenario, scenarios),
             ("condition", body.condition, CONDITIONS),
             ("player", body.player, PLAYERS),
+            ("rules", body.rules, RULES),
         ):
             if name not in known:
                 raise HTTPException(404, f"unknown {kind} {name!r}")
+        if PLAYERS[body.player].compass_only and body.rules != "compass":
+            raise HTTPException(400, f"{body.player} can only play compass rules")
         try:
             player = make_player(body.player)
         except (ImportError, RuntimeError) as error:
             raise HTTPException(400, str(error)) from error
         game_id = uuid4().hex[:8]
-        games[game_id] = Game(scenarios[body.scenario], player, CONDITIONS[body.condition])
-        return game_json(game_id, games[game_id])
+        scenario = replace(scenarios[body.scenario], rules=make_rules(body.rules))
+        games[game_id] = Game(scenario, player, CONDITIONS[body.condition])
+        player_names[game_id] = body.player
+        return game_json(game_id, games[game_id], body.player)
 
     @app.post("/api/games/{game_id}/step")
     def step(game_id: str) -> dict[str, Any]:
@@ -74,13 +87,13 @@ def create_app() -> FastAPI:
         if game.is_over:
             raise HTTPException(409, "the game is over")
         game.step()
-        return game_json(game_id, game)
+        return game_json(game_id, game, player_names[game_id])
 
     @app.post("/api/games/{game_id}/play")
     def play(game_id: str) -> dict[str, Any]:
         game = find_game(game_id)
         game.play()
-        return game_json(game_id, game)
+        return game_json(game_id, game, player_names[game_id])
 
     return app
 
@@ -118,7 +131,7 @@ def step_json(step: Step) -> dict[str, Any]:
     }
 
 
-def game_json(game_id: str, game: Game) -> dict[str, Any]:
+def game_json(game_id: str, game: Game, player: str) -> dict[str, Any]:
     upcoming = None
     if not game.is_over:
         upcoming = {
@@ -128,9 +141,11 @@ def game_json(game_id: str, game: Game) -> dict[str, Any]:
     return {
         "id": game_id,
         "scenario": game.scenario.name,
-        "player": game.player.name,
+        "player": player,
         "condition": game.condition.name,
+        "rules": game.rules.name,
         "moves_to_goal": game.scenario.moves_to_goal,
+        "fewest_moves": game.scenario.fewest_moves,
         "max_moves": game.scenario.max_moves,
         "board": board_json(game.board),
         "won": game.won,

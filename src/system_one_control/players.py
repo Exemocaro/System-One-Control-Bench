@@ -6,7 +6,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Any, ClassVar, TypeVar
+from typing import Any, TypeVar
 
 from dotenv import load_dotenv
 from typesafe_sdk import (
@@ -93,7 +93,7 @@ def with_retries(
 
 
 class Player(ABC):
-    name: ClassVar[str]
+    """Chooses a move from what a turn shows it. Known by its name in the roster."""
 
     @abstractmethod
     def choose(self, turn: Turn) -> Choice: ...
@@ -103,8 +103,6 @@ class Player(ABC):
 
 
 class RandomPlayer(Player):
-    name = "random"
-
     def __init__(self, seed: int = 0) -> None:
         self._rng = random.Random(seed)
 
@@ -114,8 +112,6 @@ class RandomPlayer(Player):
 
 class ScriptedPlayer(Player):
     """Plays a fixed list of moves, then gives up. For examples and tests."""
-
-    name = "scripted"
 
     def __init__(self, moves: Sequence[str]) -> None:
         self._moves = iter(moves)
@@ -127,8 +123,6 @@ class ScriptedPlayer(Player):
 
 class SolverPlayer(Player):
     """Plays perfectly by searching the real board."""
-
-    name = "solver"
 
     def __init__(self) -> None:
         # The distances from the first board of a game cover every later one.
@@ -153,7 +147,6 @@ class GreedyPlayer(Player):
     Compass rules only.
     """
 
-    name = "greedy"
     avoids_blocked_moves = False
 
     def choose(self, turn: Turn) -> Choice:
@@ -175,7 +168,6 @@ class GreedyPlayer(Player):
 class WallAwareGreedyPlayer(GreedyPlayer):
     """Greedy, but never picks a move that would leave it where it stands."""
 
-    name = "greedy-walls"
     avoids_blocked_moves = True
 
 
@@ -200,12 +192,18 @@ def turned_away(error: Exception) -> bool:
     return isinstance(error, refused)
 
 
-def api_key() -> str:
+def setting(name: str) -> str | None:
+    """A setting from the environment, or else from .env; None if empty."""
     load_dotenv()
-    for name in API_KEY_NAMES:
-        if os.environ.get(name):
-            return os.environ[name]
-    raise RuntimeError(f"no Jev API key: set {' or '.join(API_KEY_NAMES)} in .env")
+    return os.environ.get(name) or None
+
+
+def api_key(names: Sequence[str], service: str) -> str:
+    """The first of these settings that is set: an API key for the service."""
+    for name in names:
+        if key := setting(name):
+            return key
+    raise RuntimeError(f"no {service} API key: set {' or '.join(names)} in .env")
 
 
 def jev_body(request: Request, model: str = JEV_MODEL) -> dict[str, Any]:
@@ -231,8 +229,6 @@ class JevPlayer(Player):
     that still fails raises, and the game records it as a move with no answer.
     """
 
-    name = "jev"
-
     def __init__(
         self,
         model: str = JEV_MODEL,
@@ -242,7 +238,9 @@ class JevPlayer(Player):
         self._owns_client = client is None
         if client is None:
             no_retries = RetryPolicy(max_retries=0)  # retried here, so each attempt is seen
-            client = TypeSafeClient(api_key=api_key(), timeout=JEV_TIMEOUT, retry=no_retries)
+            client = TypeSafeClient(
+                api_key=api_key(API_KEY_NAMES, "Jev"), timeout=JEV_TIMEOUT, retry=no_retries
+            )
         self.model = model
         self._client = client
         self._retry_waits = tuple(retry_waits)

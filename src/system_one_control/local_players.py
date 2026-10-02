@@ -7,13 +7,14 @@ GPU, so games side by side would only wait for each other.
 
 from __future__ import annotations
 
-import os
+import copy
 import threading
 import time
-from collections.abc import Callable
-from typing import Any, ClassVar
+from collections.abc import Callable, Collection, Sequence
+from typing import Any
 
-from system_one_control.players import Choice, Player, Turn, answer_choice
+from system_one_control.llm_players import llm_messages
+from system_one_control.players import Choice, Player, Turn, answer_choice, setting
 from system_one_control.request import Request
 
 DEVICE_NAME = "SOCB_DEVICE"  # such as cpu or cuda; by default the model picks
@@ -33,7 +34,7 @@ _running = threading.Lock()
 
 
 def device() -> str | None:
-    return os.environ.get(DEVICE_NAME) or None
+    return setting(DEVICE_NAME)
 
 
 def shared(name: str, load: Callable[[], Any]) -> Any:
@@ -85,8 +86,6 @@ class LayaPlayer(Player):
     write each option's id in front of its text, and the ids mean nothing, while an option
     gets only 48 tokens. Sees only the request.
     """
-
-    name: ClassVar[str] = "laya"
 
     def __init__(self, agent: Any = None) -> None:
         self._agent = agent  # for tests; otherwise the shared model
@@ -149,8 +148,6 @@ class GLiClassPlayer(Player):
     as probabilities. Sees only the request.
     """
 
-    name: ClassVar[str] = "gliclass"
-
     def __init__(self, pipeline: Any = None) -> None:
         self._pipeline = pipeline  # for tests; otherwise the shared model
 
@@ -171,5 +168,135 @@ class GLiClassPlayer(Player):
             best,
             {id: score / total for id, score in scores.items()} if total else {},
             model=GLICLASS_MODEL,
+            seconds=seconds,
+        )
+
+
+# Open-weight chat models run here, by short name: each is asked what the OpenRouter models are
+# asked, but writes nothing; the probability it gives each option's id is read off instead (plan
+# §15: "a local autoregressive LLM used only to score candidate IDs after prefill"). Another is a
+# line here, for any model whose tokenizer writes each digit as a token of its own.
+LOCAL_LLM_MODELS = {
+    "qwen3.5-4b": "Qwen/Qwen3.5-4B",
+}
+# What the model is taken to have written so far: the start of the JSON answer that the
+# OpenRouter models are held to, up to the option's number.
+ANSWER_PREFIX = '{"option": "option_'
+
+
+def number_probabilities(
+    numbers: Collection[str], next_digits: Callable[[str], Sequence[float]]
+) -> dict[str, float]:
+    """The probability of each number, as a model writes it a digit at a time, among these.
+
+    `next_digits(written)` is the model's probability of each digit 0 to 9 coming next once it
+    has written `written`; the rest of its probability goes to ending the number there. At each
+    point the probability is shared among the digits, or the end, that can still make one of
+    `numbers`, as when a model's answer is held to them; so a number no other extends, such as
+    84 out of 1 to 84, needs no call once its first digits are written.
+    """
+    found: dict[str, float] = {}
+
+    def walk(written: str, share: float) -> None:
+        onward = sorted(
+            {n[len(written)] for n in numbers if n.startswith(written) and n != written}
+        )
+        if not onward:
+            found[written] = share
+            return
+        digits = next_digits(written)
+        weights = {digit: digits[int(digit)] for digit in onward}
+        if written in numbers:
+            weights[""] = max(0.0, 1 - sum(digits))
+        total = sum(weights.values())
+        for digit, weight in weights.items():
+            part = share * (weight / total if total else 1 / len(weights))
+            if digit:
+                walk(written + digit, part)
+            else:
+                found[written] = part
+
+    walk("", 1.0)
+    return found
+
+
+class LocalLLM:
+    """A causal language model and its tokenizer, loaded here, that reads off digit odds."""
+
+    def __init__(self, repo: str) -> None:
+        # Optional dependencies: uv sync --extra local
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self.torch = torch
+        self.where = device() or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(repo)
+        model = AutoModelForCausalLM.from_pretrained(repo, dtype=torch.bfloat16)
+        self.model = model.to(self.where).eval()
+        self.digits = [self.tokenizer.convert_tokens_to_ids(str(d)) for d in range(10)]
+        written = self.tokenizer(ANSWER_PREFIX + "12", add_special_tokens=False)["input_ids"]
+        if written[-2:] != self.digits[1:3]:
+            raise ValueError(f"{repo} does not write each digit as a token of its own")
+
+    def prompt(self, request: Request) -> list[int]:
+        """The chat, as the model's own template lays it out, then the start of the answer."""
+        text = self.tokenizer.apply_chat_template(
+            llm_messages(request),
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=False,  # templates without thinking ignore it
+        )
+        ids: list[int] = self.tokenizer(text + ANSWER_PREFIX, add_special_tokens=False)["input_ids"]
+        return ids
+
+    def option_probabilities(self, request: Request, prompt: Sequence[int]) -> dict[str, float]:
+        """The probability of each option id, read after one pass over the prompt."""
+        torch = self.torch
+        with torch.inference_mode():
+            ids = torch.tensor([list(prompt)], device=self.where)
+            out = self.model(ids, use_cache=True, logits_to_keep=1)  # the last position only
+            first, cache = out.logits[0, -1], out.past_key_values
+
+            def next_digits(written: str) -> list[float]:
+                logits = first
+                if written:  # a copy of the cache, since each digit tried moves it on
+                    digits = [[self.digits[int(d)]] for d in written]
+                    step = torch.tensor(digits, device=self.where).T
+                    later = self.model(step, past_key_values=copy.deepcopy(cache), use_cache=True)
+                    logits = later.logits[0, -1]
+                probabilities = logits.float().softmax(-1)[self.digits]
+                return [float(p) for p in probabilities]
+
+            numbers = {option.id.removeprefix("option_") for option in request.options}
+            found = number_probabilities(numbers, next_digits)
+        return {f"option_{number}": p for number, p in found.items()}
+
+
+class LocalLLMPlayer(Player):
+    """An open-weight chat model on this machine, asked as the OpenRouter models are.
+
+    It writes nothing and so cannot reason: the options' probabilities are read from one pass
+    over the chat, and the likeliest is played. Sees only the request.
+    """
+
+    def __init__(self, repo: str, model: Any = None) -> None:
+        self.repo = repo
+        self._model = model  # for tests; otherwise the shared model
+
+    def choose(self, turn: Turn) -> Choice:
+        request = turn.request
+        model = self._model or shared(self.repo, lambda: LocalLLM(self.repo))
+        with _running:
+            started = time.perf_counter()
+            prompt = model.prompt(request)
+            probabilities = model.option_probabilities(request, prompt)
+            seconds = time.perf_counter() - started
+        best = max(probabilities, key=probabilities.__getitem__) if probabilities else None
+        return answer_choice(
+            request,
+            best,
+            probabilities,
+            input_tokens=len(prompt),
+            model=self.repo,
             seconds=seconds,
         )

@@ -19,7 +19,18 @@ dependencies = [
 local = [
     "laya>=0.3.20",
     "gliclass>=0.1.20",
+    "torch>=2.7",
 ]
+
+# PyPI's Windows build of PyTorch runs on the CPU alone; this one also runs on NVIDIA GPUs
+# (CUDA 13.0, which needs an NVIDIA driver from 580 on). PyPI's Linux build has CUDA already.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu130", marker = "sys_platform == 'win32'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
 
 [project.scripts]
 socb = "system_one_control.cli:app"
@@ -65,3 +76,8 @@ files = ["src"]
 # The local extra, which is optional and has no type information.
 module = ["laya", "gliclass", "torch", "transformers"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Partly typed, in a way that mypy's strict mode rejects in ordinary use; treated as untyped.
+module = ["transformers", "transformers.*"]
+follow_imports = "skip"

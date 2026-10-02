@@ -4,7 +4,7 @@
   "questions": {
     "move": {
       "type": "choice",
-      "instructions": "Your next target is the key K at (7, 2). Which move starts the shortest path to the goal through it?",
+      "instructions": "Your next target is the key K at (7, 2). Which move starts the way to the goal through it that takes the fewest turns?",
       "criteria": {
         "option_1": "move north (up), then south (down)",
         "option_2": "move south (down), then south (down)",

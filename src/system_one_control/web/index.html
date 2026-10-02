@@ -181,6 +181,7 @@
   <label>Scenario <select id="scenario"></select></label>
   <label>Player <select id="player"></select></label>
   <label>Condition <select id="condition"></select></label>
+  <label>Rules <select id="rules"></select></label>
   <button id="new" class="primary">New game</button>
   <button id="next-puzzle">Next puzzle</button>
 </header>
@@ -237,6 +238,7 @@
     try {
       localStorage.setItem("socb", JSON.stringify({
         scenario: $("scenario").value, player: $("player").value, condition: $("condition").value,
+        rules: $("rules").value,
       }));
     } catch (_) {}
   }
@@ -256,7 +258,9 @@
       `<option value="${p.name}">${p.name}${p.paid ? " (paid)" : ""}</option>`).join("");
     $("condition").innerHTML = catalog.conditions.map((p) =>
       `<option value="${p.name}" title="${p.description}">${p.name}</option>`).join("");
-    for (const id of ["scenario", "player", "condition"]) {
+    $("rules").innerHTML = catalog.rules.map((r) =>
+      `<option value="${r.name}" title="${r.description}">${r.name}</option>`).join("");
+    for (const id of ["scenario", "player", "condition", "rules"]) {
       if (saved[id] && [...$(id).options].some((o) => o.value === saved[id])) $(id).value = saved[id];
     }
   }
@@ -309,7 +313,7 @@
     const scenario = catalog.scenarios.find((s) => s.name === game.scenario);
     $("name").textContent = game.scenario;
     $("description").textContent = scenario.description;
-    $("status").innerHTML = `${outcome()}<span>${game.steps.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.moves_to_goal}</span><span>${game.player} · ${game.condition}</span>`;
+    $("status").innerHTML = `${outcome()}<span>${game.steps.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.fewest_moves}</span><span>${game.player} · ${game.condition}${game.rules === "compass" ? "" : ` · ${game.rules}`}</span>`;
 
     const step = viewing === null ? null : game.steps[viewing];
     $("board").innerHTML = drawBoard(step ? step.before : game.board, step?.choice.move);
@@ -389,6 +393,7 @@
     remember();
     game = await call("POST", "/api/games", {
       scenario: $("scenario").value, player: $("player").value, condition: $("condition").value,
+      rules: $("rules").value,
     });
     viewing = null;
   }
@@ -419,7 +424,7 @@
   $("next-puzzle").addEventListener("click", () => run(nextPuzzle));
   $("step").addEventListener("click", () => run(playOne));
   $("play").addEventListener("click", () => run(playAll));
-  for (const id of ["scenario", "player", "condition"]) $(id).addEventListener("change", () => run(newGame));
+  for (const id of ["scenario", "player", "condition", "rules"]) $(id).addEventListener("change", () => run(newGame));
   $("history").addEventListener("click", (event) => {
     const i = event.target.closest("[data-i]")?.dataset.i;
     if (i === undefined) return;

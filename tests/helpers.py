@@ -20,8 +20,6 @@ def scenario(text: str, moves_to_goal: int) -> Scenario:
 class AlwaysPlayer(Player):
     """Always answers the same move, allowed or not."""
 
-    name = "always"
-
     def __init__(self, move: str | None) -> None:
         self.move = move
 

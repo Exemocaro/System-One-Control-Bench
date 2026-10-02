@@ -22,7 +22,7 @@ from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
 from system_one_control.generator import LEVELS, write_level
 from system_one_control.roster import PLAYERS
-from system_one_control.rules import RULES, make_rules
+from system_one_control.rules import RULES, Rules, make_rules
 from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -39,6 +39,13 @@ def _pick(catalog: dict[str, T], spec: str, kind: str) -> list[T]:
             f"unknown {kind}: {', '.join(unknown)}. Known: {', '.join(catalog)}"
         )
     return [catalog[name] for name in names]
+
+
+def _rules(name: str) -> Rules:
+    try:
+        return make_rules(name)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
 
 
 def _levels(spec: str) -> set[int] | None:
@@ -86,10 +93,7 @@ def benchmark(
     if not chosen_scenarios:
         raise typer.BadParameter("no scenario matches the chosen --levels and --scenarios")
     if rules is not None:
-        try:
-            chosen_rules = make_rules(rules)
-        except ValueError as error:
-            raise typer.BadParameter(str(error)) from None
+        chosen_rules = _rules(rules)
         chosen_scenarios = [replace(s, rules=chosen_rules) for s in chosen_scenarios]
     chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
@@ -216,11 +220,7 @@ def examples(
     ),
 ) -> None:
     """Write what each condition shows the player to the examples folder."""
-    try:
-        chosen = make_rules(rules)
-    except ValueError as error:
-        raise typer.BadParameter(str(error)) from None
-    for path in write_examples(rules=chosen):
+    for path in write_examples(rules=_rules(rules)):
         typer.echo(f"wrote {path}")
 
 

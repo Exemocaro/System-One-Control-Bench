@@ -1,15 +1,21 @@
 from __future__ import annotations
 
-import os
+import json
 import re
 from collections.abc import Sequence
 from dataclasses import replace
-from typing import Any, ClassVar
+from typing import Any
 
 import httpx
-from dotenv import load_dotenv
 
-from system_one_control.players import Choice, Player, Turn, answer_choice, with_retries
+from system_one_control.players import (
+    Choice,
+    Player,
+    Turn,
+    answer_choice,
+    api_key,
+    with_retries,
+)
 from system_one_control.request import Request
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -38,6 +44,9 @@ LLM_RETRY_WAITS = (5.0, 15.0, 30.0, 60.0)
 # Answering without reasoning is a few tokens, such as {"option": "option_12"}; the cap stops a
 # model that reasons anyway from running up a bill, and its answer then comes back cut, as an error.
 ANSWER_TOKENS = 64
+# With reasoning, a cap far above what a move needs, to stop one runaway call: at DeepSeek V4.1
+# Flash's price it costs at most about 1.3 cents. The reasoning counts toward it.
+REASONING_TOKENS = 32_000
 # Seconds a call may take: reasoning can take minutes on a long puzzle.
 LLM_TIMEOUT = 120.0
 LLM_REASONING_TIMEOUT = 600.0
@@ -51,14 +60,6 @@ class ProviderError(Exception):
     def __init__(self, code: int | None, message: str) -> None:
         super().__init__(f"{code} {message}")
         self.code = code
-
-
-def openrouter_key() -> str:
-    load_dotenv()
-    key = os.environ.get(OPENROUTER_KEY_NAME)
-    if not key:
-        raise RuntimeError(f"no OpenRouter API key: set {OPENROUTER_KEY_NAME} in .env")
-    return key
 
 
 def turned_away(error: Exception) -> bool:
@@ -102,8 +103,15 @@ def answer_format(request: Request) -> dict[str, Any]:
 
 
 def parse_answer(text: str, request: Request) -> str | None:
-    """The last option id in the answer that is one of the request's, or None."""
+    """The option the answer names, or None: the JSON it was asked for, or failing that the
+    last option id in the text that is one of the request's."""
     ids = {option.id for option in request.options}
+    try:
+        answer = json.loads(text)
+    except json.JSONDecodeError:
+        answer = None
+    if isinstance(answer, dict) and answer.get("option") in ids:
+        return str(answer["option"])
     found = [match for match in OPTION_ID.findall(text) if match in ids]
     return found[-1] if found else None
 
@@ -115,8 +123,6 @@ class LLMPlayer(Player):
     which is slower and costs more. A chat answer carries no probabilities, so none are kept.
     Retries follow Jev's: a call the provider turned away is tried again after each wait.
     """
-
-    name: ClassVar[str] = "llm"
 
     def __init__(
         self,
@@ -130,7 +136,7 @@ class LLMPlayer(Player):
         self._owns_client = client is None
         if client is None:
             timeout = LLM_REASONING_TIMEOUT if reasoning else LLM_TIMEOUT
-            headers = {"Authorization": f"Bearer {openrouter_key()}"}
+            headers = {"Authorization": f"Bearer {api_key([OPENROUTER_KEY_NAME], 'OpenRouter')}"}
             client = httpx.Client(headers=headers, timeout=timeout)
         self.model = model
         self.host = host
@@ -152,8 +158,7 @@ class LLMPlayer(Player):
         }
         if self.host:
             body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
-        if not self.reasoning:
-            body["max_tokens"] = ANSWER_TOKENS
+        body["max_tokens"] = REASONING_TOKENS if self.reasoning else ANSWER_TOKENS
         return body
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
@@ -170,13 +175,16 @@ class LLMPlayer(Player):
         data, seconds, retried = with_retries(
             lambda: self._post(body), self._retry_waits, turned_away
         )
-        text = data["choices"][0]["message"].get("content") or ""
+        answer = data["choices"][0]
+        text = answer["message"].get("content") or ""
+        # A cut-off answer can still hold a valid id, such as option_1 out of option_12.
+        cut = answer.get("finish_reason") == "length"
         usage = data.get("usage") or {}
         provider = data.get("provider")
         model = data.get("model", self.model)
         choice = answer_choice(
             turn.request,
-            parse_answer(text, turn.request),
+            None if cut else parse_answer(text, turn.request),
             {},
             input_tokens=usage.get("prompt_tokens"),
             output_tokens=usage.get("completion_tokens"),
@@ -186,7 +194,8 @@ class LLMPlayer(Player):
             cost=usage.get("cost"),
         )
         if choice.error:
-            return replace(choice, error=f"{self.model} answered {text[:200]!r}")
+            how = "ran out of tokens after" if cut else "answered"
+            return replace(choice, error=f"{self.model} {how} {text[:200]!r}")
         return choice
 
     def close(self) -> None:

@@ -9,6 +9,7 @@ from system_one_control.llm_players import (
     ANSWER_TOKENS,
     LLM_SYSTEM,
     OPENROUTER_URL,
+    REASONING_TOKENS,
     LLMPlayer,
     llm_messages,
     parse_answer,
@@ -17,7 +18,9 @@ from system_one_control.local_players import (
     LAYA_OPTION_TOKENS,
     GLiClassPlayer,
     LayaPlayer,
+    LocalLLMPlayer,
     laya_budget,
+    number_probabilities,
 )
 from system_one_control.players import Turn
 from system_one_control.rules import CompassRules
@@ -89,7 +92,7 @@ def test_without_reasoning_the_model_must_answer_at_once_and_with_it_may_think()
     assert quick["reasoning"] == {"enabled": False, "exclude": True}
     assert quick["max_tokens"] == ANSWER_TOKENS
     assert reasoned["reasoning"] == {"enabled": True, "exclude": True}
-    assert "max_tokens" not in reasoned
+    assert reasoned["max_tokens"] == REASONING_TOKENS  # room to think, but not without end
 
 
 def test_the_answer_must_be_json_naming_one_of_the_options():
@@ -123,6 +126,22 @@ def test_the_last_option_id_in_the_answer_is_the_one_taken():
     assert parse_answer("  option_2\n", t.request) == "option_2"
     assert parse_answer("option_9", t.request) is None
     assert parse_answer("east", t.request) is None
+
+
+def test_the_json_answer_is_read_before_any_id_in_the_text():
+    t = turn()
+    assert parse_answer('{"option": "option_2"}', t.request) == "option_2"
+    assert parse_answer('{"option": "option_9"} option_1', t.request) == "option_1"
+
+
+def test_an_answer_cut_off_by_the_token_cap_is_an_error_even_if_it_names_an_option():
+    # Cut off while writing option_12, it would read as option_1.
+    t = turn()
+    cut = {"message": {"content": '{"option": "option_1'}, "finish_reason": "length"}
+    client, _ = answering({"model": "m", "choices": [cut]})
+    choice = llm(client).choose(t)
+    assert choice.move is None
+    assert "ran out of tokens" in choice.error
 
 
 def test_an_answer_without_an_option_id_is_an_error_that_quotes_it():
@@ -235,3 +254,59 @@ def test_gliclass_classifies_the_state_by_the_option_texts_under_the_question():
     assert choice.move == t.request.options[1].move
     assert choice.probabilities[choice.move] == pytest.approx(0.9 / 1.2)
     assert sum(choice.probabilities.values()) == pytest.approx(1.0)
+
+
+# --- Chat models on this machine -------------------------------------------------------------
+
+
+def digits_after(table: dict[str, list[float]], asked: list[str]):
+    """next_digits for number_probabilities, from a table by what has been written."""
+
+    def next_digits(written: str) -> list[float]:
+        asked.append(written)
+        return table[written]
+
+    return next_digits
+
+
+def test_single_digit_numbers_share_the_first_digit_among_themselves():
+    asked: list[str] = []
+    first = [0.0, 0.5, 0.2, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0, 0.1]  # 0.1 on 9, which is not offered
+    found = number_probabilities({"1", "2", "3", "4"}, digits_after({"": first}, asked))
+    assert found == pytest.approx({"1": 0.5 / 0.9, "2": 0.2 / 0.9, "3": 0.1 / 0.9, "4": 0.1 / 0.9})
+    assert asked == [""]  # one pass: no number is longer than a digit
+
+
+def test_a_number_that_others_extend_shares_with_them_the_chance_of_ending_there():
+    asked: list[str] = []
+    table = {
+        "": [0.0, 0.8, 0.2] + [0.0] * 7,
+        "1": [0.5, 0.0, 0.3] + [0.0] * 7,  # 0.5 on 10, 0.3 on 12 (not offered), 0.2 to end
+    }
+    found = number_probabilities({"1", "2", "10", "11"}, digits_after(table, asked))
+    assert found == pytest.approx(
+        {"1": 0.8 * 0.2 / 0.7, "10": 0.8 * 0.5 / 0.7, "11": 0.0, "2": 0.2}
+    )
+    assert sum(found.values()) == pytest.approx(1.0)
+    assert sorted(asked) == ["", "1"]  # 10 and 11 end where nothing longer is offered
+
+
+class FakeLocalLLM:
+    def __init__(self, favourite: str) -> None:
+        self.favourite = favourite
+
+    def prompt(self, request):
+        return [7] * 42
+
+    def option_probabilities(self, request, prompt):
+        others = [o.id for o in request.options if o.id != self.favourite]
+        return {self.favourite: 0.7} | dict.fromkeys(others, 0.3 / len(others))
+
+
+def test_a_local_chat_model_plays_the_option_it_gives_the_most_probability():
+    t = turn()
+    favourite = option_for(t, "east")
+    choice = LocalLLMPlayer("org/model", model=FakeLocalLLM(favourite)).choose(t)
+    assert choice.move == "east" and choice.error is None
+    assert choice.probabilities["east"] == 0.7
+    assert (choice.input_tokens, choice.model) == (42, "org/model")

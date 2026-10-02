@@ -6,21 +6,9 @@ from dataclasses import dataclass
 
 from system_one_control.board import DOOR, GOAL, KEY, SYMBOL_NAMES, Board
 from system_one_control.request import Option, Request
-from system_one_control.rules import Rules, next_target
+from system_one_control.rules import Rules
 
-QUESTION = "What is the best next move?"
-SUBGOAL_QUESTION = (
-    "Your next target is {target}. Which move is the first step of the shortest path to it?"
-)
-# Where a move is several steps, "the first step" would be the wrong thing to ask for, and so
-# would the shortest path to the target alone: a move that reaches the key with steps to spare
-# should spend them heading on toward the door or the goal, and the solver scores it that way.
-SEVERAL_STEPS_SUBGOAL_QUESTION = (
-    "Your next target is {target}. Which move starts the shortest path to the goal through it?"
-)
-SEVERAL_STEPS_GOAL_QUESTION = (
-    "Your next target is {target}. Which move starts the shortest path to it?"
-)
+QUESTION = "What is the best next move?"  # the subgoal ingredient asks the rules' own instead
 
 # Each ingredient hands the player one thing that code can work out for it.
 INGREDIENTS = {
@@ -65,15 +53,7 @@ class Condition:
         if self.memory:
             sections.append(describe_history(history))
 
-        question = QUESTION
-        if self.subgoal:
-            if rules.step_rules() is rules:
-                template = SUBGOAL_QUESTION
-            elif next_target(board)[0] == GOAL:
-                template = SEVERAL_STEPS_GOAL_QUESTION
-            else:
-                template = SEVERAL_STEPS_SUBGOAL_QUESTION
-            question = template.format(target=rules.describe_next_target(board))
+        question = rules.subgoal_question(board) if self.subgoal else QUESTION
 
         moves = list(rules.moves(board))
         if shuffle_seed is not None:

@@ -5,10 +5,9 @@ from system_one_control.web.app import create_app
 client = TestClient(create_app())
 
 
-def new_game(scenario="gen-02-04", player="solver", condition="map"):
-    return client.post(
-        "/api/games", json={"scenario": scenario, "player": player, "condition": condition}
-    )
+def new_game(scenario="gen-02-04", player="solver", condition="map", **more):
+    body = {"scenario": scenario, "player": player, "condition": condition, **more}
+    return client.post("/api/games", json=body)
 
 
 def test_the_page_is_served():
@@ -18,8 +17,9 @@ def test_the_page_is_served():
 def test_the_catalog_lists_scenarios_players_and_conditions():
     catalog = client.get("/api/catalog").json()
     assert "gen-02-04" in [s["name"] for s in catalog["scenarios"]]
-    assert {"name": "jev", "paid": True} in catalog["players"]
+    assert {"name": "jev", "paid": True, "compass_only": False} in catalog["players"]
     assert "map" in [p["name"] for p in catalog["conditions"]]
+    assert "three-moves" in [r["name"] for r in catalog["rules"]]
 
 
 def test_a_new_game_shows_the_board_and_what_the_player_will_be_asked():
@@ -56,3 +56,18 @@ def test_unknown_names_are_reported():
     response = new_game(scenario="nowhere")
     assert response.status_code == 404
     assert "nowhere" in response.json()["detail"]
+
+
+def test_a_game_can_be_played_under_other_rules():
+    game = new_game(rules="two-moves").json()
+    assert game["rules"] == "two-moves"
+    assert game["fewest_moves"] == 1 and game["moves_to_goal"] == 2
+    assert len(game["next"]["request"]["options"]) == 16
+
+
+def test_a_compass_only_player_is_refused_other_rules():
+    assert new_game(player="greedy", rules="two-moves").status_code == 400
+
+
+def test_a_game_shows_the_player_by_the_name_it_was_chosen_by():
+    assert new_game(player="random").json()["player"] == "random"

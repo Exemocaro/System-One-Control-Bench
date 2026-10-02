@@ -4,8 +4,14 @@ from dataclasses import replace
 import pytest
 
 from system_one_control.conditions import CONDITIONS
-from system_one_control.examples import EXAMPLE_DIR, EXAMPLE_SCENARIO, example, write_examples
-from system_one_control.rules import RULES, ThreeMoveRules, TwoMoveRules
+from system_one_control.examples import (
+    EXAMPLE_DIR,
+    EXAMPLE_SCENARIO,
+    example,
+    example_moves,
+    write_examples,
+)
+from system_one_control.rules import RULES, CompassRules, ThreeMoveRules, TwoMoveRules
 from system_one_control.scenario import load_scenarios
 
 SCENARIO = load_scenarios()[EXAMPLE_SCENARIO]
@@ -48,3 +54,16 @@ def test_examples_under_sequence_rules_go_in_their_own_folder(tmp_path, rules, o
     body = json.loads((tmp_path / rules.name / "map+memory.json").read_text(encoding="utf-8"))
     assert len(body["questions"]["move"]["criteria"]) == options
     assert "you end" in body["state"]
+
+
+def test_rules_without_example_moves_get_a_move_then_a_blocked_one():
+    class SouthFirst(CompassRules):
+        name = "south-first"
+        MOVES = (CompassRules.MOVES[1], *CompassRules.MOVES[:1], *CompassRules.MOVES[2:])
+
+    scenario = replace(SCENARIO, rules=SouthFirst())
+    first, second = example_moves(scenario)
+    rules, board = scenario.rules, scenario.board
+    moved = rules.apply(board, rules.find_move(board, first))
+    assert moved != board
+    assert rules.apply(moved, rules.find_move(moved, second)) == moved

@@ -12,7 +12,8 @@ from system_one_control.scenario import Scenario, load_scenarios
 
 EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples"
 EXAMPLE_SCENARIO = "gen-10-01"
-# Two moves under each rules; the second walks into a wall, so the memory shows it.
+# Two moves under each rules; the second walks into a wall, so the memory shows it. Rules not
+# listed get the first move that goes anywhere, then the first that is blocked (see example_moves).
 EXAMPLE_MOVES = {
     "compass": ("east", "north"),
     "two-moves": ("east,south", "north,north"),
@@ -22,9 +23,20 @@ EXAMPLE_MOVES = {
 }
 
 
+def example_moves(scenario: Scenario) -> tuple[str, ...]:
+    """The two moves an example is taken after: a move, then one that is blocked, if any is."""
+    if scenario.rules.name in EXAMPLE_MOVES:
+        return EXAMPLE_MOVES[scenario.rules.name]
+    rules, board = scenario.rules, scenario.board
+    first = next(move for move in rules.moves(board) if rules.apply(board, move) != board)
+    after = rules.apply(board, first)
+    blocked = [move for move in rules.moves(after) if rules.apply(after, move) == after]
+    return first.name, (blocked or [first])[0].name
+
+
 def example(condition: Condition, scenario: Scenario) -> str:
     """The JSON body sent to Jev under this condition, two moves into the scenario."""
-    moves = EXAMPLE_MOVES[scenario.rules.name]
+    moves = example_moves(scenario)
     game = Game(scenario, ScriptedPlayer(moves), condition)
     for _ in moves:
         game.step()

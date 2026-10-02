@@ -28,7 +28,7 @@ uv sync                      # install
 uv run pytest                # run the tests
 uv run pre-commit install    # lint, format and type-check on commit; tests on push
 cp .env.example .env         # then fill in TYPESAFE_API_KEY for Jev, OPENROUTER_API_KEY for chat models
-uv sync --extra local        # only for laya and gliclass: installs PyTorch (several GB)
+uv sync --extra local        # only for the models that run here: installs PyTorch (several GB)
 ```
 
 | Command | What it does |
@@ -38,7 +38,7 @@ uv sync --extra local        # only for laya and gliclass: installs PyTorch (sev
 | `uv run socb generate` | fills every level with generated puzzles (`--seed` for a fresh set) |
 | `uv run socb examples` | rewrites `examples/` after a change of wording (`--rules` for the other rules) |
 
-In the viewer, pick a scenario, a player and a condition, then play one move at a time or to the end. Beside the board is exactly what the player was shown, with the probability it gave each option.
+In the viewer, pick a scenario, a player, a condition and the rules, then play one move at a time or to the end. Beside the board is exactly what the player was shown, with the probability it gave each option.
 
 ## Running a benchmark
 
@@ -166,7 +166,7 @@ Under all but `compass`:
 - A blocked step is wasted and the rest are still taken. Reaching the goal ends the move there, so no puzzle is out of reach.
 - A puzzle `n` steps away takes `n / 2` or `n / 3` moves, rounded up, and a game still ends at twice that.
 - Memory and lookahead describe a move by where it ends and what it picked up, opened or reached, not step by step.
-- The subgoal question asks which move *starts* the shortest path to the goal through the target, rather than which is its first step. A move that reaches the key with steps to spare should spend them heading on, and it is scored that way. When the target is the goal, it asks for the shortest path to it.
+- The subgoal question asks which move *starts* the shortest path to the goal through the target, rather than which is its first step. A move that reaches the key with steps to spare should spend them heading on, and it is scored that way. When the target is the goal, it asks for the shortest path to it. Under the `up-to-…` rules it asks instead for the move that starts the way there *that takes the fewest turns*: a single step also starts the shortest path, but wastes a turn.
 - Many sequences do the same thing, such as `north,south` and `east,west`: at the start of a puzzle the 64 three-step options have a median of 8 different outcomes, and the 16 two-step ones 5. They are all offered, since merging them would tell the player where the walls are, so a model's probability is split across them. Add it up by outcome before comparing it with `compass`.
 
 The `up-to-…` rules also offer every shorter sequence, so a player can take a single careful step next to a wall and a long stride in the open. A shorter move never wins in fewer moves, so the fewest moves, the move limit and the scores are those of the rules they extend; compare the two to see whether choosing how far to commit helps.
@@ -238,15 +238,17 @@ Half the puzzles at levels 12, 15 and 20 are also walled in more thickly than us
 | `jev` | ✓ | asks Jev (`jev-1.13.0`), sending the condition's request |
 | `laya` | | asks [Laya](https://huggingface.co/convaiinnovations/laya)'s `typed-decisions` checkpoint, an open-weight model built to answer as Jev does, on this machine |
 | `gliclass` | | asks [GLiClass](https://huggingface.co/knowledgator/gliclass-modern-large-v3.0) (`gliclass-modern-large-v3.0`), an open-weight zero-shot classifier, on this machine |
+| `qwen3.5-4b` | | asks [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), an open-weight chat model, on this machine, and reads the probability it gives each option id instead of letting it write |
 | `gemma-4-26b` | ✓ | asks Google's Gemma 4 26B, an open-weight chat model, for an option id through OpenRouter, with its reasoning off |
 | `gemma-4-26b-think` | ✓ | the same model, thinking first |
 | `deepseek-v4.1-flash` | ✓ | asks DeepSeek V4.1 Flash, a bigger open-weight chat model, the same way, with its reasoning off |
 | `deepseek-v4.1-flash-think` | ✓ | the same model, thinking first |
 | `ScriptedPlayer` | | a fixed list of moves; used by the tests and by `examples/`, not in the CLI |
 
-**Local models.** `laya` and `gliclass` need `uv sync --extra local`, which installs PyTorch. A plain `uv sync` afterwards removes it again, so run them with `uv run --extra local socb benchmark --players laya`. Each model downloads from Hugging Face the first time it plays (about 800 MB), loads once and is shared by every game, and answers one move at a time: it already uses every core, or the GPU. On a 20-core CPU a move takes about 1 second under `compass` and 5 to 6 under `three-moves`, with 64 options. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`.
+**Local models.** `laya`, `gliclass` and `qwen3.5-4b` need `uv sync --extra local`, which installs PyTorch; on Windows it comes from PyTorch's CUDA 13.0 index, which needs an NVIDIA driver from 580 on (and runs on the CPU without a GPU). A plain `uv sync` afterwards removes it again, so run them with `uv run --extra local socb benchmark --players laya`. Each model downloads from Hugging Face the first time it plays (about 800 MB for Laya and GLiClass, 9 GB for Qwen3.5-4B), loads once and is shared by every game, and answers one move at a time: it already uses the GPU, or every core. On an RTX 5070 Ti laptop GPU, a Laya move takes about 0.1 s and a GLiClass move 0.3 s; Qwen3.5-4B takes 0.2 s with 4 options and 1.7 s with 84. On a 20-core CPU, Laya takes about 1 s under `compass` and 5 to 6 s under `three-moves`. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`. Qwen3.5-4B needs 9 GB of GPU memory: on a 12 GB GPU, play it alone, since a GPU with too little memory left can make the driver reset, which ends every game under way in an error (`--resume` plays them again).
 - Laya is asked the condition's question with the option texts alone, since their ids carry nothing and Laya gives each option only 48 tokens. Its token budget is stretched to fit the whole request (it defaults to 1,024 tokens, and would otherwise cut the state short without saying so). An option longer than 48 tokens ends the game as an error rather than being cut.
 - GLiClass reads the state as its text, the question as its task prompt and the option texts as its labels. It scores each option from 0 to 1 on its own; the scores are scaled to add up to 1.
+- Qwen3.5-4B is sent the chat the OpenRouter models get, laid out by its own chat template with thinking off, followed by the start of the answer they give, `{"option": "option_`. It writes nothing: the probability of each option is read from its odds for the digits of the option's number, shared at each digit among those that can still make one of the options, and it plays the likeliest. So it gives probabilities, as Jev does, and cannot reason first. Another model is a line in `LOCAL_LLM_MODELS` in `local_players.py`, if its tokenizer writes each digit as a token of its own (it is checked when the model loads).
 
 **Chat models.** Gemma 4 26B (`google/gemma-4-26b-a4b-it`), one of the cheapest recent models on OpenRouter whose reasoning can be switched off, at $0.09 per million input tokens and $0.30 per million output tokens (September 2026). DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash`) is a bigger model at $0.14 and $0.42. Both always run on DeepInfra: OpenRouter would otherwise send each call to whichever host is free, and hosts may run a model differently. Another model is a line in `LLM_MODELS` in `llm_players.py`. Each gets the same state, question and options as Jev, and replies with an option id. Without reasoning it may use only 64 tokens, so a model that thinks anyway ends the game as an error rather than running up a bill. A chat answer has no probabilities, so none are saved. The cost of every call is saved with the move. OpenRouter shares a model's capacity between its users and turns calls away when it is busy, so a call is tried again after 5, 15, 30 and 60 seconds; a game that still fails ends as an error, for `--resume`.
 
@@ -256,14 +258,14 @@ Half the puzzles at levels 12, 15 and 20 are also walled in more thickly than us
 src/system_one_control/
 ├── board.py        Board: the map, where the agent stands, and what it carries
 ├── rules.py        Rules: the allowed moves, what each does, how to describe it (CompassRules, and
-│                   TwoMoveRules and ThreeMoveRules for steps chosen several at a time)
+│                   SequenceRules for several steps chosen at a time, such as TwoMoveRules)
 ├── solver.py       Solver: fewest moves to the goal, and every move that starts such a path
 ├── scenario.py     Scenario: a board, its rules and its level, loaded from scenarios/
 ├── request.py      Request: exactly what a player is shown (state, question, options)
 ├── conditions.py   Condition and CONDITIONS, the ablation
 ├── players.py      Player, the simple players and JevPlayer
 ├── llm_players.py  LLMPlayer: chat models on OpenRouter
-├── local_players.py LayaPlayer and GLiClassPlayer, which run on this machine
+├── local_players.py LayaPlayer, GLiClassPlayer and LocalLLMPlayer, which run on this machine
 ├── roster.py       PLAYERS: every player by name
 ├── game.py         Game: one player on one scenario, a Step per move
 ├── benchmark.py    every scenario × condition × player, played side by side, scored and saved
@@ -275,7 +277,7 @@ src/system_one_control/
 
 ## Extending
 
-**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `roster.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS`.
+**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `roster.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS`, and one run on this machine a line in `LOCAL_LLM_MODELS`.
 - A model player must read only `turn.request`, the text it is shown, never `turn.board`.
 - If it cannot answer, it may raise: the game records the error and ends.
 - A player that holds a connection releases it in `close()`, which is called after every game.
@@ -284,9 +286,10 @@ src/system_one_control/
 
 **New rules**, such as MiniGrid-style turning:
 1. Subclass `Rules` and implement `moves`, `apply` and `is_won`.
-2. Implement `describe_outcome`, `describe_surroundings` and `describe_next_target`, which the conditions use to put the board into words.
+2. Implement `describe_outcome`, `describe_surroundings` and `describe_next_target`, which the conditions use to put the board into words. Override `subgoal_question` if "the first step of the shortest path" is the wrong thing to ask under them.
 3. If a move is several steps of other rules, return those rules from `step_rules` and say how many moves a level takes in `moves_for`, so levels and progress keep counting single steps.
-4. Add them to `RULES` in `rules.py`, then play them with `--rules <name>`, or select them in a scenario with `rules: <name>`.
+4. Add them to `RULES` in `rules.py`, then play them with `--rules <name>`, or select them in a scenario with `rules: <name>`. The viewer lists them too.
+5. Run `uv run socb examples --rules <name>` to write their examples. The examples play two moves first, a move and then a blocked one; `EXAMPLE_MOVES` in `examples.py` picks them, and rules not listed there get the first of their moves that goes anywhere, then the first that is blocked.
 
 ## License
 

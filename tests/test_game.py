@@ -82,8 +82,6 @@ def test_the_history_lists_every_move_and_what_it_did():
 
 
 class FailingPlayer(Player):
-    name = "failing"
-
     def choose(self, turn: Turn) -> Choice:
         raise ConnectionError("the API is down")
 

@@ -2,7 +2,12 @@ import pytest
 
 from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS, INGREDIENTS, Condition
-from system_one_control.rules import CompassRules, TwoMoveRules
+from system_one_control.rules import (
+    CompassRules,
+    TwoMoveRules,
+    UpToThreeMoveRules,
+    UpToTwoMoveRules,
+)
 from system_one_control.scenario import load_scenarios
 
 SCENARIOS = load_scenarios()
@@ -135,3 +140,21 @@ def test_under_sequence_rules_a_subgoal_before_the_goal_asks_for_the_path_to_the
         "Your next target is the key K at (7, 2). "
         "Which move starts the shortest path to the goal through it?"
     )
+
+
+def test_where_a_move_may_be_shorter_the_subgoal_asks_for_the_way_with_fewest_turns():
+    # "Starts the shortest path" would be true of a single step, which wastes a turn.
+    subgoal = CONDITIONS["map+subgoal"]
+    assert subgoal.render(ROOM, UpToThreeMoveRules()).question == (
+        "Your next target is the goal G at (3, 1). "
+        "Which move starts the way to it that takes the fewest turns?"
+    )
+    assert subgoal.render(LEVEL_TEN, UpToTwoMoveRules()).question == (
+        "Your next target is the key K at (7, 2). "
+        "Which move starts the way to the goal through it that takes the fewest turns?"
+    )
+
+
+def test_without_the_subgoal_every_rules_ask_the_plain_question():
+    for rules_type in (CompassRules, TwoMoveRules, UpToThreeMoveRules):
+        assert MAP.render(LEVEL_TEN, rules_type()).question == "What is the best next move?"

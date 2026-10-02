@@ -42,6 +42,13 @@ class Rules(ABC):
     def describe_next_target(self, board: Board) -> str:
         """The next thing to reach on the way to winning, such as "the key K at (7, 2)"."""
 
+    def subgoal_question(self, board: Board) -> str:
+        """The question that names the next target, asked instead of the plain one."""
+        return (
+            f"Your next target is {self.describe_next_target(board)}. "
+            "Which move is the first step of the shortest path to it?"
+        )
+
     def passes(self, board: Board, move: Move) -> tuple[Board, ...]:
         """Every board the move passes through, ending with the one it ends on."""
         return (self.apply(board, move),)
@@ -216,6 +223,24 @@ class SequenceRules(Rules):
 
     def describe_next_target(self, board: Board) -> str:
         return self.step.describe_next_target(board)
+
+    def subgoal_question(self, board: Board) -> str:
+        """Which move starts the way to the goal through the next target.
+
+        Not "the first step", since a move is several; and the way to the goal, not to the
+        target alone, since a move that reaches the key with steps to spare should spend them
+        heading on, and the solver scores it that way. Where a move may be shorter than
+        `length`, "the shortest path" would be wrong too: a single step does start it, yet
+        wastes a turn. So those rules ask for the way that takes the fewest turns.
+        """
+        target = self.describe_next_target(board)
+        onward = "it" if next_target(board)[0] == GOAL else "the goal through it"
+        if self.shortest is None:
+            return f"Your next target is {target}. Which move starts the shortest path to {onward}?"
+        return (
+            f"Your next target is {target}. "
+            f"Which move starts the way to {onward} that takes the fewest turns?"
+        )
 
     def step_rules(self) -> Rules:
         return self.step
