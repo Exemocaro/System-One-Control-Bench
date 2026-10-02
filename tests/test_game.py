@@ -3,9 +3,9 @@ from dataclasses import replace
 
 import pytest
 
-from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game
 from system_one_control.players import Choice, Player, SolverPlayer, Turn
+from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import load_scenarios
 from system_one_control.world import ThreeMoveRules, TwoMoveRules
 from tests.helpers import MAP, AlwaysPlayer, scenario

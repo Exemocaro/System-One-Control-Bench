@@ -3,7 +3,6 @@ import json
 import httpx
 import pytest
 
-from system_one_control.conditions import CONDITIONS
 from system_one_control.llm_players import (
     ANSWER_TOKENS,
     LLM_SYSTEM,
@@ -22,6 +21,7 @@ from system_one_control.local_players import (
     number_probabilities,
 )
 from system_one_control.players import Turn
+from system_one_control.prompts import CONDITIONS
 from system_one_control.world import Board, CompassRules
 from tests.helpers import MAP
 

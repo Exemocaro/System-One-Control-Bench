@@ -13,7 +13,6 @@ from system_one_control.benchmark import (
     summarize,
     usage,
 )
-from system_one_control.conditions import CONDITIONS
 from system_one_control.players import (
     Player,
     RandomPlayer,
@@ -21,6 +20,7 @@ from system_one_control.players import (
     SolverPlayer,
     WallAwareGreedyPlayer,
 )
+from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import load_scenarios
 from system_one_control.world import TwoMoveRules
 from tests.helpers import AlwaysPlayer, scenario

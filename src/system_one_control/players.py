@@ -18,7 +18,7 @@ from typesafe_sdk import (
     TypeSafeRateLimitError,
 )
 
-from system_one_control.request import Request
+from system_one_control.prompts import Request
 from system_one_control.world import Board, CompassRules, Move, Rules, Solver, next_target
 
 

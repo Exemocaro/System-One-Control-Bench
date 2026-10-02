@@ -1,11 +1,23 @@
+"""What a player is shown: the state and question of a turn, its options, and the conditions."""
+
 from __future__ import annotations
 
+import json
 import random
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 
-from system_one_control.request import Option, Request
-from system_one_control.world import DOOR, GOAL, KEY, SYMBOL_NAMES, Board, Rules
+from system_one_control.puzzles import Scenario, load_scenarios
+from system_one_control.world import (
+    DOOR,
+    GOAL,
+    KEY,
+    SYMBOL_NAMES,
+    Board,
+    CompassRules,
+    Rules,
+)
 
 QUESTION = "What is the best next move?"  # the subgoal ingredient asks the rules' own instead
 
@@ -16,6 +28,22 @@ INGREDIENTS = {
     "lookahead": "what each move would do, written into its option",
     "subgoal": "a question naming the next thing to reach: the key, then the door, then the goal",
 }
+
+
+@dataclass(frozen=True)
+class Option:
+    id: str
+    move: str
+    text: str
+
+
+@dataclass(frozen=True)
+class Request:
+    """Exactly what a player is shown: the state, the question and the options."""
+
+    state: str
+    question: str
+    options: tuple[Option, ...]
 
 
 @dataclass(frozen=True)
@@ -114,3 +142,57 @@ CONDITIONS = {
         Condition("everything-subgoal", surroundings=True, memory=True, lookahead=True),
     )
 }
+
+EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples"
+EXAMPLE_SCENARIO = "gen-10-01"
+# Two moves under each rules; the second walks into a wall, so the memory shows it. Rules not
+# listed get the first move that goes anywhere, then the first that is blocked (see example_moves).
+EXAMPLE_MOVES = {
+    "compass": ("east", "north"),
+    "two-moves": ("east,south", "north,north"),
+    "three-moves": ("east,south,west", "north,north,north"),
+    "up-to-two-moves": ("east", "north,north"),
+    "up-to-three-moves": ("east,south", "north,north,north"),
+}
+
+
+def example_moves(scenario: Scenario) -> tuple[str, ...]:
+    """The two moves an example is taken after: a move, then one that is blocked, if any is."""
+    if scenario.rules.name in EXAMPLE_MOVES:
+        return EXAMPLE_MOVES[scenario.rules.name]
+    rules, board = scenario.rules, scenario.board
+    first = next(move for move in rules.moves(board) if rules.apply(board, move) != board)
+    after = rules.apply(board, first)
+    blocked = [move for move in rules.moves(after) if rules.apply(after, move) == after]
+    return first.name, (blocked or [first])[0].name
+
+
+def example(condition: Condition, scenario: Scenario) -> str:
+    """The JSON body sent to Jev under this condition, two moves into the scenario."""
+    # Imported here: the game and the players are built on this module's Request.
+    from system_one_control.game import Game
+    from system_one_control.players import ScriptedPlayer, jev_body
+
+    moves = example_moves(scenario)
+    game = Game(scenario, ScriptedPlayer(moves), condition)
+    for _ in moves:
+        game.step()
+    return json.dumps(jev_body(game.next_request()), indent=2, ensure_ascii=False) + "\n"
+
+
+def write_examples(folder: Path = EXAMPLE_DIR, rules: Rules | None = None) -> list[Path]:
+    """One file per condition, so anyone can read what each condition sends Jev.
+
+    Rules other than compass get a subfolder of their own.
+    """
+    scenario = load_scenarios()[EXAMPLE_SCENARIO]
+    if rules is not None and not isinstance(rules, CompassRules):
+        scenario = replace(scenario, rules=rules)
+        folder = folder / rules.name
+    folder.mkdir(parents=True, exist_ok=True)
+    written = []
+    for condition in CONDITIONS.values():
+        path = folder / f"{condition.name}.json"
+        path.write_text(example(condition, scenario), encoding="utf-8", newline="\n")
+        written.append(path)
+    return written

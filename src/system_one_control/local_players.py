@@ -15,7 +15,7 @@ from typing import Any
 
 from system_one_control.llm_players import llm_messages
 from system_one_control.players import Choice, Player, Turn, answer_choice, setting
-from system_one_control.request import Request
+from system_one_control.prompts import Request
 
 DEVICE_NAME = "SOCB_DEVICE"  # such as cpu or cuda; by default the model picks
 

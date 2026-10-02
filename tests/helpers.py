@@ -1,5 +1,5 @@
-from system_one_control.conditions import CONDITIONS
 from system_one_control.players import Choice, Player, Turn
+from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import Scenario
 from system_one_control.world import Board, CompassRules
 

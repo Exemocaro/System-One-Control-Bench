@@ -16,7 +16,7 @@ from system_one_control.players import (
     api_key,
     with_retries,
 )
-from system_one_control.request import Request
+from system_one_control.prompts import Request
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_KEY_NAME = "OPENROUTER_API_KEY"

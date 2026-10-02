@@ -8,7 +8,6 @@ from pathlib import Path
 
 import yaml
 
-from system_one_control.players import WallAwareGreedyPlayer
 from system_one_control.world import (
     DOOR,
     FLOOR,
@@ -85,6 +84,9 @@ MAX_ATTEMPTS = 20000
 
 def greedy_wins(board: Board) -> bool:
     """Whether walking straight at each target, around nothing, reaches the goal in time."""
+    # Imported here: the players are built on the prompts, which are built on this module.
+    from system_one_control.players import WallAwareGreedyPlayer
+
     player = WallAwareGreedyPlayer()
     distance = SOLVER.moves_to_goal(board)
     if distance is None:
