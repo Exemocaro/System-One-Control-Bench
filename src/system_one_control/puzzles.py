@@ -9,13 +9,13 @@ from pathlib import Path
 import yaml
 
 from system_one_control.world import (
+    COMPASS,
     DOOR,
     FLOOR,
     GOAL,
     KEY,
     WALL,
     Board,
-    CompassRules,
     Position,
     Rules,
     Solver,
@@ -76,7 +76,6 @@ def load_scenarios(folder: Path = SCENARIO_DIR) -> dict[str, Scenario]:
     return {scenario.name: scenario for scenario in scenarios}
 
 
-COMPASS = CompassRules()
 SOLVER = Solver(COMPASS)
 KEY_FROM_LEVEL = 3  # key, door and goal need at least three moves
 MAX_ATTEMPTS = 20000
@@ -85,7 +84,7 @@ MAX_ATTEMPTS = 20000
 def greedy_wins(board: Board) -> bool:
     """Whether walking straight at each target, around nothing, reaches the goal in time."""
     # Imported here: the players are built on the prompts, which are built on this module.
-    from system_one_control.players import WallAwareGreedyPlayer
+    from system_one_control.players.baselines import WallAwareGreedyPlayer
 
     player = WallAwareGreedyPlayer()
     distance = SOLVER.moves_to_goal(board)

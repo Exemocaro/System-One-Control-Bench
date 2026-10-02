@@ -360,6 +360,8 @@ def next_target(board: Board) -> tuple[str, Position]:
     raise ValueError("the map has no goal")
 
 
+COMPASS = CompassRules()  # the one shared instance; puzzles and tests walk it, not their own
+
 RULES: dict[str, type[Rules]] = {
     rules.name: rules
     for rules in (

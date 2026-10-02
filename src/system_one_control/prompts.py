@@ -171,7 +171,8 @@ def example(condition: Condition, scenario: Scenario) -> str:
     """The JSON body sent to Jev under this condition, two moves into the scenario."""
     # Imported here: the game and the players are built on this module's Request.
     from system_one_control.game import Game
-    from system_one_control.players import ScriptedPlayer, jev_body
+    from system_one_control.players.baselines import ScriptedPlayer
+    from system_one_control.players.remote import jev_body
 
     moves = example_moves(scenario)
     game = Game(scenario, ScriptedPlayer(moves), condition)

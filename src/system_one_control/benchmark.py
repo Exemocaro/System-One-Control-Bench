@@ -11,10 +11,9 @@ from pathlib import Path
 import typer
 
 from system_one_control.game import Game, Step
-from system_one_control.players import Player
+from system_one_control.players import PLAYERS, Player
 from system_one_control.prompts import Condition
 from system_one_control.puzzles import Scenario
-from system_one_control.roster import PLAYERS
 from system_one_control.world import make_rules
 
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "benchmarks"

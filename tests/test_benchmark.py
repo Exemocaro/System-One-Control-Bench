@@ -13,8 +13,8 @@ from system_one_control.benchmark import (
     summarize,
     usage,
 )
-from system_one_control.players import (
-    Player,
+from system_one_control.players import Player
+from system_one_control.players.baselines import (
     RandomPlayer,
     ScriptedPlayer,
     SolverPlayer,

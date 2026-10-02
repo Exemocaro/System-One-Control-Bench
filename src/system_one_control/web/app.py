@@ -10,9 +10,9 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from system_one_control.game import Game, Step
+from system_one_control.players import PLAYERS, make_player
 from system_one_control.prompts import CONDITIONS, Request
 from system_one_control.puzzles import load_scenarios
-from system_one_control.roster import PLAYERS, make_player
 from system_one_control.world import RULES, Board, make_rules
 
 PAGE = Path(__file__).with_name("index.html")
