@@ -11,7 +11,7 @@ from system_one_control.examples import (
     example_moves,
     write_examples,
 )
-from system_one_control.scenario import load_scenarios
+from system_one_control.puzzles import load_scenarios
 from system_one_control.world import RULES, CompassRules, ThreeMoveRules, TwoMoveRules
 
 SCENARIO = load_scenarios()[EXAMPLE_SCENARIO]

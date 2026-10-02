@@ -1,11 +1,14 @@
+"""Scenarios: one board and its level each, and the generator that fills the levels."""
+
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+import yaml
+
 from system_one_control.players import WallAwareGreedyPlayer
-from system_one_control.scenario import MOVE_ALLOWANCE, Scenario
 from system_one_control.world import (
     DOOR,
     FLOOR,
@@ -15,14 +18,69 @@ from system_one_control.world import (
     Board,
     CompassRules,
     Position,
+    Rules,
     Solver,
+    make_rules,
     next_target,
 )
 
+SCENARIO_DIR = Path(__file__).resolve().parents[2] / "scenarios"
+MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest moves
+
+
+@dataclass(frozen=True)
+class Scenario:
+    """One starting board, the rules it is played under, and how far the goal is."""
+
+    # The distance, which is also the level, counts the moves of the rules' step_rules: compass
+    # moves, even when a move under these rules is several of them.
+    name: str
+    description: str
+    board: Board
+    rules: Rules
+    moves_to_goal: int
+
+    @property
+    def fewest_moves(self) -> int:
+        """The fewest moves that win under the scenario's own rules."""
+        return self.rules.moves_for(self.moves_to_goal)
+
+    @property
+    def max_moves(self) -> int:
+        return MOVE_ALLOWANCE * self.fewest_moves
+
+    @classmethod
+    def load(cls, path: Path) -> Scenario:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        return cls(
+            name=path.stem,
+            description=data.get("description", ""),
+            board=Board.parse(data["map"]),
+            rules=make_rules(data.get("rules", "compass")),
+            moves_to_goal=int(data["moves_to_goal"]),
+        )
+
+
+def load_scenarios(folder: Path = SCENARIO_DIR) -> dict[str, Scenario]:
+    """Every scenario under a folder (one subfolder per level), easiest first.
+
+    Scenarios are known by their file name, so two files may not share one.
+    """
+    paths = sorted(folder.rglob("*.yaml"))
+    names = [path.stem for path in paths]
+    repeated = sorted({name for name in names if names.count(name) > 1})
+    if repeated:
+        raise ValueError(f"scenario names used more than once: {', '.join(repeated)}")
+    scenarios = sorted(
+        (Scenario.load(path) for path in paths), key=lambda s: (s.moves_to_goal, s.name)
+    )
+    return {scenario.name: scenario for scenario in scenarios}
+
+
+COMPASS = CompassRules()
+SOLVER = Solver(COMPASS)
 KEY_FROM_LEVEL = 3  # key, door and goal need at least three moves
 MAX_ATTEMPTS = 20000
-RULES = CompassRules()
-SOLVER = Solver(RULES)
 
 
 def greedy_wins(board: Board) -> bool:
@@ -32,12 +90,12 @@ def greedy_wins(board: Board) -> bool:
     if distance is None:
         return False
     for _ in range(MOVE_ALLOWANCE * distance):
-        if RULES.is_won(board):
+        if COMPASS.is_won(board):
             return True
-        move = RULES.find_move(board, player.pick(board, RULES))
+        move = COMPASS.find_move(board, player.pick(board, COMPASS))
         assert move is not None
-        board = RULES.apply(board, move)
-    return RULES.is_won(board)
+        board = COMPASS.apply(board, move)
+    return COMPASS.is_won(board)
 
 
 def has_a_longer_route(board: Board) -> bool:
@@ -47,9 +105,9 @@ def has_a_longer_route(board: Board) -> bool:
         return False
     walled, current = board, board
     for _ in range(distance):
-        move = RULES.find_move(current, SOLVER.best_moves(current)[0])
+        move = COMPASS.find_move(current, SOLVER.best_moves(current)[0])
         assert move is not None
-        current = RULES.apply(current, move)
+        current = COMPASS.apply(current, move)
         if board.at(current.agent) == FLOOR:
             walled = walled.with_cell(current.agent, WALL)
     detour = SOLVER.moves_to_goal(walled)
@@ -66,15 +124,15 @@ def detours(board: Board) -> int | None:
     layer = {board: 0}  # every board first reached at this depth, and its fewest detours
     seen = {board}
     while layer:
-        won = [count for current, count in layer.items() if RULES.is_won(current)]
+        won = [count for current, count in layer.items() if COMPASS.is_won(current)]
         if won:
             return min(won)
         following: dict[Board, int] = {}
         for current, count in layer.items():
             _, target = next_target(current)
             before = _walk(current.agent, target)
-            for move in RULES.moves(current):
-                after = RULES.apply(current, move)
+            for move in COMPASS.moves(current):
+                after = COMPASS.apply(current, move)
                 if after in seen:  # reached sooner, or a blocked move
                     continue
                 away = count + (_walk(after.agent, target) > before)
@@ -89,11 +147,10 @@ def wall_in_the_way(board: Board) -> bool:
     _, target = next_target(board)
     nearer = [
         move
-        for move in RULES.moves(board)
-        if _walk(board.agent.moved(*CompassRules.STEPS[move.name]), target)
-        < _walk(board.agent, target)
+        for move in COMPASS.moves(board)
+        if _walk(board.agent.moved(*COMPASS.STEPS[move.name]), target) < _walk(board.agent, target)
     ]
-    return any(RULES.apply(board, move) == board for move in nearer)
+    return any(COMPASS.apply(board, move) == board for move in nearer)
 
 
 def _walk(a: Position, b: Position) -> int:
@@ -140,6 +197,13 @@ LONGER_ROUTE = PuzzleKind(
     needs_planning=True,
     longer_route=True,
 )
+# The way to the goal is blocked, as in a puzzle Jev lost at level 2: the goal is up and to
+# the left, north is a wall, and it walked north again and again. Any level from 2 can have it.
+WALL_IN_THE_WAY = PuzzleKind(
+    "without a key, with a wall in the way of walking straight at the goal",
+    keyless=True,
+    wall_in_the_way=True,
+)
 TIMES = {1: "once", 2: "twice", 3: "three times", 4: "four times", 5: "five times", 6: "six times"}
 
 
@@ -151,15 +215,6 @@ def with_detours(least: int) -> PuzzleKind:
         needs_planning=True,
         min_detours=least,
     )
-
-
-# The way to the goal is blocked, as in a puzzle Jev lost at level 2: the goal is up and to
-# the left, north is a wall, and it walked north again and again. Any level from 2 can have it.
-WALL_IN_THE_WAY = PuzzleKind(
-    "without a key, with a wall in the way of walking straight at the goal",
-    keyless=True,
-    wall_in_the_way=True,
-)
 
 
 def around(least: int) -> PuzzleKind:
@@ -314,7 +369,7 @@ def _cells(grid: list[list[str]], symbol: str) -> list[Position]:
 
 
 def _neighbours(position: Position) -> list[Position]:
-    return [position.moved(dx, dy) for dx, dy in CompassRules.STEPS.values()]
+    return [position.moved(dx, dy) for dx, dy in COMPASS.STEPS.values()]
 
 
 def _get(grid: list[list[str]], position: Position) -> str:

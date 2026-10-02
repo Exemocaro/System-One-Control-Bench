@@ -20,9 +20,8 @@ from system_one_control.benchmark import (
 )
 from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
-from system_one_control.generator import LEVELS, write_level
+from system_one_control.puzzles import LEVELS, SCENARIO_DIR, load_scenarios, write_level
 from system_one_control.roster import PLAYERS
-from system_one_control.scenario import SCENARIO_DIR, load_scenarios
 from system_one_control.world import RULES, Rules, make_rules
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)

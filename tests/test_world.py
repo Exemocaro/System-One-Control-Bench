@@ -1,6 +1,6 @@
 import pytest
 
-from system_one_control.scenario import load_scenarios
+from system_one_control.puzzles import load_scenarios
 from system_one_control.world import (
     Board,
     CompassRules,

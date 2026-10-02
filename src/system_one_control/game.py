@@ -6,8 +6,8 @@ from dataclasses import dataclass, replace
 
 from system_one_control.conditions import Condition
 from system_one_control.players import Choice, Player, Turn
+from system_one_control.puzzles import Scenario
 from system_one_control.request import Request
-from system_one_control.scenario import Scenario
 from system_one_control.world import Board, Rules, Solver
 
 

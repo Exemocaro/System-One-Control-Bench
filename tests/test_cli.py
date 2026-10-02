@@ -4,7 +4,7 @@ from datetime import datetime
 from typer.testing import CliRunner
 
 from system_one_control.cli import _run_name, app
-from system_one_control.generator import LEVELS
+from system_one_control.puzzles import LEVELS
 
 runner = CliRunner()
 

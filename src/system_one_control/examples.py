@@ -7,7 +7,7 @@ from pathlib import Path
 from system_one_control.conditions import CONDITIONS, Condition
 from system_one_control.game import Game
 from system_one_control.players import ScriptedPlayer, jev_body
-from system_one_control.scenario import Scenario, load_scenarios
+from system_one_control.puzzles import Scenario, load_scenarios
 from system_one_control.world import CompassRules, Rules
 
 EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples"
