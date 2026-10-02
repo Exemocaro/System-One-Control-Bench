@@ -2,7 +2,6 @@ from dataclasses import replace
 
 import pytest
 
-from system_one_control.board import Board
 from system_one_control.generator import (
     LEVELS,
     LONGER_ROUTE,
@@ -19,9 +18,8 @@ from system_one_control.generator import (
     with_detours,
     write_level,
 )
-from system_one_control.rules import CompassRules
 from system_one_control.scenario import Scenario, load_scenarios
-from system_one_control.solver import Solver
+from system_one_control.world import Board, CompassRules, Solver
 
 solver = Solver(CompassRules())
 SCENARIOS = load_scenarios()

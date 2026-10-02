@@ -21,8 +21,8 @@ from system_one_control.players import (
     SolverPlayer,
     WallAwareGreedyPlayer,
 )
-from system_one_control.rules import TwoMoveRules
 from system_one_control.scenario import load_scenarios
+from system_one_control.world import TwoMoveRules
 from tests.helpers import AlwaysPlayer, scenario
 
 SCENARIOS = list(load_scenarios().values())

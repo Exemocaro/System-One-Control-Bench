@@ -3,14 +3,14 @@ from dataclasses import replace
 import pytest
 
 from system_one_control.generator import LEVELS
-from system_one_control.rules import (
+from system_one_control.scenario import SCENARIO_DIR, Scenario, load_scenarios
+from system_one_control.world import (
+    Solver,
     ThreeMoveRules,
     TwoMoveRules,
     UpToThreeMoveRules,
     UpToTwoMoveRules,
 )
-from system_one_control.scenario import SCENARIO_DIR, Scenario, load_scenarios
-from system_one_control.solver import Solver
 
 SCENARIOS = load_scenarios()
 

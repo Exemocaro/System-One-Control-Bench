@@ -18,10 +18,8 @@ from typesafe_sdk import (
     TypeSafeRateLimitError,
 )
 
-from system_one_control.board import Board
 from system_one_control.request import Request
-from system_one_control.rules import CompassRules, Move, Rules, next_target
-from system_one_control.solver import Solver
+from system_one_control.world import Board, CompassRules, Move, Rules, Solver, next_target
 
 
 @dataclass(frozen=True)

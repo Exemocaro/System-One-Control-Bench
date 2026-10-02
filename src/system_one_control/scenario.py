@@ -5,8 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from system_one_control.board import Board
-from system_one_control.rules import Rules, make_rules
+from system_one_control.world import Board, Rules, make_rules
 
 SCENARIO_DIR = Path(__file__).resolve().parents[2] / "scenarios"
 MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest moves

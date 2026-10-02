@@ -4,11 +4,20 @@ import random
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from system_one_control.board import DOOR, FLOOR, GOAL, KEY, WALL, Board, Position
 from system_one_control.players import WallAwareGreedyPlayer
-from system_one_control.rules import CompassRules, next_target
 from system_one_control.scenario import MOVE_ALLOWANCE, Scenario
-from system_one_control.solver import Solver
+from system_one_control.world import (
+    DOOR,
+    FLOOR,
+    GOAL,
+    KEY,
+    WALL,
+    Board,
+    CompassRules,
+    Position,
+    Solver,
+    next_target,
+)
 
 KEY_FROM_LEVEL = 3  # key, door and goal need at least three moves
 MAX_ATTEMPTS = 20000

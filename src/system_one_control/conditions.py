@@ -4,9 +4,8 @@ import random
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from system_one_control.board import DOOR, GOAL, KEY, SYMBOL_NAMES, Board
 from system_one_control.request import Option, Request
-from system_one_control.rules import Rules
+from system_one_control.world import DOOR, GOAL, KEY, SYMBOL_NAMES, Board, Rules
 
 QUESTION = "What is the best next move?"  # the subgoal ingredient asks the rules' own instead
 

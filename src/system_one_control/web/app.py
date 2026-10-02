@@ -9,13 +9,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS
 from system_one_control.game import Game, Step
 from system_one_control.request import Request
 from system_one_control.roster import PLAYERS, make_player
-from system_one_control.rules import RULES, make_rules
 from system_one_control.scenario import load_scenarios
+from system_one_control.world import RULES, Board, make_rules
 
 PAGE = Path(__file__).with_name("index.html")
 

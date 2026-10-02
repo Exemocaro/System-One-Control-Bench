@@ -3,7 +3,6 @@ import json
 import httpx
 import pytest
 
-from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS
 from system_one_control.llm_players import (
     ANSWER_TOKENS,
@@ -23,7 +22,7 @@ from system_one_control.local_players import (
     number_probabilities,
 )
 from system_one_control.players import Turn
-from system_one_control.rules import CompassRules
+from system_one_control.world import Board, CompassRules
 from tests.helpers import MAP
 
 rules = CompassRules()

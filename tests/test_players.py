@@ -8,7 +8,6 @@ from typesafe_sdk import (
     TypeSafeInternalServerError,
 )
 
-from system_one_control.board import Board
 from system_one_control.llm_players import LLM_MODELS
 from system_one_control.players import (
     JEV_RETRY_WAITS,
@@ -21,7 +20,7 @@ from system_one_control.players import (
     jev_body,
 )
 from system_one_control.roster import PLAYERS, make_player
-from system_one_control.rules import CompassRules
+from system_one_control.world import Board, CompassRules
 from tests.helpers import MAP
 
 rules = CompassRules()

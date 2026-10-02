@@ -1,14 +1,14 @@
 import pytest
 
-from system_one_control.board import Board
 from system_one_control.conditions import CONDITIONS, INGREDIENTS, Condition
-from system_one_control.rules import (
+from system_one_control.scenario import load_scenarios
+from system_one_control.world import (
+    Board,
     CompassRules,
     TwoMoveRules,
     UpToThreeMoveRules,
     UpToTwoMoveRules,
 )
-from system_one_control.scenario import load_scenarios
 
 SCENARIOS = load_scenarios()
 LEVEL_TEN = SCENARIOS["gen-10-01"].board
