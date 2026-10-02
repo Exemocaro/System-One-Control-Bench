@@ -9,7 +9,7 @@ from system_one_control.llm_players import (
     ANSWER_TOKENS,
     LLM_SYSTEM,
     OPENROUTER_URL,
-    REASONING_TOKENS,
+    REASONING_BUDGET,
     LLMPlayer,
     llm_messages,
     parse_answer,
@@ -91,8 +91,9 @@ def test_without_reasoning_the_model_must_answer_at_once_and_with_it_may_think()
     quick, reasoned = llm(answering()[0]).body(t.request), llm(answering()[0], True).body(t.request)
     assert quick["reasoning"] == {"enabled": False, "exclude": True}
     assert quick["max_tokens"] == ANSWER_TOKENS
-    assert reasoned["reasoning"] == {"enabled": True, "exclude": True}
-    assert reasoned["max_tokens"] == REASONING_TOKENS  # room to think, but not without end
+    budget = {"enabled": True, "exclude": True, "max_tokens": REASONING_BUDGET}
+    assert reasoned["reasoning"] == budget
+    assert reasoned["max_tokens"] == REASONING_BUDGET + ANSWER_TOKENS
 
 
 def test_the_answer_must_be_json_naming_one_of_the_options():

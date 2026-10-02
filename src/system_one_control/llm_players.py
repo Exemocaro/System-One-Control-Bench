@@ -44,9 +44,9 @@ LLM_RETRY_WAITS = (5.0, 15.0, 30.0, 60.0)
 # Answering without reasoning is a few tokens, such as {"option": "option_12"}; the cap stops a
 # model that reasons anyway from running up a bill, and its answer then comes back cut, as an error.
 ANSWER_TOKENS = 64
-# With reasoning, a cap far above what a move needs, to stop one runaway call: at DeepSeek V4.1
-# Flash's price it costs at most about 1.3 cents. The reasoning counts toward it.
-REASONING_TOKENS = 32_000
+# With reasoning, the thinking is capped: on a level-10 request DeepSeek V4.1 Flash used 748 tokens
+# under this budget, 1,361 under 2,048 and 2,400 at effort "low", which would have tripled the cost.
+REASONING_BUDGET = 1024
 # Seconds a call may take: reasoning can take minutes on a long puzzle.
 LLM_TIMEOUT = 120.0
 LLM_REASONING_TIMEOUT = 600.0
@@ -149,7 +149,8 @@ class LLMPlayer(Player):
             "model": self.model,
             "messages": llm_messages(request),
             # The reasoning is billed either way; leaving its text out only saves the transfer.
-            "reasoning": {"enabled": self.reasoning, "exclude": True},
+            "reasoning": {"enabled": self.reasoning, "exclude": True}
+            | ({"max_tokens": REASONING_BUDGET} if self.reasoning else {}),
             "usage": {"include": True},  # adds the cost to the answer
             # The answer must be JSON naming one of the options, so a model cannot answer in
             # prose, or think aloud when its reasoning is off; only providers that enforce it.
@@ -158,7 +159,7 @@ class LLMPlayer(Player):
         }
         if self.host:
             body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
-        body["max_tokens"] = REASONING_TOKENS if self.reasoning else ANSWER_TOKENS
+        body["max_tokens"] = REASONING_BUDGET + ANSWER_TOKENS if self.reasoning else ANSWER_TOKENS
         return body
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
