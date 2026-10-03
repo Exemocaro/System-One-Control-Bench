@@ -132,28 +132,28 @@
 | Gemma 4 26B | full context | 12 | 10 | 0.20 [0.00, 0.50] |
 | Gemma 4 26B | full context | 15 | 10 | 0.00 [0.00, 0.00] |
 | Gemma 4 26B | full context | 20 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 1 | 5 | 0.60 [0.20, 1.00] |
-| Qwen3.5 4B | map only | 2 | 5 | 0.60 [0.20, 1.00] |
-| Qwen3.5 4B | map only | 3 | 10 | 0.40 [0.10, 0.70] |
-| Qwen3.5 4B | map only | 4 | 10 | 0.20 [0.00, 0.50] |
-| Qwen3.5 4B | map only | 5 | 10 | 0.20 [0.00, 0.50] |
-| Qwen3.5 4B | map only | 6 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 8 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 10 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 12 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 15 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | map only | 20 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | full context | 1 | 5 | 1.00 [1.00, 1.00] |
-| Qwen3.5 4B | full context | 2 | 5 | 0.80 [0.40, 1.00] |
-| Qwen3.5 4B | full context | 3 | 10 | 0.80 [0.50, 1.00] |
-| Qwen3.5 4B | full context | 4 | 10 | 0.50 [0.20, 0.80] |
-| Qwen3.5 4B | full context | 5 | 10 | 0.40 [0.10, 0.70] |
-| Qwen3.5 4B | full context | 6 | 10 | 0.50 [0.20, 0.80] |
-| Qwen3.5 4B | full context | 8 | 10 | 0.60 [0.30, 0.90] |
-| Qwen3.5 4B | full context | 10 | 10 | 0.60 [0.30, 0.90] |
-| Qwen3.5 4B | full context | 12 | 10 | 0.20 [0.00, 0.50] |
-| Qwen3.5 4B | full context | 15 | 10 | 0.00 [0.00, 0.00] |
-| Qwen3.5 4B | full context | 20 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 1 | 5 | 0.60 [0.20, 1.00] |
+| Qwen3.5-4B | map only | 2 | 5 | 0.60 [0.20, 1.00] |
+| Qwen3.5-4B | map only | 3 | 10 | 0.40 [0.10, 0.70] |
+| Qwen3.5-4B | map only | 4 | 10 | 0.20 [0.00, 0.50] |
+| Qwen3.5-4B | map only | 5 | 10 | 0.20 [0.00, 0.50] |
+| Qwen3.5-4B | map only | 6 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 8 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 10 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 12 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 15 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | map only | 20 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | full context | 1 | 5 | 1.00 [1.00, 1.00] |
+| Qwen3.5-4B | full context | 2 | 5 | 0.80 [0.40, 1.00] |
+| Qwen3.5-4B | full context | 3 | 10 | 0.80 [0.50, 1.00] |
+| Qwen3.5-4B | full context | 4 | 10 | 0.50 [0.20, 0.80] |
+| Qwen3.5-4B | full context | 5 | 10 | 0.40 [0.10, 0.70] |
+| Qwen3.5-4B | full context | 6 | 10 | 0.50 [0.20, 0.80] |
+| Qwen3.5-4B | full context | 8 | 10 | 0.60 [0.30, 0.90] |
+| Qwen3.5-4B | full context | 10 | 10 | 0.60 [0.30, 0.90] |
+| Qwen3.5-4B | full context | 12 | 10 | 0.20 [0.00, 0.50] |
+| Qwen3.5-4B | full context | 15 | 10 | 0.00 [0.00, 0.00] |
+| Qwen3.5-4B | full context | 20 | 10 | 0.00 [0.00, 0.00] |
 | DeepSeek V4.1 Flash | map only | 1 | 5 | 1.00 [1.00, 1.00] |
 | DeepSeek V4.1 Flash | map only | 2 | 5 | 0.60 [0.20, 1.00] |
 | DeepSeek V4.1 Flash | map only | 3 | 10 | 0.90 [0.70, 1.00] |

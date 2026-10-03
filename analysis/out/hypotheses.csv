@@ -1,8 +1,8 @@
 Hypothesis,Observed,Criterion met
-"H1: under map only, Jev beats random but not greedy (walls), on won rate and progress","won vs random: +0.28 [+0.19, +0.37]; progress vs random: +0.18 [+0.09, +0.26]; won vs greedy-walls: -0.05 [-0.12, +0.02]; progress vs greedy-walls: -0.05 [-0.11, +0.01]",yes
+"H1: under map only, Jev beats random but not greedy (walls), on won rate and progress","won vs random: +0.28 [+0.19, +0.37]; progress vs random: +0.18 [+0.09, +0.26]; won vs greedy-walls: -0.05 [-0.12, +0.02]; progress vs greedy-walls: -0.05 [-0.11, +0.01]; 'not greedy (walls)' = no advantage shown, not shown to be worse",yes
 H2: Jev's wins fall with the level; no condition wins half of the planning puzzles,won-vs-level slope -0.061 to -0.046 per level; best on the 63 planning puzzles: 0.40 (everything-surroundings),yes
 "H3: simulated action outcomes help most (best map+X, worst everything-X, on progress)","map+X: lookahead 0.61, memory 0.58, surroundings 0.57, subgoal 0.46; everything-X lowest: memory 0.63",partly
 "H4: explicit subgoal is second among additions, and helps mostly from level 3 up","rank 4 of 4; progress gain +0.02 at levels 3+, +0.10 at 1-2",no
 H5: interaction history alone adds almost nothing (within 0.05 progress of map),"progress change +0.15 [+0.11, +0.21]",no
 H6: full context has the best progress of the ten conditions and wins at least 28/100,best progress: everything-subgoal (0.73); full context wins 57/100,partly
-"H7: Jev is overconfident, but its p(chosen) still ranks its moves","mean p(chosen) 0.72 vs optimal share 0.51; optimal at p >= 0.9: 0.74 (3895 moves), below: 0.42",yes
+"H7: Jev is overconfident, but its p(chosen) still ranks its moves","mean p(chosen) 0.72 vs optimal share 0.51; optimal at p >= 0.9: 0.74 (3895 moves), below: 0.42; ranking checked only by this split, and the reliability curve is not monotone",yes

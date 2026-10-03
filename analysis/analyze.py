@@ -49,7 +49,7 @@ MODELS = {
     "laya": ("Laya", "#332288"),
     "gliclass": ("GLiClass", "#AA4499"),
     "gemma-4-26b": ("Gemma 4 26B", "#009E73"),
-    "qwen3.5-4b": ("Qwen3.5 4B", "#44AA99"),
+    "qwen3.5-4b": ("Qwen3.5-4B", "#44AA99"),
     "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#CC79A7"),
     "deepseek-v4.1-flash-think": ("DeepSeek V4.1 Flash (reasoning)", "#882255"),
 }
@@ -61,6 +61,7 @@ COMPONENTS = {
     "subgoal": "explicit subgoal",
 }
 INPUTS = {"map": "map only", "everything": "full context"}
+DIAMOND = {"marker": "D", "ls": "", "color": "white", "mec": "black", "ms": 4}  # own-game share
 KINDS = ["start", "on-route", "off-route", "after-blocked", "late"]  # exam items
 
 
@@ -179,7 +180,7 @@ def tables(games: dict) -> None:
         for component, label in COMPONENTS.items():
             for direction, a, b in [
                 ("added to map only", f"map+{component}", "map"),
-                ("removed from full context", "everything", f"everything-{component}"),
+                ("full vs full minus it", "everything", f"everything-{component}"),
             ]:
                 a, b = games[(player, "compass", a)], games[(player, "compass", b)]
                 found.append([name, label, direction, change(a, b, "won")])
@@ -216,8 +217,18 @@ def tables(games: dict) -> None:
             rows.append([name, len(confidence), statistics.mean(confidence)])
             rows[-1] += [statistics.mean(optimal)]
             rows[-1] += [metrics.expected_calibration_error(confidence, optimal)]
-            rows[-1] += [metrics.brier_score(confidence, optimal), ties, gap]
-    header = ["Model", "Moves", "Mean p(chosen)", "Optimal share", "ECE", "Brier", "Tied share"]
+            rows[-1] += [metrics.brier_score(confidence, optimal)]
+            rows[-1] += [statistics.mean(optimal) * (1 - statistics.mean(optimal)), ties, gap]
+    header = [
+        "Model",
+        "Moves",
+        "Mean p(chosen)",
+        "Optimal share",
+        "ECE",
+        "Brier",
+        "Brier of a constant",
+    ]
+    header += ["Tied share"]
     write_table("calibration", [*header, "Max confidence - rescaled p_max"], rows)
 
     rows = []
@@ -273,9 +284,16 @@ def exam_rate(by_puzzle: dict[str, list]) -> tuple[float, float, float]:
     return estimate([statistics.mean(a[1] for a in v) for v in by_puzzle.values()])
 
 
-def in_game_optimal(games: dict, player: str, condition: str) -> float:
-    g = games[(player, "compass", condition)].values()
-    return statistics.mean(m.optimal for x in g for m in x.moves if m.move)
+def in_game_optimal(games: dict, player: str, condition: str, pooled: bool = False) -> float:
+    """Optimal share of the moves in the player's own compass games: averaged within each game,
+    then over puzzles, as the exam is; or `pooled` over all moves, where long games weigh more."""
+    g = [
+        [m.optimal for m in x.moves if m.move]
+        for x in games[(player, "compass", condition)].values()
+    ]
+    return statistics.mean(
+        [m for x in g for m in x] if pooled else [statistics.mean(x) for x in g if x]
+    )
 
 
 def exam_tables(games: dict, exam: dict) -> None:
@@ -289,7 +307,8 @@ def exam_tables(games: dict, exam: dict) -> None:
                 [name, INPUTS[condition], len(answers), exam_rate(exam[(player, condition)])]
             )
             rows[-1] += [statistics.mean(a[1] for a in answers if a[0] == kind) for kind in KINDS]
-            rows[-1] += [in_game_optimal(games, player, condition), "", ""]
+            rows[-1] += [in_game_optimal(games, player, condition)]
+            rows[-1] += [in_game_optimal(games, player, condition, pooled=True), "", ""]
             p = [a[2] for a in answers if a[2] is not None and player in MODELS]
             if p:  # calibration, for the models that return probabilities
                 optimal = [a[1] for a in answers if a[2] is not None]
@@ -302,8 +321,24 @@ def exam_tables(games: dict, exam: dict) -> None:
             }
             changes.append([name, estimate(list(mean.values()))])
     header = ["Model", "Input", "Answers", "Optimal rate", *KINDS, "In-game optimal share"]
-    write_table("exam", [*header, "Mean p(chosen)", "ECE"], rows)
+    write_table("exam", [*header, "In-game, pooled over moves", "Mean p(chosen)", "ECE"], rows)
     write_table("exam_inputs", ["Model", "Full context - map only, optimal rate"], changes)
+    rows = []  # paired differences between the three models the paper calls similar
+    for a, b in [
+        ("jev", "gemma-4-26b"),
+        ("jev", "deepseek-v4.1-flash"),
+        ("gemma-4-26b", "deepseek-v4.1-flash"),
+    ]:
+        for c in INPUTS:
+            x, y = exam[(a, c)], exam[(b, c)]
+            optimal = [
+                statistics.mean(v[1] for v in x[k]) - statistics.mean(v[1] for v in y[k]) for k in x
+            ]
+            won = change(games[(a, "compass", c)], games[(b, "compass", c)], "won")
+            rows.append([f"{MODELS[a][0]} - {MODELS[b][0]}", INPUTS[c], won, estimate(optimal)])
+    write_table(
+        "pairs", ["Pair", "Input", "Won rate difference", "Exam optimal-rate difference"], rows
+    )
 
 
 def fig_exam(games: dict, exam: dict) -> None:
@@ -311,8 +346,7 @@ def fig_exam(games: dict, exam: dict) -> None:
     players = [p for p in PLAYERS if (p, "map") in exam]
     rate, own = (lambda p, c: exam_rate(exam[(p, c)])), (lambda p, c: in_game_optimal(games, p, c))
     bar_panel(ax, players, rate, "Optimal answers, fixed-state exam (compass)", mark=own)
-    marker = {"ls": "", "marker": "D", "color": "white", "mec": "black"}
-    input_legend(fig, 0.0, (Line2D([], [], **marker, label="optimal share in own games"),))
+    input_legend(fig, 0.0, (Line2D([], [], label="own games (per-puzzle average)", **DIAMOND),))
     save(fig, "fig_exam")
 
 
@@ -336,12 +370,15 @@ def calibration_moves(games: dict, player: str) -> tuple[list, list, float, floa
 
 
 def hypotheses(games: dict) -> list[list]:
-    """H1-H7 of 23 September, about Jev under compass rules; see docs/DECISIONS.md."""
+    """H1-H7 of 23 September, about Jev under compass rules, checked as written (paper App. B)."""
     jev = {c: v for (p, r, c), v in games.items() if p == "jev" and r == "compass"}
     base = {p: games[(p, "compass", "map")] for p in BASELINES}
+    rows: list[list] = []
 
-    def verdict(*parts: bool) -> str:
-        return "yes" if all(parts) else "partly" if any(parts) else "no"
+    def add(statement: str, observed: str, *parts: bool) -> None:
+        rows.append(
+            [statement, observed, "yes" if all(parts) else "partly" if any(parts) else "no"]
+        )
 
     def fmt(e: tuple) -> str:
         return f"{e[0]:+.2f} [{e[1]:+.2f}, {e[2]:+.2f}]"
@@ -349,86 +386,75 @@ def hypotheses(games: dict) -> list[list]:
     def mean(condition: str, field: str = "progress") -> float:
         return statistics.mean(getattr(x, field) for x in jev[condition].values())
 
-    rows = []
-    vs = {
-        (p, f): change(jev["map"], base[p], f)
-        for p in ["random", "greedy-walls"]
-        for f in ["won", "progress"]
-    }
-    rows.append(
-        [
-            "H1: under map only, Jev beats random but not greedy (walls), on won rate and progress",
-            "; ".join(f"{f} vs {p}: {fmt(e)}" for (p, f), e in vs.items()),
-            verdict(
-                all(vs[("random", f)][1] > 0 for f in ["won", "progress"]),
-                all(vs[("greedy-walls", f)][1] <= 0 for f in ["won", "progress"]),
-            ),
-        ]
+    vs = {(p, f): change(jev["map"], base[p], f) for p in base for f in ["won", "progress"]}
+    pairs = [
+        ("random", "won"),
+        ("random", "progress"),
+        ("greedy-walls", "won"),
+        ("greedy-walls", "progress"),
+    ]
+    observed = "; ".join(f"{f} vs {p}: {fmt(vs[(p, f)])}" for p, f in pairs)
+    add(
+        "H1: under map only, Jev beats random but not greedy (walls), on won rate and progress",
+        observed + "; 'not greedy (walls)' = no advantage shown, not shown to be worse",
+        all(vs[("random", f)][1] > 0 for f in ["won", "progress"]),
+        all(vs[("greedy-walls", f)][1] <= 0 for f in ["won", "progress"]),
     )
 
     planning = {p for p, x in base["greedy-walls"].items() if not x.won}
-    slopes = {
-        c: metrics.slope([x.level for x in v.values()], [x.won for x in v.values()])
-        for c, v in jev.items()
-    }
+    slopes = [
+        metrics.slope(*zip(*[(x.level, x.won) for x in v.values()], strict=True))
+        for v in jev.values()
+    ]
     best = max(jev, key=lambda c: statistics.mean(jev[c][p].won for p in planning))
     best_rate = statistics.mean(jev[best][p].won for p in planning)
-    rows.append(
-        [
-            "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
-            f"won-vs-level slope {min(slopes.values()):+.3f} to {max(slopes.values()):+.3f} "
-            f"per level; "
-            f"best on the {len(planning)} planning puzzles: {best_rate:.2f} ({best})",
-            verdict(max(slopes.values()) < 0, best_rate < 0.5),
-        ]
+    add(
+        "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
+        f"won-vs-level slope {min(slopes):+.3f} to {max(slopes):+.3f} per level; "
+        f"best on the {len(planning)} planning puzzles: {best_rate:.2f} ({best})",
+        max(slopes) < 0,
+        best_rate < 0.5,
     )
 
     added = {c: mean(f"map+{c}") for c in COMPONENTS}
     removed = {c: mean(f"everything-{c}") for c in COMPONENTS}
-    ranked = sorted(added, key=added.get, reverse=True)
-    rows.append(
-        [
-            "H3: simulated action outcomes help most (best map+X, worst everything-X, on progress)",
-            f"map+X: {', '.join(f'{c} {added[c]:.2f}' for c in ranked)}; everything-X lowest: "
-            f"{min(removed, key=removed.get)} {min(removed.values()):.2f}",
-            verdict(ranked[0] == "lookahead", min(removed, key=removed.get) == "lookahead"),
-        ]
+    ranked, worst = sorted(added, key=added.get, reverse=True), min(removed, key=removed.get)
+    add(
+        "H3: simulated action outcomes help most (best map+X, worst everything-X, on progress)",
+        f"map+X: {', '.join(f'{c} {added[c]:.2f}' for c in ranked)}; everything-X lowest: "
+        f"{worst} {removed[worst]:.2f}",
+        ranked[0] == "lookahead",
+        worst == "lookahead",
     )
 
     def subgoal_gain(levels) -> float:
+        gain = [jev["map+subgoal"][p].progress - x.progress for p, x in jev["map"].items()]
         return statistics.mean(
-            jev["map+subgoal"][p].progress - jev["map"][p].progress
-            for p in jev["map"]
-            if jev["map"][p].level in levels
+            g for g, x in zip(gain, jev["map"].values(), strict=True) if x.level in levels
         )
 
     high, low = subgoal_gain(range(3, 100)), subgoal_gain(range(1, 3))
-    rows.append(
-        [
-            "H4: explicit subgoal is second among additions, and helps mostly from level 3 up",
-            f"rank {ranked.index('subgoal') + 1} of 4; progress gain {high:+.2f} at levels 3+, "
-            f"{low:+.2f} at 1-2",
-            verdict(ranked[1] == "subgoal", high > low),
-        ]
+    add(
+        "H4: explicit subgoal is second among additions, and helps mostly from level 3 up",
+        f"rank {ranked.index('subgoal') + 1} of 4; "
+        f"progress gain {high:+.2f} at levels 3+, {low:+.2f} at 1-2",
+        ranked[1] == "subgoal",
+        high > low,
     )
 
     memory = change(jev["map+memory"], jev["map"], "progress")
-    rows.append(
-        [
-            "H5: interaction history alone adds almost nothing (within 0.05 progress of map)",
-            f"progress change {fmt(memory)}",
-            verdict(abs(memory[0]) <= 0.05),
-        ]
+    add(
+        "H5: interaction history alone adds almost nothing (within 0.05 progress of map)",
+        f"progress change {fmt(memory)}",
+        abs(memory[0]) <= 0.05,
     )
 
-    wins = sum(x.won for x in jev["everything"].values())
-    top = max(jev, key=mean)
-    rows.append(
-        [
-            "H6: full context has the best progress of the ten conditions and wins at least 28/100",
-            f"best progress: {top} ({mean(top):.2f}); full context wins {wins}/100",
-            verdict(top == "everything", wins >= 28),
-        ]
+    wins, top = sum(x.won for x in jev["everything"].values()), max(jev, key=mean)
+    add(
+        "H6: full context has the best progress of the ten conditions and wins at least 28/100",
+        f"best progress: {top} ({mean(top):.2f}); full context wins {wins}/100",
+        top == "everything",
+        wins >= 28,
     )
 
     confidence, optimal, *_ = calibration_moves(
@@ -436,17 +462,14 @@ def hypotheses(games: dict) -> list[list]:
     )
     sure = [o for c, o in zip(confidence, optimal, strict=True) if c >= 0.9]
     rest = [o for c, o in zip(confidence, optimal, strict=True) if c < 0.9]
-    rows.append(
-        [
-            "H7: Jev is overconfident, but its p(chosen) still ranks its moves",
-            f"mean p(chosen) {statistics.mean(confidence):.2f} vs optimal share "
-            f"{statistics.mean(optimal):.2f}; optimal at p >= 0.9: {statistics.mean(sure):.2f} "
-            f"({len(sure)} moves), below: {statistics.mean(rest):.2f}",
-            verdict(
-                statistics.mean(confidence) > statistics.mean(optimal),
-                statistics.mean(sure) > statistics.mean(rest),
-            ),
-        ]
+    add(
+        "H7: Jev is overconfident, but its p(chosen) still ranks its moves",
+        f"mean p(chosen) {statistics.mean(confidence):.2f} vs optimal share "
+        f"{statistics.mean(optimal):.2f}; optimal at p >= 0.9: {statistics.mean(sure):.2f} "
+        f"({len(sure)} moves), below: {statistics.mean(rest):.2f}; ranking checked only by "
+        "this split, and the reliability curve is not monotone",
+        statistics.mean(confidence) > statistics.mean(optimal),
+        statistics.mean(sure) > statistics.mean(rest),
     )
     return rows
 
@@ -485,15 +508,7 @@ def bar_panel(ax, players: list[str], value, xlabel: str, mark=None) -> None:
             ax.barh(y_bar, v, height=height, color=PLAYERS[player][1], alpha=0.35 if pale else 1)
             ax.errorbar(v, y_bar, xerr=[[v - low], [high - v]], color="black", lw=0.8, capsize=2)
             if mark:
-                ax.plot(
-                    mark(player, condition),
-                    y_bar,
-                    "D",
-                    color="white",
-                    mec="black",
-                    ms=4,
-                    clip_on=False,
-                )
+                ax.plot(mark(player, condition), y_bar, clip_on=False, **DIAMOND)
     ax.set_xlim(0, 1)
     ax.set_xlabel(xlabel)
     ax.set_yticks(range(len(players)), [PLAYERS[p][0] for p in reversed(players)])
@@ -545,7 +560,7 @@ def fig_components(games: dict) -> None:
     axes.flat[-1].legend(
         handles=[
             plt.Line2D([], [], color="0.3", marker="o", ls="", label="added to map only"),
-            plt.Line2D([], [], color="0.3", marker="s", ls="", label="removed from\nfull context"),
+            plt.Line2D([], [], color="0.3", marker="s", ls="", label="full vs full\nminus it"),
         ],
         loc="center",
         frameon=False,
@@ -564,14 +579,8 @@ def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
             points = [(i, key(games, player, x, condition)) for i, x in enumerate(xs)]
             points = [(i, v) for i, v in points if v is not None]
             if len(points) > 1 and player != "solver":
-                ax.plot(
-                    *zip(*points, strict=True),
-                    marker="o",
-                    markersize=3,
-                    color=color,
-                    label=label,
-                    ls="--" if player in BASELINES else "-",
-                )
+                style = "o--" if player in BASELINES else "o-"
+                ax.plot(*zip(*points, strict=True), style, ms=3, color=color, label=label)
         ax.set_xticks(
             range(len(xs)),
             [f"{x}".replace("-moves", "") + (f"\n({RULES[x]})" if x in RULES else "") for x in xs],
@@ -613,14 +622,7 @@ def fig_calibration(games: dict) -> None:
         confidence, optimal, *_ = calibration_moves(games, player)
         bins = [b for b in metrics.calibration_bins(confidence, optimal) if b[2] >= 30]
         if bins:
-            ax.plot(
-                [b[0] for b in bins],
-                [b[1] for b in bins],
-                marker="o",
-                markersize=3,
-                color=color,
-                label=name,
-            )
+            ax.plot(*zip(*[b[:2] for b in bins], strict=True), "o-", ms=3, color=color, label=name)
     ax.set_xlabel("Probability of the chosen move (compass)")
     ax.set_ylabel("Share of chosen moves that were optimal")
     ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), frameon=False)
@@ -641,13 +643,9 @@ def main() -> None:
     fig_main(games)
     fig_components(games)
     fig_lines(games, "fig_action_spaces", list(RULES), rules_won, "Action space (options per move)")
-    fig_lines(
-        games,
-        "fig_levels",
-        sorted({x.level for x in games[("solver", "compass", "map")].values()}),
-        level_won,
-        "Level (steps to the goal), compass",
-    )
+    levels = sorted({x.level for x in games[("solver", "compass", "map")].values()})
+    xlabel = "Level (steps to the goal; evenly spaced, not to scale), compass"
+    fig_lines(games, "fig_levels", levels, level_won, xlabel)
     fig_calibration(games)
     exam = load_exam()
     exam_tables(games, exam)

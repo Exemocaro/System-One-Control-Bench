@@ -1,0 +1,7 @@
+Pair,Input,Won rate difference,Won rate difference low,Won rate difference high,Exam optimal-rate difference,Exam optimal-rate difference low,Exam optimal-rate difference high
+Jev - Gemma 4 26B,map only,-0.03,-0.11,0.05,0.043000000000000003,0.006000000000000003,0.079
+Jev - Gemma 4 26B,full context,-0.04,-0.1,0.02,0.004,-0.012000000000000002,0.02
+Jev - DeepSeek V4.1 Flash,map only,-0.07,-0.14,0.0,0.065,0.027000000000000003,0.10249999999999998
+Jev - DeepSeek V4.1 Flash,full context,-0.03,-0.11,0.05,0.036,0.011999999999999997,0.062
+Gemma 4 26B - DeepSeek V4.1 Flash,map only,-0.04,-0.12,0.04,0.022,-0.020000000000000004,0.06749999999999999
+Gemma 4 26B - DeepSeek V4.1 Flash,full context,0.01,-0.06,0.09,0.032,0.004,0.06

@@ -131,28 +131,28 @@ Gemma 4 26B,full context,10,10,0.8,0.5,1.0
 Gemma 4 26B,full context,12,10,0.2,0.0,0.5
 Gemma 4 26B,full context,15,10,0,0.0,0.0
 Gemma 4 26B,full context,20,10,0,0.0,0.0
-Qwen3.5 4B,map only,1,5,0.6,0.2,1.0
-Qwen3.5 4B,map only,2,5,0.6,0.2,1.0
-Qwen3.5 4B,map only,3,10,0.4,0.1,0.7
-Qwen3.5 4B,map only,4,10,0.2,0.0,0.5
-Qwen3.5 4B,map only,5,10,0.2,0.0,0.5
-Qwen3.5 4B,map only,6,10,0,0.0,0.0
-Qwen3.5 4B,map only,8,10,0,0.0,0.0
-Qwen3.5 4B,map only,10,10,0,0.0,0.0
-Qwen3.5 4B,map only,12,10,0,0.0,0.0
-Qwen3.5 4B,map only,15,10,0,0.0,0.0
-Qwen3.5 4B,map only,20,10,0,0.0,0.0
-Qwen3.5 4B,full context,1,5,1,1.0,1.0
-Qwen3.5 4B,full context,2,5,0.8,0.4,1.0
-Qwen3.5 4B,full context,3,10,0.8,0.5,1.0
-Qwen3.5 4B,full context,4,10,0.5,0.2,0.8
-Qwen3.5 4B,full context,5,10,0.4,0.1,0.7
-Qwen3.5 4B,full context,6,10,0.5,0.2,0.8
-Qwen3.5 4B,full context,8,10,0.6,0.3,0.9
-Qwen3.5 4B,full context,10,10,0.6,0.3,0.9
-Qwen3.5 4B,full context,12,10,0.2,0.0,0.5
-Qwen3.5 4B,full context,15,10,0,0.0,0.0
-Qwen3.5 4B,full context,20,10,0,0.0,0.0
+Qwen3.5-4B,map only,1,5,0.6,0.2,1.0
+Qwen3.5-4B,map only,2,5,0.6,0.2,1.0
+Qwen3.5-4B,map only,3,10,0.4,0.1,0.7
+Qwen3.5-4B,map only,4,10,0.2,0.0,0.5
+Qwen3.5-4B,map only,5,10,0.2,0.0,0.5
+Qwen3.5-4B,map only,6,10,0,0.0,0.0
+Qwen3.5-4B,map only,8,10,0,0.0,0.0
+Qwen3.5-4B,map only,10,10,0,0.0,0.0
+Qwen3.5-4B,map only,12,10,0,0.0,0.0
+Qwen3.5-4B,map only,15,10,0,0.0,0.0
+Qwen3.5-4B,map only,20,10,0,0.0,0.0
+Qwen3.5-4B,full context,1,5,1,1.0,1.0
+Qwen3.5-4B,full context,2,5,0.8,0.4,1.0
+Qwen3.5-4B,full context,3,10,0.8,0.5,1.0
+Qwen3.5-4B,full context,4,10,0.5,0.2,0.8
+Qwen3.5-4B,full context,5,10,0.4,0.1,0.7
+Qwen3.5-4B,full context,6,10,0.5,0.2,0.8
+Qwen3.5-4B,full context,8,10,0.6,0.3,0.9
+Qwen3.5-4B,full context,10,10,0.6,0.3,0.9
+Qwen3.5-4B,full context,12,10,0.2,0.0,0.5
+Qwen3.5-4B,full context,15,10,0,0.0,0.0
+Qwen3.5-4B,full context,20,10,0,0.0,0.0
 DeepSeek V4.1 Flash,map only,1,5,1,1.0,1.0
 DeepSeek V4.1 Flash,map only,2,5,0.6,0.2,1.0
 DeepSeek V4.1 Flash,map only,3,10,0.9,0.7,1.0

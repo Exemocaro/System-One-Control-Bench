@@ -52,8 +52,8 @@
 | Gemma 4 26B | three-moves (64) | full context | 100 | 0.69 [0.60, 0.78] | 0.78 [0.71, 0.85] |
 | Gemma 4 26B | up-to-three-moves (84) | map only | 100 | 0.32 [0.23, 0.41] | 0.52 [0.44, 0.60] |
 | Gemma 4 26B | up-to-three-moves (84) | full context | 100 | 0.61 [0.51, 0.70] | 0.71 [0.64, 0.78] |
-| Qwen3.5 4B | compass (4) | map only | 100 | 0.14 [0.08, 0.21] | 0.34 [0.27, 0.40] |
-| Qwen3.5 4B | compass (4) | full context | 100 | 0.45 [0.35, 0.55] | 0.66 [0.59, 0.73] |
+| Qwen3.5-4B | compass (4) | map only | 100 | 0.14 [0.08, 0.21] | 0.34 [0.27, 0.40] |
+| Qwen3.5-4B | compass (4) | full context | 100 | 0.45 [0.35, 0.55] | 0.66 [0.59, 0.73] |
 | DeepSeek V4.1 Flash | compass (4) | map only | 100 | 0.39 [0.30, 0.49] | 0.55 [0.47, 0.62] |
 | DeepSeek V4.1 Flash | compass (4) | full context | 100 | 0.60 [0.50, 0.69] | 0.72 [0.64, 0.79] |
 | DeepSeek V4.1 Flash (reasoning) | compass (4) | map only | 100 | 0.67 [0.57, 0.76] | 0.79 [0.72, 0.85] |
