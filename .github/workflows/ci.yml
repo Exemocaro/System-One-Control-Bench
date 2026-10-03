@@ -16,3 +16,5 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run --with matplotlib pytest analysis -q
+      - run: uv run socb leaderboard
+      - run: git diff --exit-code -- leaderboard/ docs/index.html

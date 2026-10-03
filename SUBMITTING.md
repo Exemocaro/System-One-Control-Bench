@@ -1,7 +1,10 @@
 # Submitting to the leaderboard
 
-The core track is compass rules, conditions `map` and `everything`, all 100 puzzles:
-200 games, up to ~3,400 paid calls worst case (one per move).
+The core track is compass rules, conditions `map` and `everything` (the full context), all
+100 puzzles: 200 games, up to ~3,400 paid calls worst case (one per move). Any player can be
+submitted: a chat model, a decision endpoint, or a Python `Player` from the README, since
+`socb submit` works from the results file, not from how the player runs.
+The repository is <https://github.com/Exemocaro/JevStuff>; submissions are pull requests to it.
 
 ## Run it
 
@@ -18,7 +21,23 @@ api_key_env = "MY_API_KEY"
 ```
 
 then `uv run socb benchmark --track core --players my-chat-model --allow-paid`.
-A bounded decision model serves `POST /decide` with
+
+The keys of a `players.toml` entry:
+
+| Key | Needed for | Meaning |
+| --- | --- | --- |
+| `kind` | all | `chat` or `decision` |
+| `base_url`, `model` | `chat` | the endpoint (`/chat/completions` is appended) and model name |
+| `url` | `decision` | the endpoint that answers `POST` |
+| `api_key_env` | optional | name of the environment variable (or `.env` entry) holding the API key |
+| `paid` | optional, default `true` | `false` for a free player, so `--allow-paid` is not required |
+| `reasoning` | optional, `chat` only, default `false` | let the model reason first, capped at 1,024 tokens |
+
+A `chat` endpoint must support JSON-schema structured output: every request sends a strict
+`response_format` that allows only one option id as the answer, and an endpoint that ignores
+or rejects it fails every game as an error.
+
+A decision model serves `POST /decide` with
 `{"state": ..., "question": ..., "options": [{"id": ..., "text": ...}]}` and answers
 `{"probabilities": {id: p}}` or `{"choice": id}` (see
 `leaderboard/decision_server_example.py`); a server on your own machine costs nothing,
@@ -39,12 +58,13 @@ then benchmark it the same way (still pass `--allow-paid` unless `paid = false`)
 --notes "what it is"` validates the file first (every game replayed: options, best moves,
 won/closest, probabilities, full core coverage) and writes `leaderboard/entries/<player>.json`
 with the entry plus the player's core games in `leaderboard/results/<player>.jsonl`.
-`--kind` (bounded decision, chat, local or baseline) is required except for the four
-baselines; a file with several players needs `--player` to pick one.
-Then `uv run socb leaderboard` and commit its outputs (`entries/`, `README.md`, `docs/index.html`).
+`--kind` (`baseline`, `chat` or `decision`: the type of model, not where it runs) is required
+except for the four baselines; a file with several players needs `--player` to pick one.
+Then `uv run socb leaderboard` and commit `leaderboard/results/<player>.jsonl`, the entry in
+`leaderboard/entries/`, and the rebuilt `leaderboard/README.md` and `docs/index.html`.
 Open a pull request; CI revalidates and rebuilds, failing on any diff.
 
 Validation proves the games are consistent, not that your model made the choices: anyone can
 submit solver play under another name, and cost and latency are self-reported and unchecked.
 Runs may be re-run on request. The puzzles and examples are frozen: any change to them means
-benchmark version 1.1, and older results no longer validate.
+benchmark version 1.1 (the current version is 1.0), and older results no longer validate.

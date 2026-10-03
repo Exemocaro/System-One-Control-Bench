@@ -34,7 +34,7 @@ Needs [uv](https://docs.astral.sh/uv/), which installs Python 3.11. Works on Win
 uv sync                      # install
 uv run pytest                # tests
 uv run socb benchmark        # the free players on all 100 puzzles, a few seconds
-uv run socb exam               # every model answers the same 495 positions once
+uv run socb exam             # the fixed-state exam: the 4 free baselines answer 495 positions, map only
 uv run socb web              # board viewer at http://127.0.0.1:8000
 ```
 
@@ -43,7 +43,8 @@ To use Jev or the chat models, copy `.env.example` to `.env` and fill in `TYPESA
 ```bash
 uv run socb benchmark --players jev --allow-paid                 # Jev, map only: up to 1,690 calls
 uv run socb benchmark --players jev --conditions all --allow-paid
-uv run socb benchmark --levels 1-3 --rules two-moves             # free players, shorter puzzles, other rules
+uv run socb benchmark --levels 1-3 --rules two-moves --players random,solver   # sequence rules: the greedy players do compass only
+uv run socb benchmark --track core --players jev --allow-paid     # the leaderboard track: compass, map and everything
 ```
 
 Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of every game) and a `.txt` score table. Cost, output files, resuming, local models and extending the code: [docs/details.md](docs/details.md).
@@ -72,7 +73,7 @@ Compass rules, 100 puzzles, `won / progress`. The baselines ignore the prompt, s
 | GLiClass | 3 / 0.10 | 13 / 0.22 |
 | Gemma 4 26B | 35 / 0.45 | 61 / 0.71 |
 | DeepSeek V4.1 Flash | 39 / 0.55 | 60 / 0.72 |
-| DeepSeek V4.1 Flash, reasoning | 67 / 0.79 | 80 / 0.86 |
+| DeepSeek V4.1 Flash (reasoning) | 67 / 0.79 | 80 / 0.86 |
 | Qwen3.5-4B | 14 / 0.34 | 45 / 0.66 |
 
 ## Conditions
@@ -83,7 +84,7 @@ Every condition includes the **map**: the rules, the numbered map, your position
 | --- | :---: | :---: | :---: | :---: |
 | `map` | | | | |
 | `map+surroundings`, `map+memory`, `map+lookahead`, `map+subgoal` | one of the four | | | |
-| `everything` | ✓ | ✓ | ✓ | ✓ |
+| `everything` (the full context) | ✓ | ✓ | ✓ | ✓ |
 | `everything-surroundings`, `-memory`, `-lookahead`, `-subgoal` | all but one | | | |
 
 `surroundings`: what is next to you, and where the key, door and goal are. `memory`: the moves so far. `lookahead`: what each option would do. `subgoal`: the question names the next target.
@@ -102,7 +103,7 @@ Choose with `--rules`. Every sequence is offered, blocked or not. A blocked step
 
 ## Players
 
-`random`, `greedy`, `greedy-walls` and `solver` are free baselines. `jev` (`jev-1.13.0`) is paid. `laya`, `gliclass` and `qwen3.5-4b` run on your machine. `gemma-4-26b` and `deepseek-v4.1-flash` (and the same with `-think`, which lets the model reason first) are paid, through OpenRouter.
+`random`, `greedy`, `greedy-walls` and `solver` are free baselines. `jev` (`jev-1.13.0`) is paid. `laya`, `gliclass` and `qwen3.5-4b` run on your machine. `gemma-4-26b` and `deepseek-v4.1-flash` (and the same with `-think`, which lets the model reason first, capped at 1,024 tokens) are paid, through OpenRouter.
 
 To add one, subclass `Player` and register it:
 
@@ -130,7 +131,7 @@ Puzzles are YAML files under `puzzles/`: 100 over the levels 1, 2, 3, 4, 5, 6, 8
 
 ## Leaderboard
 
-Coming soon: a core track (compass rules, `map` and `everything`, 200 games per player) so that models can be compared without paying for all 5,000 games, and a way to submit a results file. It is not built yet.
+The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md) (also built as `docs/index.html`). To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
 
 ## Citation
 

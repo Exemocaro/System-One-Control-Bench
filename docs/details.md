@@ -19,13 +19,15 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 | `--levels` | `all` | such as `3`, `1,4` or `2-5` |
 | `--puzzles` | `all` | comma-separated puzzle names |
 | `--conditions` | `map` | condition names, or `all` |
+| `--track` | none | `core`: compass rules, `map` and `everything`, all 100 puzzles (the [leaderboard](../SUBMITTING.md) track); cannot be combined with `--conditions` or `--rules` |
 | `--rules` | each puzzle's own, `compass` | `compass`, `two-moves`, `three-moves`, `up-to-two-moves`, `up-to-three-moves` |
+| `--players-file` | `./players.toml` if present | extra chat and decision players, see [SUBMITTING.md](../SUBMITTING.md) |
 | `--allow-paid` | off | required for any player that costs money per move |
 | `--workers` | `3` | games played at once |
 | `--out` | `benchmarks/<date>_<time>_<what>.jsonl` | where results go |
 | `--resume` | off | finish the run in `--out` |
 
-The other commands: `socb examples [--rules <name>]` writes what each condition shows the player to `examples/`, `socb generate [--per-level N] [--seed N]` tops up the puzzles, and `socb web` opens the viewer.
+The other commands: `socb examples [--rules <name>]` writes what each condition shows the player to `examples/`, `socb generate [--per-level N] [--seed N]` tops up the puzzles, `socb web` opens the viewer, `socb exam` runs the exam, `socb validate <file>` replays a results file and checks every option, answer and score, `socb submit <file> --kind ...` writes a leaderboard entry from a core-track file, and `socb leaderboard` rebuilds the leaderboard table and page from the entries (see [SUBMITTING.md](../SUBMITTING.md)).
 
 ## Exam
 
@@ -51,8 +53,6 @@ Each run writes two files to `benchmarks/`, named after the date, time and what 
 
 - `.jsonl`, the results file: one line per game with the puzzle, condition, player, level, rules, whether it was won, how close it got, and every move (options in the order shown, move chosen, probability per option, best moves, whether the move was optimal, tokens, cost where reported, the model's confidence and version, seconds, and why any earlier attempt was turned away).
 - `.txt`: the score table.
-
-Files written before the rename use the keys `scenario` and `moves_to_goal`. `scripts/migrate_results.py` renames them to `puzzle` and `level`; the loader reads only the new keys.
 
 ## Stopping and resuming
 
@@ -92,7 +92,8 @@ On an RTX 5070 Ti laptop GPU a Laya move takes about 0.1 s and a GLiClass move 0
 ## Rules, in more detail
 
 - Every sequence is offered, blocked or not. A blocked step is wasted and the rest are taken. Reaching the goal ends the move there, so every puzzle stays winnable.
-- A puzzle `n` steps away takes `n / 2` or `n / 3` moves, rounded up; a game ends at twice that. Levels and `progress` count single steps, so they compare across rules.
+- A puzzle `n` steps away takes `n / 2` or `n / 3` moves, rounded up; a game ends at twice that. Levels and `progress` count single steps, so they compare across rules. The rounding matters for the budget: a 4-step puzzle allows 8 compass moves (8 steps) but 4 three-step moves (up to 12 steps), so sequence rules can give a game more steps than compass rules.
+- The solver minimises the number of moves (decisions), not steps, and keeps ties. A move with a wasted or blocked step is therefore optimal when it still finishes in the fewest moves. The fixed-length rules ask "Which move starts the shortest path to ...?" (shortest in moves, ties kept) and the `up-to-` rules ask for the fewest turns. The prompts are frozen, since every run depends on them.
 - Memory and lookahead describe a move by where it ends. The subgoal question asks which move *starts* the shortest path (under the `up-to-` rules: the one that gets there in the fewest turns).
 - Many sequences have the same outcome (`north,south` and `east,west`). At the start of a puzzle the 64 three-step options have a median of 8 outcomes, the 16 two-step options 5. They are all offered, so a model's probability is split across them; add it up by outcome before comparing with `compass`.
 - `optimal` does not compare across rules: under `three-moves` about 4 of 64 options are best, against 1 or 2 of 4 under `compass`.
@@ -130,6 +131,9 @@ src/system_one_control/
 ├── prompts.py      Option, Request: exactly what a player is shown (state, question, options);
 │                   Condition and CONDITIONS, the ablation
 ├── examples.py     writes examples/
+├── exam.py         the fixed-state exam: plays every model on the same positions
+├── exam_items.py   picks the exam positions (used by scripts/make_exam.py)
+├── leaderboard.py  entries from submitted core runs, and the table and page built from them
 ├── players/
 │   ├── base.py     Turn, Choice, Player, and the settings read from .env
 │   ├── baselines.py the players that read the board: Random, Scripted, Solver, Greedy
@@ -140,10 +144,19 @@ src/system_one_control/
 │                   puzzle × condition × player, played side by side, scored and saved
 ├── cli.py          the socb command
 └── web/            the FastAPI viewer
+
+benchmarks/         results of the runs in the paper (.jsonl and .txt)
+exam/               exam items and the exam results
+examples/           the exact request each condition sends
+leaderboard/        entries, core-track results, players endpoint example, the generated table
+analysis/           recomputes every table and figure of the paper from the results files
+paper/              the Typst source of the report
+scripts/            make_exam.py, which made exam/items.jsonl
 ```
 
 ## Extending
 
 - **A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `players/__init__.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS` in `players/remote.py`, and a model run on this machine a line in `LOCAL_LLM_MODELS` in `players/local.py`. A model must read only `turn.request`. If it cannot answer it may raise: the game records the error and ends. A player holding a connection releases it in `close()`.
+- **A chat model or decision endpoint without code.** Add it to a `players.toml` (`--players-file`); the keys are listed in [SUBMITTING.md](../SUBMITTING.md).
 - **A new condition.** Add a line to `CONDITIONS` in `prompts.py`, then `uv run socb examples`. A test fails when the wording changes, so every change shows in the diff.
 - **New rules.** Subclass `Rules` in `world.py` (`moves`, `apply`, `is_won`, `describe_outcome`, `describe_surroundings`, `describe_next_target`; override `subgoal_question` if needed). If a move is several steps of other rules, return them from `step_rules` and set `moves_for`. Add them to `RULES`, then `uv run socb examples --rules <name>`. The examples play two moves first, a move and then a blocked one; `EXAMPLE_MOVES` in `examples.py` picks them.
