@@ -221,3 +221,6 @@ __marimo__/
 # Not part of the public repository.
 docs/plan.md
 docs/DECISIONS.md
+
+# Built paper
+paper/main.pdf
