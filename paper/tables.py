@@ -93,6 +93,8 @@ def example():
 
 if __name__ == "__main__":
     main_table()
-    table("hypothesis_table", [cells(row.values()) for row in read("hypotheses")])
+    hypothesis_rows = read("hypotheses")
+    hypothesis_rows[1]["Observed"] += "; planning: the 63 puzzles greedy-walls loses (100 - 37)"
+    table("hypothesis_table", [cells(row.values()) for row in hypothesis_rows])
     components()
     example()

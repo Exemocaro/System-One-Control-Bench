@@ -6,7 +6,7 @@
 
 #include "main_table.typ"
 
-DeepSeek V4.1 Flash with capped reasoning wins substantially more games than any other model. Its won rate is 80% [72, 87] with full context and 67% [57, 76] with the map alone. Each estimate uses 100 games. All ten reasoning conditions have been evaluated, with no recorded errors.
+DeepSeek V4.1 Flash with capped reasoning wins more games than any other model, with non-overlapping intervals under both inputs. Its won rate is 80% [72, 87] with full context and 67% [57, 76] with the map alone. Each estimate uses 100 games. All ten reasoning conditions have been evaluated, with no recorded errors.
 // src: analysis/out/main.md; analysis/out/coverage.md
 
 Jev wins 32% with the map alone, below the wall-aware greedy baseline's observed 37% and above random's 4%. With full context, Jev, Gemma and DeepSeek without reasoning win 57%, 61% and 60%, respectively. Their intervals overlap. We describe these observed rates as similar without claiming that the models perform equally. Laya and GLiClass win 2% and 3% with the map alone, close to random. Full context raises their rates to 12% and 13%, but completion remains low.
@@ -34,19 +34,19 @@ For Jev with the map alone, won rate is 32% with compass moves, 40% with two-ste
 // src: analysis/out/action_spaces.md
 
 #figure(image("../../analysis/out/fig_action_spaces.pdf", width: 100%), placement: top,
-  caption: [Won rate with the map alone and full context across compass, two-step, up-to-two-step, three-step and up-to-three-step moves. Their option counts are 4, 16, 20, 64 and 84. More steps are executed before the next observation as well as more options being offered.]) <fig:rules>
+  caption: [Won rate across compass, two-step, up-to-two-step, three-step and up-to-three-step moves (4, 16, 20, 64 and 84 options). More steps execute before the next observation as well as more options being offered. Qwen3.5 and DeepSeek ran compass moves only. The dashed Random line is the same in both panels.]) <fig:rules>
 // src: analysis/out/action_spaces.md
 
 == Fixed-state evaluation
 
-On the fixed-state exam, capped reasoning reaches 94% [91, 96] optimality with full context. Jev and Gemma both reach 90% [87, 93], ahead of DeepSeek without reasoning at 86% [83, 90]. Gemma and non-reasoning DeepSeek have higher observed game completion than Jev; exam optimality measures a different outcome. Full context improves exam optimality for every model: 16 percentage points for Jev, 21 for Laya, 21 for GLiClass, 20 for Gemma, 30 for Qwen, 19 for non-reasoning DeepSeek and 5 for capped reasoning. All paired intervals exclude zero.
+On the fixed-state exam, capped reasoning reaches 94% [91, 96] optimality with full context. Jev and Gemma both reach 90% [87, 93], and DeepSeek without reasoning reaches 86% [83, 90]; their intervals overlap. Full context improves exam optimality for every model: 16 percentage points for Jev, 21 for Laya, 21 for GLiClass, 20 for Gemma, 30 for Qwen, 19 for non-reasoning DeepSeek and 5 for capped reasoning. All paired intervals exclude zero.
 // src: analysis/out/exam.md; analysis/out/exam_inputs.md; analysis/out/main.md
 
 Jev's map-only optimality is 74% on the exam versus 16% in its own games; with full context it is 90% versus 64%. Failures can leave models answering repeatedly in difficult positions. The exam removes that selection, but covers scripted positions. Jev scores 86% at starts and 97% on late-route items with full context; distance and inventory also differ, so this does not isolate history's effect.
 // src: analysis/out/exam.md
 
 #figure(image("../../analysis/out/fig_exam.pdf", width: 70%), placement: top,
-  caption: [Optimality on the same 495 exam items. Pale and dark bars show map alone and full context, with intervals over puzzles. Diamonds show each model's optimal-move share in its own games under the same input.]) <fig:exam>
+  caption: [Optimality on the same 495 exam items. Pale and dark bars show map alone and full context, with intervals over puzzles; baselines have one bar. Diamonds show each model's optimal-move share in its own games under the same input.]) <fig:exam>
 // src: analysis/out/exam.md
 
 == Blocked moves and progress
@@ -69,7 +69,7 @@ We pool all compass conditions and ask whether the chosen move was optimal. Jev 
 // src: analysis/out/calibration.md; analysis/out/exam.md
 
 TypeSafe defines Choice confidence as $c = (p_(max) - 1/n) / (1 - 1/n)$ @typesafeconfidence. On all 14,642 Jev compass moves, the reported confidence differs from $(p_(max) - 1/n) / (1 - 1/n)$ by at most 0.023. For a fixed number of options, the formula ranks moves exactly as the top probability does. Reported confidence is therefore a rescaled score rather than an independent prediction of correctness.
-// src: analysis/out/calibration.md (move count); TypeSafe confidence documentation; recorded confidence-formula check
+// src: analysis/out/calibration.md; TypeSafe confidence documentation
 
 #figure(image("../../analysis/out/fig_calibration.pdf", width: 60%), placement: top,
   caption: [Reliability after pooling all compass conditions. Each point compares mean chosen-move probability with the fraction of those moves that are optimal, accepting any tied best move. The diagonal indicates agreement between probability and observed optimality. Only four models appear because Gemma and DeepSeek return an option ID rather than probabilities.]) <fig:reliability>
@@ -77,5 +77,5 @@ TypeSafe defines Choice confidence as $c = (p_(max) - 1/n) / (1 - 1/n)$ @typesaf
 
 == Cost and latency
 
-The tables pool all compass conditions. Median inference time is 0.503 seconds for Jev, 0.653 for Gemma, and 0.805 for DeepSeek without reasoning. Capped reasoning takes 6.817 seconds. Recorded cost per 100 games is \$0.059, \$0.047 and \$0.348, respectively. Dollar costs are unavailable for Jev and the local models. These timings compare the evaluated services and hardware, not controlled implementations on the same machine.
+The tables pool all compass conditions. Median inference time is 0.503 seconds for Jev, 0.653 for Gemma, and 0.805 for DeepSeek without reasoning. Capped reasoning takes 6.817 seconds. Recorded cost per 100 games is \$0.059 for Gemma, \$0.047 for DeepSeek without reasoning and \$0.348 with capped reasoning. Dollar costs are unavailable for Jev and the local models. These timings compare the evaluated services and hardware, not controlled implementations on the same machine.
 // src: analysis/out/cost.md
