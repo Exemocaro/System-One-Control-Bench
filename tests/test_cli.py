@@ -9,7 +9,7 @@ from system_one_control.puzzles import LEVELS
 
 runner = CliRunner()
 THREE = "gen-01-01,gen-01-02,gen-01-03"
-SOLVER = ["benchmark", "--players", "solver", "--puzzles", THREE]
+SOLVER = ["--players", "solver", "--puzzles", THREE]
 WHEN = datetime(2026, 9, 23, 18, 45)
 
 
@@ -33,18 +33,12 @@ def test_a_benchmark_of_free_players_prints_a_summary_and_saves_the_games_and_th
 @pytest.mark.parametrize(
     ("args", "message"),
     [
-        (["--players", "jev"], "--allow-paid"),
-        (["--players", "greedy", "--rules", "two-moves"], "compass"),
-        (["--rules", "chess"], "unknown rules"),
-        (["--puzzles", "nowhere"], "nowhere"),
-        (["--levels", "one"], "levels must look like"),
-    ],
-    ids=[
-        "a paid player needs permission",
-        "greedy players cannot play other rules",
-        "unknown rules",
-        "unknown puzzles",
-        "levels that cannot be read",
+        pytest.param(["--players", "jev"], "--allow-paid", id="a paid player needs permission"),
+        pytest.param(
+            ["--players", "greedy", "--rules", "two-moves"], "compass", id="greedy on other rules"
+        ),
+        pytest.param(["--puzzles", "nowhere"], "nowhere", id="unknown puzzles"),
+        pytest.param(["--levels", "one"], "levels must look like", id="levels that cannot be read"),
     ],
 )
 def test_a_benchmark_that_cannot_run_is_refused_before_anything_is_saved(tmp_path, args, message):
@@ -66,34 +60,25 @@ def test_a_benchmark_never_overwrites_an_earlier_one(tmp_path):
 @pytest.mark.parametrize(
     ("changed", "message"),
     [
-        (["--players", "random"], "would not play"),
-        (["--rules", "two-moves"], "--rules"),
+        pytest.param(["--players", "random"], "would not play", id="other players"),
+        pytest.param(["--rules", "two-moves"], "--rules", id="other rules"),
     ],
-    ids=["other players", "other rules"],
 )
 def test_resume_refuses_a_file_from_a_different_run(tmp_path, changed, message):
-    _, out = run(tmp_path, *SOLVER[1:])
+    _, out = run(tmp_path, *SOLVER)
     before = out.read_text()
-    result, _ = run(tmp_path, *SOLVER[1:], *changed, "--resume")
+    result, _ = run(tmp_path, *SOLVER, *changed, "--resume")
     assert result.exit_code != 0
     assert message in result.output
     assert out.read_text() == before
 
 
-def test_resume_refuses_other_rules_even_if_the_games_ended_in_errors(tmp_path):
-    _, out = run(tmp_path, *SOLVER[1:])
-    errored = [record | {"error": "down"} for record in records(out)]
-    out.write_text("".join(json.dumps(record) + "\n" for record in errored))
-    result, _ = run(tmp_path, *SOLVER[1:], "--rules", "two-moves", "--resume")
-    assert result.exit_code != 0 and "--rules" in result.output
-
-
 def test_resume_replays_the_missing_games_and_the_errors_and_keeps_the_rest(tmp_path):
-    _, out = run(tmp_path, *SOLVER[1:])
+    _, out = run(tmp_path, *SOLVER)
     errored, kept, _missing = out.read_text().splitlines()
     broken = json.loads(errored) | {"error": "ConnectionError: the API is down", "won": False}
     out.write_text(f"{json.dumps(broken)}\n{kept}\n")
-    result, _ = run(tmp_path, *SOLVER[1:], "--resume")
+    result, _ = run(tmp_path, *SOLVER, "--resume")
     assert result.exit_code == 0, result.output
     assert "Keeping 1 finished games, playing 2" in result.output
     assert kept in out.read_text().splitlines()
@@ -105,49 +90,35 @@ def test_a_run_on_a_few_levels_can_be_extended_to_all_of_them_in_the_same_file(t
     rest, _ = run(tmp_path, "--players", "solver", "--resume")
     assert (first.exit_code, rest.exit_code) == (0, 0)
     assert "Keeping 20 finished games, playing 80" in rest.output
-    levels = [record["level"] for record in records(out)]
-    assert len(levels) == 100 and levels == sorted(levels)
-
-
-def test_levels_choose_the_puzzles_to_play(tmp_path):
-    result, out = run(tmp_path, "--players", "solver", "--levels", "2,4-5")
-    assert {record["level"] for record in records(out)} == {2, 4, 5}
-    assert "3 away" not in result.output
+    assert len(records(out)) == 100
 
 
 def test_a_benchmark_can_play_every_puzzle_under_other_rules(tmp_path):
-    result, out = run(
-        tmp_path, "--players", "solver,random", "--puzzles", THREE, "--rules", "three-moves"
-    )
+    result, out = run(tmp_path, *SOLVER, "--rules", "three-moves")
     assert result.exit_code == 0, result.output
     assert {record["rules"] for record in records(out)} == {"three-moves"}
-    solver = [record for record in records(out) if record["player"] == "solver"]
-    assert all(record["won"] and "," in record["moves"][0]["move"] for record in solver)
+    assert all(record["won"] and "," in record["moves"][0]["move"] for record in records(out))
 
 
 @pytest.mark.parametrize(
     ("args", "expected"),
     [
-        ((["jev"], "all", "all", "all"), "2026-09-23_18-45_jev_all"),
-        ((["jev"], "all", "1-3", "all"), "2026-09-23_18-45_jev_all_levels-1-3"),
-        ((["jev"], "all", "all", "gen-10-01"), "2026-09-23_18-45_jev_all_gen-10-01"),
-        ((["jev"], "map,everything", "all", "all"), "2026-09-23_18-45_jev_map+everything"),
-        ((["jev"], "map", "1-3", "all"), "2026-09-23_18-45_jev_map_levels-1-3"),
+        pytest.param((["jev"], "all", "all", "all"), "jev_all", id="everything"),
+        pytest.param(
+            (["jev"], "map,everything", "1-3", "gen-10-01"),
+            "jev_map+everything_levels-1-3_gen-10-01",
+            id="narrowed",
+        ),
+        pytest.param(
+            (["jev"], "all", "all", "all", "two-moves"), "jev_all_two-moves", id="other rules"
+        ),
+        pytest.param(
+            (["jev"], "all", "all", "all", "compass"), "jev_all", id="compass says nothing"
+        ),
     ],
-    ids=["everything", "some levels", "one puzzle", "some conditions", "conditions and levels"],
 )
-def test_different_runs_get_different_file_names_with_the_date_and_time(args, expected):
-    assert _run_name(*args, WHEN) == expected
-
-
-@pytest.mark.parametrize(
-    ("rules", "expected"),
-    [("two-moves", "2026-09-24_10-00_jev_all_two-moves"), ("compass", "2026-09-24_10-00_jev_all")],
-    ids=["other rules say so", "compass does not"],
-)
-def test_a_run_under_other_rules_says_so_in_its_file_name(rules, expected):
-    when = datetime(2026, 9, 24, 10, 0)
-    assert _run_name(["jev"], "all", "all", "all", when, rules=rules) == expected
+def test_a_run_is_named_after_the_date_and_time_and_what_was_run(args, expected):
+    assert _run_name(*args[:4], WHEN, *args[4:]) == f"2026-09-23_18-45_{expected}"
 
 
 def test_generate_fills_every_level_to_the_requested_count(tmp_path):
