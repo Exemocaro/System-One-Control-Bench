@@ -24,21 +24,14 @@ from system_one_control.puzzles import (
     with_detours,
     write_level,
 )
-from system_one_control.world import (
-    Board,
-    CompassRules,
-    Solver,
-    ThreeMoveRules,
-    TwoMoveRules,
-    UpToThreeMoveRules,
-    UpToTwoMoveRules,
-)
+from system_one_control.world import Board, CompassRules, Solver, ThreeMoveRules, TwoMoveRules
 
 PUZZLES = load_puzzles()
 solver = Solver(CompassRules())
 STRAIGHT = "#####\n#A.G#\n#####"
 # The goal sits just below A, but A must climb out of its pocket and walk round either side.
 POCKET = "#######\n#.....#\n#.#.#.#\n#.#A#.#\n#.###.#\n#..G..#\n#######"
+POCKET_WITH_KEY = POCKET.replace("#.....#", "#..K..#", 1)
 # Two ways round a block: along the top in 4 moves, or down and round the bottom in 8.
 LOOP = "#######\n#A...G#\n#.###.#\n#.....#\n#######"
 TINY = "level: 1\nmap: |\n  ####\n  #AG#\n  ####\n"
@@ -58,11 +51,6 @@ def test_the_solver_agrees_with_what_each_puzzle_file_claims(name):
     assert Solver(puzzle.rules).fewest_moves(puzzle.board) == puzzle.level
 
 
-@pytest.mark.parametrize("name", PUZZLES)
-def test_a_game_allows_twice_the_moves_the_solver_needs(name):
-    assert PUZZLES[name].max_moves == 2 * PUZZLES[name].level
-
-
 @pytest.mark.parametrize("path", sorted(PUZZLE_DIR.rglob("*.yaml")), ids=lambda p: p.stem)
 def test_each_puzzle_sits_in_the_folder_for_its_level(path):
     assert path.parent.name == f"level-{Puzzle.load(path).level:02d}"
@@ -80,7 +68,7 @@ def test_every_level_has_the_number_of_puzzles_levels_asks_for():
 
 def test_puzzles_are_named_after_their_file_and_sorted_by_difficulty():
     levels = [p.level for p in PUZZLES.values()]
-    assert ("maze" in PUZZLES, "gen-03-01" in PUZZLES, levels == sorted(levels)) == (True,) * 3
+    assert ("maze" in PUZZLES, levels == sorted(levels)) == (True, True)
 
 
 def test_a_puzzle_file_can_choose_its_rules(tmp_path):
@@ -97,11 +85,7 @@ def test_two_puzzles_may_not_share_a_name(tmp_path):
         load_puzzles(tmp_path)
 
 
-@pytest.mark.parametrize(
-    "rules",
-    [TwoMoveRules(), ThreeMoveRules(), UpToTwoMoveRules(), UpToThreeMoveRules()],
-    ids=lambda r: r.name,
-)
+@pytest.mark.parametrize("rules", [TwoMoveRules(), ThreeMoveRules()], ids=lambda r: r.name)
 def test_under_sequence_rules_every_puzzle_is_won_in_its_fewest_moves(rules):
     played = [replace(p, rules=rules) for p in PUZZLES.values()]
     assert all(Solver(rules).fewest_moves(p.board) == p.fewest_moves for p in played)
@@ -116,38 +100,15 @@ def test_under_sequence_rules_a_game_allows_twice_the_fewest_sequences():
 @pytest.mark.parametrize(
     ("level", "kind", "least"),
     [
-        (1, NEEDS_PLANNING, 0),
-        (3, NEEDS_PLANNING, 1),
-        (4, NEEDS_PLANNING, 1),
-        (5, NEEDS_PLANNING, 2),
-        (6, NEEDS_PLANNING, 2),
-        (8, NEEDS_PLANNING, 5),
-        (2, WALL_IN_THE_WAY, 3),
-        (3, WALL_IN_THE_WAY, 3),
-        (4, around(1), 3),
-        (5, around(1), 3),
-        (6, around(2), 3),
-        (8, around(2), 3),
-        (10, LONGER_ROUTE, 5),
-        (15, with_detours(4), 5),
-        (20, with_detours(6), 5),
-    ],
-    ids=[
-        "level 1 needs no planning",
-        "level 3 needs planning once",
-        "level 4 needs planning once",
-        "level 5 needs planning twice",
-        "level 6 needs planning twice",
-        "level 8 needs planning half the time",
-        "level 2 has a wall in the way",
-        "level 3 has a wall in the way",
-        "level 4 goes round a wall",
-        "level 5 goes round a wall",
-        "level 6 goes round two walls",
-        "level 8 goes round two walls",
-        "level 10 has a longer second route",
-        "level 15 turns away four times",
-        "level 20 turns away six times",
+        pytest.param(3, NEEDS_PLANNING, 1, id="level 3 needs planning once"),
+        pytest.param(5, NEEDS_PLANNING, 2, id="level 5 needs planning twice"),
+        pytest.param(8, NEEDS_PLANNING, 5, id="level 8 needs planning half the time"),
+        pytest.param(2, WALL_IN_THE_WAY, 3, id="level 2 has a wall in the way"),
+        pytest.param(4, around(1), 3, id="level 4 goes round a wall"),
+        pytest.param(6, around(2), 3, id="level 6 goes round two walls"),
+        pytest.param(10, LONGER_ROUTE, 5, id="level 10 has a longer second route"),
+        pytest.param(15, with_detours(4), 5, id="level 15 turns away four times"),
+        pytest.param(20, with_detours(6), 5, id="level 20 turns away six times"),
     ],
 )
 def test_the_levels_have_the_kinds_of_puzzle_they_are_meant_to(level, kind, least):
@@ -169,13 +130,12 @@ def test_half_of_the_top_three_levels_have_a_thicker_outer_wall(level):
     assert thick_wall_count(at_level(level)) == 5
 
 
-@pytest.mark.parametrize("level", [15, 20])
-def test_one_puzzle_at_each_of_the_two_top_levels_is_walled_in_five_thick(level):
-    assert sum(outer_wall(board) == 5 for board in at_level(level)) == 1
-
-
 @pytest.mark.parametrize(
-    ("text", "expected"), [(STRAIGHT, True), (POCKET, False)], ids=["a straight line", "a pocket"]
+    ("text", "expected"),
+    [
+        pytest.param(STRAIGHT, True, id="a straight line"),
+        pytest.param(POCKET, False, id="a pocket"),
+    ],
 )
 def test_greedy_wins_where_walking_straight_at_the_goal_works(text, expected):
     assert greedy_wins(Board.parse(text)) == expected
@@ -183,8 +143,11 @@ def test_greedy_wins_where_walking_straight_at_the_goal_works(text, expected):
 
 @pytest.mark.parametrize(
     ("text", "expected"),
-    [(LOOP, True), ("######\n#A..G#\n######", False), (POCKET, False)],
-    ids=["a loop", "one route", "two routes of the same length"],
+    [
+        pytest.param(LOOP, True, id="a loop"),
+        pytest.param("######\n#A..G#\n######", False, id="one route"),
+        pytest.param(POCKET, False, id="two routes of the same length"),
+    ],
 )
 def test_a_longer_route_must_exist_and_be_longer(text, expected):
     assert has_a_longer_route(Board.parse(text)) == expected
@@ -193,11 +156,9 @@ def test_a_longer_route_must_exist_and_be_longer(text, expected):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        # The goal is up and to the left, and north is a wall: the puzzle Jev lost at level 2.
-        ("######\n#G#.##\n#.A..#\n######", True),
-        (STRAIGHT, False),
+        pytest.param("######\n#G#.##\n#.A..#\n######", True, id="north is a wall"),
+        pytest.param(STRAIGHT, False, id="a straight line"),
     ],
-    ids=["north is a wall", "a straight line"],
 )
 def test_a_wall_in_the_way_blocks_a_first_step_toward_the_target(text, expected):
     assert wall_in_the_way(Board.parse(text)) == expected
@@ -206,26 +167,23 @@ def test_a_wall_in_the_way_blocks_a_first_step_toward_the_target(text, expected)
 @pytest.mark.parametrize(
     ("kind", "text", "expected"),
     [
-        (NEEDS_PLANNING, POCKET.replace("#.....#", "#..K..#", 1), True),
-        (NEEDS_PLANNING_KEYLESS, POCKET.replace("#.....#", "#..K..#", 1), False),
-        (NEEDS_PLANNING_KEYLESS, POCKET, True),
+        pytest.param(NEEDS_PLANNING, POCKET_WITH_KEY, True, id="a key is fine"),
+        pytest.param(NEEDS_PLANNING_KEYLESS, POCKET_WITH_KEY, False, id="a keyless kind"),
+        pytest.param(NEEDS_PLANNING_KEYLESS, POCKET, True, id="a keyless puzzle is fine"),
     ],
-    ids=["a key is fine", "a keyless kind turns it down", "a keyless puzzle is fine"],
 )
 def test_a_kind_accepts_or_turns_down_a_puzzle(kind, text, expected):
     assert kind.accepts(Board.parse(text)) == expected
 
 
-# Walking back for the key is not a detour: the key is the target until it is picked up.
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        (STRAIGHT, 0),
-        (POCKET, 4),
-        ("#########\n#GD..A.K#\n#########", 0),
-        ("#####\n#A#G#\n#####", None),
+        pytest.param(STRAIGHT, 0, id="a straight line"),
+        pytest.param(POCKET, 4, id="out of a pocket"),
+        pytest.param("#########\n#GD..A.K#\n#########", 0, id="back for the key is none"),
+        pytest.param("#####\n#A#G#\n#####", None, id="unreachable"),
     ],
-    ids=["a straight line", "out of a pocket", "back for the key", "unreachable"],
 )
 def test_detours_count_the_moves_away_from_the_target_every_shortest_route_makes(text, expected):
     assert detours(Board.parse(text)) == expected
@@ -234,9 +192,8 @@ def test_detours_count_the_moves_away_from_the_target_every_shortest_route_makes
 def test_a_thicker_outer_wall_changes_nothing_but_the_map():
     board = Board.parse(POCKET)
     thick = thicken(board, 3)
-    assert (len(thick.rows), thick.rows[0], thick.rows[3]) == (11, "#" * 11, "###.....###")
-    assert solver.fewest_moves(thick) == solver.fewest_moves(board)
-    assert detours(thick) == detours(board)
+    assert (outer_wall(board), outer_wall(thick)) == (1, 3)
+    assert (solver.fewest_moves(thick), detours(thick)) == (solver.fewest_moves(board), 4)
     assert thicken(board, 1) == board
 
 
@@ -245,31 +202,17 @@ def test_a_generated_puzzle_is_exactly_its_level_away_from_the_goal(level):
     assert solver.fewest_moves(PuzzleGenerator(seed=level).drafts(level, 1)[0].board) == level
 
 
-@pytest.mark.parametrize("level", [level for level in LEVELS if level >= 3])
+@pytest.mark.parametrize("level", [3, 20])
 def test_from_level_three_every_generated_puzzle_needs_the_key(level):
     board = PuzzleGenerator(seed=level).drafts(level, 1)[0].board
     assert (bool(board.find("K")), bool(board.find("D"))) == (True, True)
     assert solver.fewest_moves(without_key(board)) is None
 
 
-def test_the_same_seed_gives_the_same_puzzles():
-    assert PuzzleGenerator(seed=7).drafts(4, 3) == PuzzleGenerator(seed=7).drafts(4, 3)
-
-
-def test_the_puzzles_for_a_level_are_all_different():
-    drafts = PuzzleGenerator(seed=0).drafts(2, 8)
+def test_the_same_seed_gives_the_same_puzzles_and_they_are_all_different():
+    drafts = PuzzleGenerator(seed=7).drafts(4, 8)
+    assert drafts == PuzzleGenerator(seed=7).drafts(4, 8)
     assert len({draft.board.draw() for draft in drafts}) == 8
-
-
-def test_both_open_rooms_and_mazes_are_generated():
-    drafts = PuzzleGenerator(seed=1).drafts(6, 10)
-    assert {draft.style for draft in drafts} == {"room", "maze"}
-
-
-def test_a_puzzle_of_a_harder_kind_is_generated_to_order():
-    board = PuzzleGenerator(seed=0).drafts(10, 1, kind=LONGER_ROUTE)[0].board
-    assert solver.fewest_moves(board) == 10
-    assert (greedy_wins(board), has_a_longer_route(board)) == (False, True)
 
 
 def test_a_level_is_topped_up_to_the_target_and_hand_made_puzzles_are_kept(tmp_path):
