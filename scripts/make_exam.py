@@ -8,7 +8,8 @@ from __future__ import annotations
 import random
 from collections import Counter
 
-from system_one_control.exam import EXAM_DIR, make_items
+from system_one_control.exam import EXAM_DIR
+from system_one_control.exam_items import make_items
 from system_one_control.puzzles import load_puzzles
 
 SEED = 0

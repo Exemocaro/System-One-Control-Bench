@@ -3,16 +3,8 @@ from collections import Counter
 
 import pytest
 
-from system_one_control.exam import (
-    ITEMS_FILE,
-    ExamItem,
-    build_prefix,
-    examine,
-    load_exam,
-    save_exam,
-    shortest_route,
-    take_step,
-)
+from system_one_control.exam import ITEMS_FILE, ExamItem, examine, load_exam, save_exam
+from system_one_control.exam_items import build_prefix, shortest_route, take_step
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import load_puzzles
