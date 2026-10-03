@@ -1,0 +1,12 @@
+player                     condition                1 away  2 away  3 away  4 away  5 away  6 away  8 away  10 away  12 away  15 away  20 away  won     progress  SPL   errors
+-------------------------  -----------------------  ------  ------  ------  ------  ------  ------  ------  -------  -------  -------  -------  ------  --------  ----  ------
+deepseek-v4.1-flash-think  map                      5/5     5/5     10/10   9/10    7/10    8/10    8/10    6/10     5/10     2/10     2/10     67/100  0.79      0.62  0     
+deepseek-v4.1-flash-think  map+surroundings         5/5     5/5     10/10   8/10    9/10    10/10   8/10    8/10     5/10     3/10     3/10     74/100  0.83      0.69  0     
+deepseek-v4.1-flash-think  map+memory               5/5     5/5     10/10   8/10    9/10    9/10    7/10    8/10     4/10     2/10     4/10     71/100  0.81      0.62  0     
+deepseek-v4.1-flash-think  map+lookahead            5/5     5/5     10/10   10/10   8/10    8/10    8/10    9/10     7/10     3/10     3/10     76/100  0.84      0.70  0     
+deepseek-v4.1-flash-think  map+subgoal              5/5     5/5     10/10   9/10    9/10    9/10    7/10    10/10    4/10     3/10     3/10     74/100  0.83      0.68  0     
+deepseek-v4.1-flash-think  everything               5/5     5/5     10/10   9/10    9/10    10/10   9/10    9/10     7/10     4/10     3/10     80/100  0.86      0.74  0     
+deepseek-v4.1-flash-think  everything-surroundings  5/5     5/5     10/10   9/10    10/10   9/10    7/10    9/10     5/10     2/10     3/10     74/100  0.84      0.70  0     
+deepseek-v4.1-flash-think  everything-memory        5/5     5/5     10/10   9/10    8/10    9/10    9/10    8/10     6/10     3/10     4/10     76/100  0.84      0.70  0     
+deepseek-v4.1-flash-think  everything-lookahead     5/5     5/5     10/10   8/10    10/10   9/10    9/10    9/10     5/10     2/10     4/10     76/100  0.85      0.69  0     
+deepseek-v4.1-flash-think  everything-subgoal       5/5     5/5     10/10   10/10   8/10    8/10    7/10    9/10     7/10     3/10     5/10     77/100  0.85      0.70  0     
