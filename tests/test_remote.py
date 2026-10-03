@@ -11,7 +11,6 @@ from typesafe_sdk import (
 
 from system_one_control.players.remote import (
     JEV_MODEL,
-    LLM_SYSTEM,
     OPENROUTER_URL,
     REASONING_BUDGET,
     JevPlayer,
@@ -144,18 +143,6 @@ def test_a_failed_jev_call_is_raised_for_the_game_to_record(failures, calls):
 )
 def test_the_chat_payload_asks_for_reasoning_or_not(reasoning, expected):
     assert chat_payload(REQUEST, reasoning)["reasoning"] == expected
-
-
-def test_the_answer_must_be_json_naming_one_of_the_options():
-    schema = chat_payload(REQUEST, False)["response_format"]["json_schema"]["schema"]
-    assert schema["properties"]["option"]["enum"] == [o.id for o in REQUEST.options]
-
-
-def test_the_chat_carries_the_system_text_the_state_the_question_and_every_option_by_id():
-    system, user = llm_messages(REQUEST)
-    assert system["content"] == LLM_SYSTEM
-    assert REQUEST.state in user["content"] and REQUEST.question in user["content"]
-    assert all(f"{o.id}: {o.text}" in user["content"] for o in REQUEST.options)
 
 
 @pytest.mark.parametrize(

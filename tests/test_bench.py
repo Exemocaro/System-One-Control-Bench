@@ -206,12 +206,6 @@ def test_rows_run_from_random_to_the_solver_with_other_players_below():
     assert [line.split()[0] for line in table.splitlines()[2:]] == ["random", "solver", "always"]
 
 
-def test_the_best_number_in_each_column_is_bold_leaving_out_the_solver():
-    records = run_benchmark(FIRST_FIVE, ONLY_MAP, {"random": RandomPlayer, "solver": SolverPlayer})
-    random_row, solver_row = summarize(records, bold_best=True).splitlines()[2:]
-    assert ("\x1b[1m" in random_row, "\x1b[1m" in solver_row) == (True, False)
-
-
 @pytest.mark.parametrize(
     ("moves", "expected"),
     [

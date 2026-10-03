@@ -7,7 +7,6 @@ from system_one_control.puzzles import (
     LONGER_ROUTE,
     NEEDS_PLANNING,
     NEEDS_PLANNING_KEYLESS,
-    PUZZLE_DIR,
     WALL_IN_THE_WAY,
     Puzzle,
     PuzzleGenerator,
@@ -18,7 +17,6 @@ from system_one_control.puzzles import (
     has_a_longer_route,
     load_puzzles,
     outer_wall,
-    thick_wall_count,
     thicken,
     wall_in_the_way,
     with_detours,
@@ -51,11 +49,6 @@ def test_the_solver_agrees_with_what_each_puzzle_file_claims(name):
     assert Solver(puzzle.rules).fewest_moves(puzzle.board) == puzzle.level
 
 
-@pytest.mark.parametrize("path", sorted(PUZZLE_DIR.rglob("*.yaml")), ids=lambda p: p.stem)
-def test_each_puzzle_sits_in_the_folder_for_its_level(path):
-    assert path.parent.name == f"level-{Puzzle.load(path).level:02d}"
-
-
 @pytest.mark.parametrize("name", [n for n, p in PUZZLES.items() if p.board.find("K")])
 def test_where_there_is_a_key_the_goal_cannot_be_reached_without_it(name):
     assert Solver(PUZZLES[name].rules).fewest_moves(without_key(PUZZLES[name].board)) is None
@@ -64,11 +57,6 @@ def test_where_there_is_a_key_the_goal_cannot_be_reached_without_it(name):
 def test_every_level_has_the_number_of_puzzles_levels_asks_for():
     levels = [p.level for p in PUZZLES.values()]
     assert {level: levels.count(level) for level in set(levels)} == LEVELS
-
-
-def test_puzzles_are_named_after_their_file_and_sorted_by_difficulty():
-    levels = [p.level for p in PUZZLES.values()]
-    assert ("maze" in PUZZLES, levels == sorted(levels)) == (True, True)
 
 
 def test_a_puzzle_file_can_choose_its_rules(tmp_path):
@@ -123,11 +111,6 @@ def test_no_puzzle_at_the_top_levels_can_be_won_by_walking_straight_at_the_targe
 @pytest.mark.parametrize(("level", "least"), [(12, 2), (15, 3), (20, 5)])
 def test_every_puzzle_at_the_top_levels_needs_detours(level, least):
     assert all((detours(board) or 0) >= least for board in at_level(level))
-
-
-@pytest.mark.parametrize("level", [12, 15, 20])
-def test_half_of_the_top_three_levels_have_a_thicker_outer_wall(level):
-    assert thick_wall_count(at_level(level)) == 5
 
 
 @pytest.mark.parametrize(

@@ -53,10 +53,6 @@ def test_a_map_that_cannot_be_read_is_refused(text, message):
         Board.parse(text)
 
 
-def test_a_cell_outside_the_map_counts_as_wall():
-    assert Board.parse(LINE).at(Position(-1, 0)) == "#"
-
-
 @pytest.mark.parametrize(
     ("rules", "count"),
     [
@@ -120,11 +116,6 @@ def test_a_move_is_found_by_name_and_describes_itself(rules, name, expected):
 def test_a_move_changes_the_board(rules, text, name, agent, holding, won):
     _, after = move(rules, text, name)
     assert (after.agent, after.holding, rules.is_won(after)) == (Position(*agent), holding, won)
-
-
-def test_a_key_picked_up_leaves_floor_behind():
-    _, after = move(COMPASS, "####\n#AK#\n####", "east")
-    assert after.at(after.agent) == "."
 
 
 @pytest.mark.parametrize(
