@@ -34,6 +34,7 @@ Needs [uv](https://docs.astral.sh/uv/), which installs Python 3.11. Works on Win
 uv sync                      # install
 uv run pytest                # tests
 uv run socb benchmark        # the free players on all 100 puzzles, a few seconds
+uv run socb exam               # every model answers the same 495 positions once
 uv run socb web              # board viewer at http://127.0.0.1:8000
 ```
 

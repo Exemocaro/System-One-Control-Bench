@@ -27,6 +27,16 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 
 The other commands: `socb examples [--rules <name>]` writes what each condition shows the player to `examples/`, `socb generate [--per-level N] [--seed N]` tops up the puzzles, and `socb web` opens the viewer.
 
+## Exam
+
+In a game each model reaches different positions, so its optimal-move rate mixes decision quality with where it went. The exam asks every model the same positions once: an item is a puzzle plus a short prefix of moves played from the start (`start`, `on-route`, `off-route`, `after-blocked`, `late`). Playing the prefix with the ordinary game gives the board and the history, so every condition renders exactly as in a real game; then the model answers one move. `exam/items.jsonl` holds the 495 items (5 per puzzle, 4 at level 1), made once by `scripts/make_exam.py`.
+
+```bash
+uv run socb exam --players solver --conditions map,everything   # one answer per item and condition
+```
+
+`--conditions` defaults to `map`; the committed runs use `map,everything`, so repeat them with that flag. Answers go to `exam/<date>_<time>_<what was run>.jsonl`, one record per item, condition and player, with the item, the move record and any error; `--workers`, `--allow-paid` and `--resume` work as in `socb benchmark`.
+
 ## Cost
 
 Call counts are worst cases: one call per move, every game played to its move limit. A paid player is refused without `--allow-paid`, and the refusal gives the worst case.
