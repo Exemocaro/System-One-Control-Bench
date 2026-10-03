@@ -100,8 +100,6 @@ class LayaPlayer(Player):
     gets only 48 tokens. Sees only the request.
     """
 
-    plays_argmax = True
-
     def __init__(self, laya: Any = None) -> None:
         self._laya = laya  # for tests; otherwise the shared model
 
@@ -159,8 +157,6 @@ class GLiClassPlayer(Player):
     labels. Each option gets its own score from 0 to 1; they are scaled to add up to 1 to serve
     as probabilities. Sees only the request.
     """
-
-    plays_argmax = True
 
     def __init__(self, pipeline: Any = None) -> None:
         self._pipeline = pipeline  # for tests; otherwise the shared model
@@ -292,8 +288,6 @@ class LocalLLMPlayer(Player):
     It writes nothing and so cannot reason: the options' probabilities are read from one pass
     over the chat, and the likeliest is played. Sees only the request.
     """
-
-    plays_argmax = True
 
     def __init__(self, repo: str, model: Any = None) -> None:
         self.repo = repo

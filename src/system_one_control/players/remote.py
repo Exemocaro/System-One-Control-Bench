@@ -376,8 +376,6 @@ class DecisionPlayer(HTTPPlayer):
     Retries follow the chat players'. See SUBMITTING.md for the contract.
     """
 
-    plays_argmax = True
-
     def __init__(
         self,
         url: str,

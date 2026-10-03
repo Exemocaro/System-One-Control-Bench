@@ -129,6 +129,13 @@ def test_validate_passes_a_real_small_run(tmp_path):
     assert validate_file(tiny_file(tmp_path)) == []
 
 
+def peak_elsewhere(game):
+    """Move 0.97 of the probability onto another option than the move."""
+    first = game["moves"][0]
+    other = next(option for option in first["options"] if option != first["move"])
+    first["probabilities"] = {other: 0.97, first["move"]: 0.01}
+
+
 @pytest.mark.parametrize(
     "tamper",
     [
@@ -143,6 +150,7 @@ def test_validate_passes_a_real_small_run(tmp_path):
             id="options in another order",
         ),
         pytest.param(lambda game: game.__setitem__("won", not game["won"]), id="a flipped outcome"),
+        pytest.param(peak_elsewhere, id="a probability peak on another move"),
     ],
 )
 def test_validate_fails_a_tampered_game(tmp_path, tamper):

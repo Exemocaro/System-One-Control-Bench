@@ -31,8 +31,6 @@ class ScriptedPlayer(Player):
 class SolverPlayer(Player):
     """Plays perfectly by searching the real board."""
 
-    plays_argmax = True  # every best move shares the top probability
-
     def __init__(self) -> None:
         # The distances from the first board of a game cover every later one.
         self._rules: Rules | None = None

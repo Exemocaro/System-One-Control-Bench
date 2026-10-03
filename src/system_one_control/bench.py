@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
-from functools import lru_cache, partial
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -446,15 +446,6 @@ def validate_file(path: Path) -> list[str]:
     return failures
 
 
-def plays_argmax(name: str) -> bool:
-    """Whether this registry player always plays one of its top-probability moves."""
-    if name not in PLAYERS:
-        return False
-    build = PLAYERS[name].build
-    cls = build.func if isinstance(build, partial) else build
-    return isinstance(cls, type) and issubclass(cls, Player) and cls.plays_argmax
-
-
 def check_game(
     record: GameRecord,
     puzzles: Mapping[str, Puzzle],
@@ -490,13 +481,14 @@ def check_game(
             or abs(sum(move.probabilities.values()) - 1) > 0.02
         ):
             failures.append(f"{where} move {number}: probabilities off the options or off 1")
-        if (
-            move.move is not None
-            and move.probabilities
-            and plays_argmax(record.player)
-            and move.probabilities.get(move.move, float("-inf")) < max(move.probabilities.values())
-        ):
-            failures.append(f"{where} move {number}: move is not the argmax of its probabilities")
+        if move.probabilities:
+            top = max(move.probabilities.values())
+            taken = move.probabilities.get(move.move or "")
+            if taken is None or top - taken > 0.011:
+                # Jev rounds to 2 decimals; its answer is the top unrounded score.
+                failures.append(
+                    f"{where} move {number}: move is not the argmax of its probabilities"
+                )
     if game.won != record.won or game.closest != record.closest:
         failures.append(f"{where}: end differs (won {record.won}, closest {record.closest})")
     return failures
