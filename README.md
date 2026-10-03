@@ -4,7 +4,7 @@
 ![uv](https://img.shields.io/badge/built%20with-uv-purple)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-> Can a bounded decision model, one that picks an answer from a list instead of writing one, steer an agent across a small grid?
+> Can a non-generative decision model, one that picks an answer from a list instead of writing one, steer an agent across a small grid?
 
 The player sees a grid as text and chooses the next move from a list of options. A breadth-first solver knows every best move, so each move is scored exactly. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
 
@@ -71,7 +71,7 @@ Compass rules, 100 puzzles, `won / progress`. The baselines ignore the prompt, s
 | GLiClass | 3 / 0.10 | 13 / 0.22 |
 | Gemma 4 26B | 35 / 0.45 | 61 / 0.71 |
 | DeepSeek V4.1 Flash | 39 / 0.55 | 60 / 0.72 |
-| DeepSeek V4.1 Flash, reasoning | pending | pending |
+| DeepSeek V4.1 Flash, reasoning | 67 / 0.79 | 80 / 0.86 |
 | Qwen3.5-4B | 14 / 0.34 | 45 / 0.66 |
 
 ## Conditions
@@ -123,7 +123,7 @@ Puzzles are YAML files under `puzzles/`: 100 over the levels 1, 2, 3, 4, 5, 6, 8
 
 ## Analysis
 
-`analysis/` (on the main branch until the merge) recomputes every table and figure of the paper from the results files, with no API calls: `uv run --with matplotlib python analysis/analyze.py`. See `analysis/README.md` for the definitions.
+`analysis/` recomputes every table and figure of the paper from the results files, with no API calls: `uv run --with matplotlib python analysis/analyze.py`. See `analysis/README.md` for the definitions.
 
 ## Leaderboard
 

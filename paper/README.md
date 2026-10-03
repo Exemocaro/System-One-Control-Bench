@@ -3,11 +3,13 @@
 Build from the repository root:
 
 ```powershell
-python paper/build_appendices.py
+uv run python paper/tables.py
 typst compile --root . paper/main.typ
 ```
 
-`build_appendices.py` generates the compact main results table, result prose, abstract, conclusion, hypothesis table, full component-effects table and example figure/request. It reads the current `analysis/out/*.csv` tables and the complete frozen `examples/everything.json`, and checks the example route with BFS. `make_appx_tables.py` calls the same generators for compatibility.
+Edit prose directly in `sections/*.typ`, preserving the `// src:` comments. No script generates prose. `tables.py` reads the current `analysis/out/*.csv` tables and frozen `examples/everything.json`, and writes only the included main, hypothesis and component tables and example request/figure data. Editable layout and captions are in `templates/*.typ`; the example overlay follows the previously checked route in the frozen position.
+
+Check the script with `uv run ruff check paper` and `uv run ruff format --check paper` (line length 100).
 
 The six figures are the example, main results, component effects, action formulations, completion by level and reliability. All source plots remain unchanged.
 
