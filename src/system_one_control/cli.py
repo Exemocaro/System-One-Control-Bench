@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import typer
 
@@ -32,7 +33,6 @@ from system_one_control.exam import (
     load_exam,
     run_exam,
     save_exam,
-    split_unanswered,
 )
 from system_one_control.examples import write_examples
 from system_one_control.players import PLAYERS, register_toml_players
@@ -75,6 +75,75 @@ def _levels(spec: str) -> set[int] | None:
     except ValueError:
         raise typer.BadParameter(f"levels must look like 3, 1,4 or 2-5, not {spec!r}") from None
     return levels
+
+
+def _resume_kept(
+    out: Path,
+    resume: bool,
+    allow_paid: bool,
+    keys: list[Any],
+    load_records: Callable[[Path], list[Any]],
+    check_records: Callable[[list[Any]], str | None],
+    split_records: Callable[[list[Any]], tuple[list[Any], list[Any]]],
+    count_calls: Callable[[set[Any]], int],
+    kept_noun: str,
+    verb: str,
+    calls_noun: str,
+) -> tuple[list[Any], set[Any]]:
+    """Keep the finished records in out, refusing anything inconsistent or unpaid.
+
+    Records are Any because games and answers share no base class by design: their
+    formats must stay distinct, so the shared block cannot name either one.
+    """
+    kept: list[Any] = []
+    if out.exists():
+        if not resume:
+            raise typer.BadParameter(
+                f"{out} already exists; add --resume to finish it, or choose another --out"
+            )
+        loaded = load_records(out)
+        if message := check_records(loaded):
+            raise typer.BadParameter(f"{out} {message}")
+        kept, _ = split_records(loaded)
+    done = {record.key for record in kept}
+    calls = count_calls(done)
+    if calls and not allow_paid:
+        raise typer.BadParameter(f"this can make up to {calls} paid {calls_noun}; add --allow-paid")
+    if resume:
+        typer.echo(f"Keeping {len(kept)} {kept_noun}, {verb} {len(keys) - len(kept)}")
+    return kept, done
+
+
+def _append_fresh(
+    out: Path,
+    kept: list[Any],
+    keys: list[Any],
+    run_fresh: Callable[[set[Any], Callable[[Any], None]], list[Any]],
+    save_records: Callable[[list[Any], Path], Path],
+    thing: str,
+    run_kind: str,
+) -> list[Any]:
+    """Play the missing keys, appending to out, then return everything in key order."""
+    save_records(kept, out)  # drops the errored ones, so they run again
+    try:
+        with out.open("a", encoding="utf-8", newline="") as file:
+
+            def write(record: Any) -> None:
+                file.write(record.to_json() + "\n")
+                file.flush()
+
+            fresh = run_fresh({record.key for record in kept}, write)
+    except BaseException:
+        typer.echo(
+            f"\nStopped. Every finished {thing} is saved in {out}; to finish the {run_kind}, "
+            f"repeat the command with --resume --out {out}",
+            err=True,
+        )
+        raise
+    order = {key: index for index, key in enumerate(keys)}
+    records = sorted([*kept, *fresh], key=lambda record: order[record.key])
+    save_records(records, out)
+    return records
 
 
 def expand_track(track: str) -> list[tuple[str, str | None]]:
@@ -180,53 +249,39 @@ def _benchmark_once(
     if out is None:
         name = _run_name(names, conditions_spec, levels, puzzles_spec, rules=rules_spec)
         out = BENCHMARK_DIR / f"{name}.jsonl"
-    kept: list[GameRecord] = []
-    if out.exists():
-        if not resume:
-            raise typer.BadParameter(
-                f"{out} already exists; add --resume to finish it, or choose another --out"
-            )
-        # Every game in the file is checked, those that ended in an error too, though only the
-        # finished ones are kept.
-        loaded = load(out)
-        message = check_same_run(loaded, keys, rules_of)
-        if message:
-            raise typer.BadParameter(f"{out} {message}")
-        kept, _ = split_finished(loaded)
-    done = {record.key for record in kept}
-    calls = estimate_paid_calls(chosen_puzzles, chosen_conditions, names, done=done)
-    if calls and not allow_paid:
-        raise typer.BadParameter(f"this can make up to {calls} paid calls; add --allow-paid")
-    if resume:
-        typer.echo(f"Keeping {len(kept)} finished games, playing {len(keys) - len(kept)}")
 
-    save(kept, out)  # drops the games that ended in an error, so they are played again
-    try:
-        with out.open("a", encoding="utf-8", newline="") as file:
+    def check(loaded: list[GameRecord]) -> str | None:
+        return check_same_run(loaded, keys, rules_of)
 
-            def write(record: GameRecord) -> None:
-                file.write(record.to_json() + "\n")
-                file.flush()
+    def count(skipped: set[Any]) -> int:
+        return estimate_paid_calls(chosen_puzzles, chosen_conditions, names, done=skipped)
 
-            played = run_benchmark(
-                chosen_puzzles,
-                chosen_conditions,
-                {name: PLAYERS[name].build for name in names},
-                workers=workers,
-                done=done,
-                on_record=write,
-            )
-    except BaseException:
-        typer.echo(
-            f"\nStopped. Every finished game is saved in {out}; to finish the run, repeat the "
-            f"command with --resume --out {out}",
-            err=True,
+    kept, done = _resume_kept(
+        out,
+        resume,
+        allow_paid,
+        keys,
+        load,
+        check,
+        split_finished,
+        count,
+        "finished games",
+        "playing",
+        "calls",
+    )
+
+    def run_fresh(done: set[Any], write: Callable[[GameRecord], None]) -> list[GameRecord]:
+        return run_benchmark(
+            chosen_puzzles,
+            chosen_conditions,
+            {name: PLAYERS[name].build for name in names},
+            workers=workers,
+            done=done,
+            on_record=write,
         )
-        raise
 
-    order = {key: index for index, key in enumerate(keys)}
-    records = sorted([*kept, *played], key=lambda record: order[record.key])
-    save(records, out)
+    records = _append_fresh(out, kept, keys, run_fresh, save, "game", "run")
+    played = [record for record in records if record.key not in done]
     table = summarize(records)
     out.with_suffix(".txt").write_text(table + "\n", encoding="utf-8", newline="")
 
@@ -267,52 +322,39 @@ def exam(
     if out is None:
         name = _run_name(names, conditions, "all", "all", rules="compass")
         out = EXAM_DIR / f"{name}.jsonl"
-    kept: list[ExamRecord] = []
-    if out.exists():
-        if not resume:
-            raise typer.BadParameter(
-                f"{out} already exists; add --resume to finish it, or choose another --out"
-            )
-        loaded = load_exam(out)
-        message = check_same_exam(loaded, keys)
-        if message:
-            raise typer.BadParameter(f"{out} {message}")
-        kept, _ = split_unanswered(loaded)
-    done = {record.key for record in kept}
-    calls = sum(1 for key in keys if key not in done and PLAYERS[key[4]].paid)
-    if calls and not allow_paid:
-        raise typer.BadParameter(f"this can ask up to {calls} paid questions; add --allow-paid")
-    if resume:
-        typer.echo(f"Keeping {len(kept)} answered items, asking {len(keys) - len(kept)}")
 
-    save_exam(kept, out)  # drops the errored answers, so they are asked again
-    try:
-        with out.open("a", encoding="utf-8", newline="") as file:
+    def check(loaded: list[ExamRecord]) -> str | None:
+        return check_same_exam(loaded, keys)
 
-            def write(record: ExamRecord) -> None:
-                file.write(record.to_json() + "\n")
-                file.flush()
+    def count(skipped: set[Any]) -> int:
+        return sum(1 for key in keys if key not in skipped and PLAYERS[key[4]].paid)
 
-            fresh = run_exam(
-                puzzles,
-                chosen_items,
-                chosen_conditions,
-                {name: PLAYERS[name].build for name in names},
-                workers=workers,
-                done=done,
-                on_record=write,
-            )
-    except BaseException:
-        typer.echo(
-            f"\nStopped. Every finished answer is saved in {out}; to finish the exam, repeat the "
-            f"command with --resume --out {out}",
-            err=True,
+    kept, _ = _resume_kept(
+        out,
+        resume,
+        allow_paid,
+        keys,
+        load_exam,
+        check,
+        split_finished,
+        count,
+        "answered items",
+        "asking",
+        "questions",
+    )
+
+    def run_fresh(done: set[Any], write: Callable[[ExamRecord], None]) -> list[ExamRecord]:
+        return run_exam(
+            puzzles,
+            chosen_items,
+            chosen_conditions,
+            {name: PLAYERS[name].build for name in names},
+            workers=workers,
+            done=done,
+            on_record=write,
         )
-        raise
 
-    order = {key: index for index, key in enumerate(keys)}
-    records = sorted([*kept, *fresh], key=lambda record: order[record.key])
-    save_exam(records, out)
+    records = _append_fresh(out, kept, keys, run_fresh, save_exam, "answer", "exam")
 
     errors = sum(record.error is not None for record in records)
     if errors:

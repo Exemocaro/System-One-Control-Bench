@@ -12,6 +12,7 @@ from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
 from functools import lru_cache
 from pathlib import Path
+from typing import Any, TypeVar
 
 import typer
 
@@ -26,6 +27,10 @@ CEILING = "solver"  # plays perfectly, so it is never the best result worth poin
 BENCHMARK_VERSION = "1.0"
 
 GameKey = tuple[str, str, str]  # puzzle, condition, player
+
+K = TypeVar("K")
+R = TypeVar("R")
+T = TypeVar("T")
 
 
 @lru_cache(maxsize=1)
@@ -305,9 +310,8 @@ def run_benchmark(
     by_name = {p.name: p for p in puzzles}
     by_condition = {c.name: c for c in conditions}
     keys = [key for key in game_keys(puzzles, conditions, players) if key not in done]
-    stop = threading.Event()
 
-    def play_one(key: GameKey) -> GameRecord | None:
+    def play_one(key: GameKey, stop: threading.Event) -> GameRecord | None:
         if stop.is_set():
             return None
         puzzle, condition, name = key
@@ -318,12 +322,32 @@ def run_benchmark(
             stop.set()
             raise
 
+    finished = run_pool(keys, play_one, workers=workers, on_record=on_record)
+    return [finished[key] for key in keys]
+
+
+def run_pool(
+    keys: Sequence[K],
+    work: Callable[[K, threading.Event], R | None],
+    *,
+    workers: int = 1,
+    on_record: Callable[[R], None] | None = None,
+) -> dict[K, R]:
+    """Do work(key, stop) for every key, `workers` at a time. Returns each result by key.
+
+    Each key gets its own work, so keys never share state and can run side by side.
+    `on_record` gets each result as it finishes, so a caller can save it straight away.
+    Work that fails sets the stop event; a failure starts no more work, stops the work
+    under way without recording it, hands over whatever finished meanwhile, and is
+    then raised.
+    """
+    stop = threading.Event()
     pool = ThreadPoolExecutor(max_workers=workers)
-    futures = [pool.submit(play_one, key) for key in keys]
-    records: dict[GameKey, GameRecord] = {}
+    waiting = {pool.submit(work, key, stop): key for key in keys}
+    records: dict[K, R] = {}
     failure: BaseException | None = None
     try:
-        for future in as_completed(futures):
+        for future in as_completed(waiting):
             try:
                 record = future.result()
             except CancelledError:
@@ -333,7 +357,7 @@ def run_benchmark(
                 pool.shutdown(wait=False, cancel_futures=True)
                 continue
             if record is not None:
-                records[record.key] = record
+                records[waiting[future]] = record
                 if on_record:
                     on_record(record)
         if failure:
@@ -341,7 +365,7 @@ def run_benchmark(
     finally:
         stop.set()
         pool.shutdown(wait=False, cancel_futures=True)
-    return [records[key] for key in keys]
+    return records
 
 
 def estimate_paid_calls(
@@ -360,29 +384,39 @@ def estimate_paid_calls(
     )
 
 
-def save(records: Iterable[GameRecord], path: Path) -> Path:
+def save_lines(path: Path, lines: Iterable[str]) -> Path:
+    """Write lines to a jsonl file, one per line."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as file:
-        for record in records:
-            file.write(record.to_json() + "\n")
+        for line in lines:
+            file.write(line + "\n")
     return path
 
 
-def load(path: Path) -> list[GameRecord]:
-    """The games saved in a file. A cut-off last line, from a run that was killed, is skipped."""
+def save(records: Iterable[GameRecord], path: Path) -> Path:
+    return save_lines(path, (record.to_json() for record in records))
+
+
+def load_lines(path: Path, parse: Callable[[str], T]) -> list[T]:
+    """The parsed non-blank lines of a jsonl file. A cut-off last line is skipped."""
     lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    records = []
+    records: list[T] = []
     for number, line in enumerate(lines, start=1):
         try:
-            records.append(GameRecord.from_json(line))
+            records.append(parse(line))
         except json.JSONDecodeError:
             if number < len(lines):
                 raise
     return records
 
 
-def split_finished(records: Sequence[GameRecord]) -> tuple[list[GameRecord], list[GameRecord]]:
-    """The records split two ways: the finished games to keep, the errored ones to play again."""
+def load(path: Path) -> list[GameRecord]:
+    """The games saved in a file. A cut-off last line, from a run that was killed, is skipped."""
+    return load_lines(path, GameRecord.from_json)
+
+
+def split_finished(records: Sequence[Any]) -> tuple[list[Any], list[Any]]:
+    """The records split two ways: the finished ones to keep, the errored ones to redo."""
     kept = [record for record in records if record.error is None]
     return kept, [record for record in records if record.error is not None]
 

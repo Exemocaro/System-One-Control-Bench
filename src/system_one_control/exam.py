@@ -6,11 +6,17 @@ import json
 import random
 import threading
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
-from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
-from system_one_control.bench import Game, MoveRecord, record_of
+from system_one_control.bench import (
+    Game,
+    MoveRecord,
+    load_lines,
+    record_of,
+    run_pool,
+    save_lines,
+)
 from system_one_control.players import Player
 from system_one_control.players.baselines import ScriptedPlayer
 from system_one_control.prompts import Condition
@@ -95,11 +101,14 @@ def examine(
 ) -> ExamRecord:
     """Ask one player for the move after the item's prefix, played with the ordinary game."""
     game = Game(puzzle, ScriptedPlayer(item.prefix), condition)
+    # Players answer once each, so RandomPlayer(seed=0) always takes shuffle position 4,
+    # itself a uniform pick over the moves.
     try:
         for _ in item.prefix:
             game.play_move()
         if game.is_over:
             raise RuntimeError(f"the prefix already ends {item.puzzle} {item.kind}")
+        # The scripted player plays the prefix, then the real one answers.
         game.player = player
         played = game.play_move()
     finally:
@@ -141,70 +150,30 @@ def run_exam(
     by_item = {(item.puzzle, item.kind, item.prefix): item for item in items}
     keys = [key for key in exam_keys(items, conditions, players) if key not in done]
     by_condition = {c.name: c for c in conditions}
-    stop = threading.Event()
 
-    def answer_one(key: ExamKey) -> ExamRecord | None:
+    def answer_one(key: ExamKey, stop: threading.Event) -> ExamRecord | None:
         if stop.is_set():
             return None
         puzzle, kind, prefix, condition, name = key
         try:
             item = by_item[(puzzle, kind, prefix)]
-            return examine(compass[puzzle], item, by_condition[condition], name, players[name]())
+            player = players[name]()
+            return examine(compass[puzzle], item, by_condition[condition], name, player)
         except BaseException:
             stop.set()
             raise
 
-    pool = ThreadPoolExecutor(max_workers=workers)
-    futures = [pool.submit(answer_one, key) for key in keys]
-    records: dict[ExamKey, ExamRecord] = {}
-    failure: BaseException | None = None
-    try:
-        for future in as_completed(futures):
-            try:
-                record = future.result()
-            except CancelledError:
-                continue
-            except Exception as error:
-                failure = failure or error
-                pool.shutdown(wait=False, cancel_futures=True)
-                continue
-            if record is not None:
-                records[record.key] = record
-                if on_record:
-                    on_record(record)
-        if failure:
-            raise failure
-    finally:
-        stop.set()
-        pool.shutdown(wait=False, cancel_futures=True)
-    return [records[key] for key in keys]
+    finished = run_pool(keys, answer_one, workers=workers, on_record=on_record)
+    return [finished[key] for key in keys]
 
 
 def save_exam(records: Iterable[ExamRecord], path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as file:
-        for record in records:
-            file.write(record.to_json() + "\n")
-    return path
+    return save_lines(path, (record.to_json() for record in records))
 
 
 def load_exam(path: Path) -> list[ExamRecord]:
     """The answers saved in a file. A cut-off last line, from a run that was killed, is skipped."""
-    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    records = []
-    for number, line in enumerate(lines, start=1):
-        try:
-            records.append(ExamRecord.from_json(line))
-        except json.JSONDecodeError:
-            if number < len(lines):
-                raise
-    return records
-
-
-def split_unanswered(records: list[ExamRecord]) -> tuple[list[ExamRecord], list[ExamRecord]]:
-    """The records split two ways: the answered ones to keep, the errored ones to ask again."""
-    kept = [record for record in records if record.error is None]
-    return kept, [record for record in records if record.error is not None]
+    return load_lines(path, ExamRecord.from_json)
 
 
 def check_same_exam(loaded: list[ExamRecord], keys: Collection[ExamKey]) -> str | None:
