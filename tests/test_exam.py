@@ -30,7 +30,7 @@ ITEMS = [ExamItem.from_json(line) for line in ITEMS_FILE.read_text(encoding="utf
 SOLVER = Solver(COMPASS)
 CORRIDOR = Board.parse("#####\n#A.G#\n#####")
 ROUTE = shortest_route(CORRIDOR, random.Random(0))
-runner = CliRunner()
+runner = CliRunner(env={"FORCE_COLOR": None, "NO_COLOR": "1", "COLUMNS": "200"})
 
 
 def walk(item):

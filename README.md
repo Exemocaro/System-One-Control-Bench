@@ -109,11 +109,13 @@ To add one, subclass `Player` and register it:
 ```python
 from system_one_control.players import PLAYERS, Choice, Player, PlayerEntry, Turn
 
+
 class FirstOption(Player):
     def choose(self, turn: Turn) -> Choice:
-        return Choice(turn.request.options[0].move)   # read turn.request only, never turn.board
+        return Choice(turn.request.options[0].move)  # read turn.request only, never turn.board
 
-PLAYERS["first"] = PlayerEntry(FirstOption)           # paid=True for a player that costs money
+
+PLAYERS["first"] = PlayerEntry(FirstOption)  # paid=True for a player that costs money
 ```
 
 In the repository, that line goes in `src/system_one_control/players/__init__.py`; then `uv run socb benchmark --players first` plays it. A chat model on OpenRouter needs only a line in `LLM_MODELS` in `players/remote.py`. More in [docs/details.md](docs/details.md).
