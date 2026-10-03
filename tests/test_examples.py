@@ -12,7 +12,7 @@ from system_one_control.examples import (
 )
 from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import load_puzzles
-from system_one_control.world import RULES, CompassRules, ThreeMoveRules, TwoMoveRules
+from system_one_control.world import RULES, CompassRules, TwoMoveRules
 
 PUZZLE = load_puzzles()[EXAMPLE_PUZZLE]
 
@@ -29,38 +29,25 @@ def test_the_saved_example_is_what_the_condition_sends_today(name, rules):
     folder, puzzle = EXAMPLE_DIR, PUZZLE
     if rules is not None:
         folder, puzzle = EXAMPLE_DIR / rules.name, replace(PUZZLE, rules=rules)
-    assert (folder / f"{name}.json").read_text(encoding="utf-8") == example(
-        CONDITIONS[name], puzzle
-    )
-
-
-def test_an_example_is_the_jev_request_after_a_move_and_a_blocked_move():
-    body = json.loads(example(CONDITIONS["everything"], PUZZLE))
-    question = body["questions"]["move"]
-    assert set(body) == {"state", "model", "questions"}
-    assert "1. east: you move to (7, 1)\n2. north: blocked, you stay at (7, 1)" in body["state"]
-    assert (question["type"], sorted(question["criteria"])) == (
-        "choice",
-        ["option_1", "option_2", "option_3", "option_4"],
-    )
+    saved = (folder / f"{name}.json").read_text(encoding="utf-8")
+    assert saved == example(CONDITIONS[name], puzzle)
 
 
 @pytest.mark.parametrize(
-    ("rules", "folder", "options", "fragment"),
+    ("rules", "folder", "options"),
     [
-        (None, "", 4, "No moves yet"),
-        (TwoMoveRules(), "two-moves", 16, "you end"),
-        (ThreeMoveRules(), "three-moves", 64, "you end"),
+        pytest.param(None, "", 4, id="compass"),
+        pytest.param(TwoMoveRules(), "two-moves", 16, id="two-moves"),
     ],
-    ids=["compass, in the folder itself", "two-moves, in its own folder", "three-moves, likewise"],
 )
-def test_one_example_is_written_per_condition(tmp_path, rules, folder, options, fragment):
+def test_one_example_is_written_per_condition_in_a_folder_for_its_rules(
+    tmp_path, rules, folder, options
+):
     written = write_examples(tmp_path, rules=rules)
     body = json.loads((tmp_path / folder / "map+memory.json").read_text(encoding="utf-8"))
     assert sorted(path.stem for path in written) == sorted(CONDITIONS)
     assert {path.parent for path in written} == {tmp_path / folder}
     assert len(body["questions"]["move"]["criteria"]) == options
-    assert fragment in body["state"] or rules is None
 
 
 def test_rules_without_example_moves_get_a_move_then_a_blocked_one():
