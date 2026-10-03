@@ -16,17 +16,17 @@ A *move* is one model decision; a *step* is a compass displacement within it. Ac
 Every request includes rules, the numbered map, position, inventory and object coordinates. A *local state description* explains adjacent cells and relative object locations. *Interaction history* lists prior moves and their results. *Simulated action outcomes* tell the model what would happen after each option. An *explicit subgoal* names the next target. The local descriptions and simulations are computed from information already present in the map. History is not needed to reconstruct the state, but may expose loops. The ten conditions add each component to the map alone or remove it from full context (@tab:conditions).
 // src: conditions.py; examples/; review interpretation framed as possibility
 
-#figure(table(columns: (auto, 1fr), stroke: none, inset: 2pt,
+#figure(table(columns: (auto, 1fr), align: left, stroke: none, inset: 2pt,
   table.header([Artifact ID], [Paper name]),
-  text(font: "DejaVu Sans Mono", size: 11pt)[map], [Map alone],
-  text(font: "DejaVu Sans Mono", size: 11pt)[map+surroundings], [Map with local state description],
-  text(font: "DejaVu Sans Mono", size: 11pt)[map+memory], [Map with interaction history],
-  text(font: "DejaVu Sans Mono", size: 11pt)[map+lookahead], [Map with simulated action outcomes],
-  text(font: "DejaVu Sans Mono", size: 11pt)[map+subgoal], [Map with explicit subgoal],
-  text(font: "DejaVu Sans Mono", size: 11pt)[everything], [Full context],
-  text(font: "DejaVu Sans Mono", size: 11pt)[everything-surroundings], [Full context without local state description],
-  text(font: "DejaVu Sans Mono", size: 11pt)[everything-memory], [Full context without interaction history],
-  text(font: "DejaVu Sans Mono", size: 11pt)[everything-lookahead], [Full context without simulated action outcomes],
-  text(font: "DejaVu Sans Mono", size: 11pt)[everything-subgoal], [Full context without explicit subgoal]),
+  text(font: "DejaVu Sans Mono", size: 9pt)[map], [Map alone],
+  text(font: "DejaVu Sans Mono", size: 9pt)[map+surroundings], [Map with local state description],
+  text(font: "DejaVu Sans Mono", size: 9pt)[map+memory], [Map with interaction history],
+  text(font: "DejaVu Sans Mono", size: 9pt)[map+lookahead], [Map with simulated action outcomes],
+  text(font: "DejaVu Sans Mono", size: 9pt)[map+subgoal], [Map with explicit subgoal],
+  text(font: "DejaVu Sans Mono", size: 9pt)[everything], [Full context],
+  text(font: "DejaVu Sans Mono", size: 9pt)[everything-surroundings], [Full context without local state description],
+  text(font: "DejaVu Sans Mono", size: 9pt)[everything-memory], [Full context without interaction history],
+  text(font: "DejaVu Sans Mono", size: 9pt)[everything-lookahead], [Full context without simulated action outcomes],
+  text(font: "DejaVu Sans Mono", size: 9pt)[everything-subgoal], [Full context without explicit subgoal]),
   placement: top, caption: [Condition-ID mapping. Full context includes all four components.]) <tab:conditions>
 // src: examples/; README.md

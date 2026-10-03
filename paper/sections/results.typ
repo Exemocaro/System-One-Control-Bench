@@ -43,7 +43,7 @@ The planned shared-position experiment will ask every model the same compass que
 
 == Blocked moves and progress
 
-With the map alone, 82% of Jev's moves leave the board unchanged. With full context, that share is 0.4%. This reduction accompanies better completion, but does not by itself establish better route planning. Final-state progress is 0.649, below its closest-state progress of 0.68. The distinction matters more for Qwen: its full-context scores are 0.560 and 0.66. A game can approach the goal and then finish farther away.
+With the map alone, 82% of Jev's moves leave the board unchanged. With full context, that share is 0.4%. This reduction accompanies better completion, but does not by itself establish better route planning. Final-state progress is 0.65, below its closest-state progress of 0.68. The distinction matters more for Qwen: its full-context scores are 0.56 and 0.66. A game can approach the goal and then finish farther away.
 // src: analysis/out/main.md
 
 == Completion by level
@@ -63,8 +63,8 @@ We pool all compass conditions and ask whether the chosen move was optimal. Jev 
 TypeSafe defines Choice confidence as $c = (p_(max) - 1/n) / (1 - 1/n)$ @typesafeconfidence. On all 14,642 Jev compass moves, the reported confidence differs from $(p_(max) - 1/n) / (1 - 1/n)$ by at most 0.023. For a fixed number of options, the formula ranks moves exactly as the top probability does. Reported confidence is therefore a rescaled score rather than an independent prediction of correctness.
 // src: analysis/out/calibration.md (move count); TypeSafe confidence documentation; recorded confidence-formula check
 
-#figure(image("../../analysis/out/fig_calibration.pdf", width: 60%), placement: top,
-  caption: [Reliability after pooling all compass conditions. Each point compares mean chosen-move probability with the fraction of those moves that are optimal, accepting any tied best move. The diagonal indicates agreement between probability and observed optimality.]) <fig:reliability>
+#figure(image("../../analysis/out/fig_calibration.pdf", width: 60%), placement: none,
+  caption: [Reliability after pooling all compass conditions. Each point compares mean chosen-move probability with the fraction of those moves that are optimal, accepting any tied best move. The diagonal indicates agreement between probability and observed optimality. Only four models appear because Gemma and DeepSeek return an option ID rather than probabilities.]) <fig:reliability>
 // src: analysis/out/calibration.md
 
 == Cost and latency

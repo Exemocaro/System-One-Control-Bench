@@ -2,7 +2,7 @@
 
 = One complete example request <app:prompts>
 
-This is the compass, full-context request for @fig:example, with every field and all state text retained; only display line breaks are added. All 50 frozen requests are in the repository's `examples/` directory.
+This is the compass, full-context request for @fig:example, with every field and all state text retained. Lines wrap only where needed to fit the page. All 50 frozen requests are in the repository's `examples/` directory.
 // src: examples/everything.json
 
 #include "example_request.typ"

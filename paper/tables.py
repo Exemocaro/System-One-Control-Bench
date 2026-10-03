@@ -2,7 +2,6 @@
 
 import csv
 import json
-import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -71,14 +70,11 @@ def example():
     lines = ["state:", request["state"], "", "model: " + request["model"]]
     lines += [f"questions.move.{key}: {question[key]}" for key in ("type", "instructions")]
     lines += ["questions.move.criteria:", *[f"  {k}: {v}" for k, v in question["criteria"].items()]]
-    content = "\n".join(
-        textwrap.fill(line, 88, replace_whitespace=False, drop_whitespace=False)
-        for line in "\n".join(lines).split("\n")
-    )
+    content = "\n".join(lines)
     write(
         "example_request",
-        "// src: examples/everything.json; complete fields, wrapped for display\n"
-        "#show raw: set text(size: 9pt)\n#set par(leading: 0.2em)\n"
+        "// src: examples/everything.json; complete fields, no added display line breaks\n"
+        "#show raw: set text(size: 7.5pt)\n#set par(leading: 0.2em)\n"
         f'#raw({json.dumps(content)}, block: true, lang: "text")\n',
     )
     board = [
