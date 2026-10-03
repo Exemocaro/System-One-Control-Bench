@@ -21,10 +21,9 @@ import matplotlib.pyplot as plt
 import metrics
 from matplotlib.patches import Patch
 
-from system_one_control.benchmark import load
-from system_one_control.rules import make_rules
-from system_one_control.scenario import load_scenarios
-from system_one_control.solver import Solver
+from system_one_control.bench import load
+from system_one_control.puzzles import load_puzzles
+from system_one_control.world import Solver, make_rules
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "analysis" / "out"
@@ -79,7 +78,7 @@ class Game:
 
 
 def load_games() -> list[Game]:
-    puzzles = load_scenarios(ROOT / "scenarios")
+    puzzles = load_puzzles(ROOT / "puzzles")
     distances: dict[str, dict] = {}
     games: dict[tuple, Game] = {}
     for entry in tomllib.loads((ROOT / "analysis" / "manifest.toml").read_text("utf-8"))["results"]:
@@ -87,9 +86,9 @@ def load_games() -> list[Game]:
             if record.player not in entry["players"]:
                 continue
             assert record.rules == entry["rules"], f"{entry['file']} holds {record.rules} games"
-            key = (record.player, record.rules, record.condition, record.scenario)
+            key = (record.player, record.rules, record.condition, record.puzzle)
             assert key not in games, f"two games for {key}"
-            puzzle = puzzles[record.scenario]
+            puzzle = puzzles[record.puzzle]
             rules = make_rules(record.rules)
             board, blocked = puzzle.board, 0
             for move in record.moves:
@@ -97,20 +96,18 @@ def load_games() -> list[Game]:
                 after = rules.apply(board, found) if found else board
                 blocked += after == board
                 board = after
-            if record.scenario not in distances:  # in single steps, as levels are counted
-                distances[record.scenario] = Solver(rules.step_rules()).distances(puzzle.board)
-            level = record.moves_to_goal
+            if record.puzzle not in distances:  # in single steps, as levels are counted
+                distances[record.puzzle] = Solver(rules.step_rules()).distances(puzzle.board)
+            level = record.level
             games[key] = Game(
                 record.player,
                 record.rules,
                 record.condition,
-                record.scenario,
+                record.puzzle,
                 level,
                 record.won,
                 metrics.progress(level, record.closest),
-                1.0
-                if record.won
-                else metrics.progress(level, distances[record.scenario].get(board)),
+                1.0 if record.won else metrics.progress(level, distances[record.puzzle].get(board)),
                 metrics.spl(record.won, rules.moves_for(level), len(record.moves)),
                 blocked,
                 record.error is not None,

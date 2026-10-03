@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 from system_one_control.cli import _run_name, app
 from system_one_control.puzzles import LEVELS
 
-runner = CliRunner()
+runner = CliRunner(env={"FORCE_COLOR": None, "NO_COLOR": "1", "COLUMNS": "200"})
 THREE = "gen-01-01,gen-01-02,gen-01-03"
 SOLVER = ["--players", "solver", "--puzzles", THREE]
 WHEN = datetime(2026, 9, 23, 18, 45)
