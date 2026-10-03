@@ -144,15 +144,14 @@ def write_table(name: str, header: list[str], rows: list[list]) -> None:
 
     lines = ["| " + " | ".join(header) + " |", "|" + " --- |" * len(header)]
     lines += ["| " + " | ".join(text(cell) for cell in row) + " |" for row in rows]
-    (OUT / f"{name}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (OUT / f"{name}.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     columns = [
         c
         for h, cell in zip(header, rows[0], strict=True)
         for c in ([h, f"{h} low", f"{h} high"] if isinstance(cell, tuple) else [h])
     ]
     with (OUT / f"{name}.csv").open("w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file, lineterminator="
-")
+        writer = csv.writer(file, lineterminator="\n")
         writer.writerow(columns)
         writer.writerows(
             [v for cell in row for v in (cell if isinstance(cell, tuple) else (cell,))]

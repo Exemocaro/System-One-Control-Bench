@@ -17,4 +17,4 @@
 | DeepSeek V4.1 Flash | map only | 100 | 0.39 [0.30, 0.49] | 0.55 [0.47, 0.62] | 0.481 | 0.347 | 0.625 |
 | DeepSeek V4.1 Flash | full context | 100 | 0.60 [0.50, 0.69] | 0.72 [0.64, 0.79] | 0.664 | 0.542 | 0.098 |
 | DeepSeek V4.1 Flash (reasoning) | map only | 90 | 0.72 [0.62, 0.81] | 0.82 [0.76, 0.88] | 0.792 | 0.669 | 0.120 |
-| DeepSeek V4.1 Flash (reasoning) | full context | 89 | 0.87 [0.79, 0.93] | 0.91 [0.85, 0.95] | 0.883 | 0.806 | 0.014 |
+| DeepSeek V4.1 Flash (reasoning) | full context | 90 | 0.86 [0.78, 0.92] | 0.90 [0.84, 0.95] | 0.873 | 0.797 | 0.015 |

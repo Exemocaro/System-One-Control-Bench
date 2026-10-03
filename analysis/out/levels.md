@@ -195,4 +195,4 @@
 | DeepSeek V4.1 Flash (reasoning) | full context | 8 | 10 | 0.90 [0.70, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 10 | 10 | 0.90 [0.70, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 12 | 10 | 0.70 [0.40, 1.00] |
-| DeepSeek V4.1 Flash (reasoning) | full context | 15 | 9 | 0.44 [0.11, 0.78] |
+| DeepSeek V4.1 Flash (reasoning) | full context | 15 | 10 | 0.40 [0.10, 0.70] |
