@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import random
+import re
 from collections import defaultdict
 from collections.abc import Collection, Sequence
 from datetime import date
@@ -67,7 +68,6 @@ def submit(
     player: str | None = None,
     kind: str | None = None,
     day: str | None = None,
-    puzzles: Collection[str] | None = None,
     leaderboard: Path = LEADERBOARD_DIR,
 ) -> Path:
     """Validate core-track files and write the player's entry and core games. Returns its path."""
@@ -77,16 +77,16 @@ def submit(
         if len(players) != 1:
             raise ValueError(f"one player per submission, got: {', '.join(sorted(players))}")
         player = next(iter(players))
+    if not re.fullmatch(r"[a-z0-9._-]+", player):
+        raise ValueError(f"player names use [a-z0-9._-], not {player!r}")
     records = [record for record in records if record.player == player]
     if any(record.rules != "compass" for record in records):
         raise ValueError("only compass records go on the core leaderboard")
     seen = [(r.puzzle, r.condition, r.player, r.rules) for r in records]
     if len(set(seen)) != len(seen):
         raise ValueError("duplicate games in the submission")
-    if puzzles is None:
-        puzzles = set(load_puzzles())
     failures = [f for path in files for f in validate_file(path)]
-    missing = sorted(set(core_scope(puzzles, player)) - set(seen))
+    missing = sorted(set(core_scope(set(load_puzzles()), player)) - set(seen))
     failures += [f"missing game {key}" for key in missing]
     if failures:
         raise ValueError("submission does not validate:\n" + "\n".join(failures))
@@ -96,6 +96,8 @@ def submit(
         kind = "baseline"
     if kind not in KINDS:
         raise ValueError(f"unknown kind {kind!r}; known: {', '.join(KINDS)}")
+    if kind == "baseline" and player not in BASELINES:
+        raise ValueError(f"only {', '.join(BASELINES)} are baselines, not {player!r}")
     core = [r for r in records if r.condition in CORE_CONDITIONS]
     stamp_of = next((r.benchmark for r in core if r.benchmark is not None), None)
     stamp_of = stamp_of or stamp()
@@ -114,7 +116,6 @@ def submit(
         "benchmark": stamp_of,
         "track": "core",
         "results": results.name,
-        "puzzles": sorted({r.puzzle for r in core}),
         "conditions": condition_stats(core),
         "cost": round(sum(costs), 4) if costs else None,
         "latency": round(sorted(waits)[len(waits) // 2], 2) if waits else None,
@@ -136,6 +137,15 @@ def ranked(entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: e["conditions"]["everything"]["progress"][0], reverse=True)
 
 
+def player_cell(entry: dict[str, Any]) -> str:
+    """The markdown player cell: a link for clean http(s) urls, else escaped text."""
+    name = html.escape(safe(entry["name"]))
+    url = entry["url"]
+    if page_url(url) and not any(mark in url for mark in ("(", ")", " ", '"')):
+        return f"[{name}]({url})"
+    return name
+
+
 def build_table(entries: Sequence[dict[str, Any]]) -> str:
     """The core leaderboard as markdown, sorted by everything progress."""
     header = [
@@ -151,8 +161,7 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
     ]
     lines = ["|" + "|".join(header) + "|", "|" + "|".join(["---"] * len(header)) + "|"]
     for entry in ranked(entries):
-        name = safe(entry["name"])
-        row = [f"[{name}]({safe(entry['url'])})" if entry["url"] else name]
+        row = [player_cell(entry)]
         for condition in ("everything", "map"):
             for metric in ("won", "progress", "spl"):
                 mean, lo, hi = entry["conditions"][condition][metric]
@@ -227,6 +236,10 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     entries = []
     for path in sorted((leaderboard / "entries").glob("*.json")):
         meta = json.loads(path.read_text(encoding="utf-8"))
+        if path.stem != meta["player"]:
+            raise ValueError(
+                f"{path.name} holds the entry for {meta['player']!r}, not its own name"
+            )
         made = submit(
             [leaderboard / "results" / meta["results"]],
             name=meta["name"],
@@ -236,7 +249,6 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
             player=meta["player"],
             kind=meta["kind"],
             day=meta["date"],
-            puzzles=set(meta["puzzles"]),
             leaderboard=leaderboard,
         )
         entries.append(json.loads(made.read_text(encoding="utf-8")))

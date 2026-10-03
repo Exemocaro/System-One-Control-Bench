@@ -20,3 +20,4 @@ jobs:
           done
       - run: uv run socb leaderboard
       - run: git diff --exit-code -- leaderboard/ docs/index.html
+      - run: test -z "$(git status --porcelain -- leaderboard docs/index.html)"

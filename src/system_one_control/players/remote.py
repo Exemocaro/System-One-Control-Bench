@@ -307,7 +307,7 @@ class LLMPlayer(HTTPPlayer):
         base_url: str = OPENROUTER_URL,
         api_key: str | None = None,
     ) -> None:
-        if api_key is None and base_url == OPENROUTER_URL:
+        if api_key is None and client is None and base_url == OPENROUTER_URL:
             api_key = lookup_key([OPENROUTER_KEY_NAME], "OpenRouter")
         super().__init__(
             api_key=api_key,

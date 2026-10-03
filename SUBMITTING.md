@@ -35,10 +35,12 @@ then benchmark it the same way (still pass `--allow-paid` unless `paid = false`)
 
 ## Submit it
 
-`uv run socb submit benchmarks/<file>.jsonl --name MyModel --org MyOrg --url https://example.com
+`uv run socb submit benchmarks/<file>.jsonl --kind chat --name MyModel --org MyOrg --url https://example.com
 --notes "what it is"` validates the file first (every game replayed: options, best moves,
 won/closest, probabilities, full core coverage) and writes `leaderboard/entries/<player>.json`
 with the entry plus the player's core games in `leaderboard/results/<player>.jsonl`.
+`--kind` (bounded decision, chat, local or baseline) is required except for the four
+baselines; a file with several players needs `--player` to pick one.
 Then `uv run socb leaderboard` and commit its outputs (`entries/`, `README.md`, `docs/index.html`).
 Open a pull request; CI revalidates and rebuilds, failing on any diff.
 

@@ -104,19 +104,28 @@ def players_from_toml(path: Path) -> dict[str, PlayerEntry]:
     return entries
 
 
+def toml_key(spec: dict[str, Any]) -> str | None:
+    """The API key a players.toml entry names, or None for entries without one."""
+    env = spec.get("api_key_env")
+    if env is None:
+        return None
+    if (key := setting(env)) is None:
+        raise ValueError(f"set {env} for this player")
+    return key
+
+
 def chat_player(spec: dict[str, Any], paid: bool) -> PlayerEntry:
     """A chat model on any OpenAI-compatible endpoint, asked as the OpenRouter ones are."""
     for field in ("base_url", "model"):
         if field not in spec:
             raise ValueError(f"chat player needs {field!r}")
-    key = setting(spec["api_key_env"]) if spec.get("api_key_env") else None
     return PlayerEntry(
         partial(
             LLMPlayer,
             spec["model"],
             reasoning=spec.get("reasoning", False),
             base_url=spec["base_url"].rstrip("/") + "/chat/completions",
-            api_key=key,
+            api_key=toml_key(spec),
         ),
         paid=paid,
     )
@@ -126,9 +135,8 @@ def decision_player(spec: dict[str, Any], paid: bool) -> PlayerEntry:
     """A bounded decision model behind an HTTP API: state, question and options in, odds out."""
     if "url" not in spec:
         raise ValueError("decision player needs 'url'")
-    key = setting(spec["api_key_env"]) if spec.get("api_key_env") else None
     return PlayerEntry(
-        partial(DecisionPlayer, spec["url"], api_key=key),
+        partial(DecisionPlayer, spec["url"], api_key=toml_key(spec)),
         paid=paid,
     )
 

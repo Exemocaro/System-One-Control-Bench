@@ -12,7 +12,7 @@ from system_one_control.bench import (
     validate_file,
 )
 from system_one_control.cli import app
-from system_one_control.leaderboard import build_page, rebuild, safe, submit
+from system_one_control.leaderboard import build_page, player_cell, rebuild, safe, submit
 from system_one_control.players import PlayerEntry, players_from_toml
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.players.remote import DecisionPlayer, LLMPlayer
@@ -68,7 +68,8 @@ api_key_env = "MY_API_KEY"
 """
 
 
-def test_players_from_toml_builds_chat_and_decision_players(tmp_path):
+def test_players_from_toml_builds_chat_and_decision_players(tmp_path, monkeypatch):
+    monkeypatch.setenv("MY_API_KEY", "secret")
     path = tmp_path / "players.toml"
     path.write_text(TOML, encoding="utf-8")
     entries = players_from_toml(path)
@@ -77,7 +78,8 @@ def test_players_from_toml_builds_chat_and_decision_players(tmp_path):
     assert entries["chatty"].paid and entries["brain"].paid
 
 
-def test_chat_is_paid_unless_the_file_says_otherwise(tmp_path):
+def test_chat_is_paid_unless_the_file_says_otherwise(tmp_path, monkeypatch):
+    monkeypatch.setenv("MY_API_KEY", "secret")
     path = tmp_path / "players.toml"
     free = '\n[players.free]\nkind = "chat"\nbase_url = "https://x/v"\nmodel = "m"\npaid = false\n'
     path.write_text(TOML + free, encoding="utf-8")
@@ -91,12 +93,18 @@ def test_chat_is_paid_unless_the_file_says_otherwise(tmp_path):
         ('[players.x]\nkind = "carrier-pigeon"', "kind must be chat or decision"),
         ('[players.x]\nkind = "chat"\nmodel = "m"', "needs 'base_url'"),
         ('[players.x]\nkind = "decision"', "needs 'url'"),
+        (
+            '[players.x]\nkind = "chat"\nbase_url = "https://x/v"\nmodel = "m"\n'
+            'api_key_env = "NO_SUCH_KEY_XYZ"',
+            "NO_SUCH_KEY_XYZ",
+        ),
     ],
     ids=[
         "a name clash with a built-in",
         "an unknown kind",
         "a chat player without a url",
         "a decision player without a url",
+        "a missing api key variable",
     ],
 )
 def test_bad_toml_entries_are_refused(tmp_path, section, message):
@@ -119,6 +127,16 @@ def tiny_run():
 
 def tiny_names():
     return {puzzle.name for puzzle in list(load_puzzles().values())[:2]}
+
+
+def scope(monkeypatch, names):
+    """Check coverage against these puzzles instead of all 100."""
+    puzzles = load_puzzles()
+    first = next(iter(puzzles.values()))
+    monkeypatch.setattr(
+        "system_one_control.leaderboard.load_puzzles",
+        lambda: {name: puzzles.get(name, first) for name in names},
+    )
 
 
 def tiny_file(tmp_path):
@@ -163,7 +181,8 @@ def test_validate_fails_a_tampered_game(tmp_path, tamper):
     assert validate_file(path) != []
 
 
-def test_submit_writes_an_entry_and_core_games_then_rebuilds_the_table(tmp_path):
+def test_submit_writes_an_entry_and_core_games_then_rebuilds_the_table(tmp_path, monkeypatch):
+    scope(monkeypatch, tiny_names())
     path = tiny_file(tmp_path)
     board = tmp_path / "board"
     entry = submit(
@@ -172,7 +191,6 @@ def test_submit_writes_an_entry_and_core_games_then_rebuilds_the_table(tmp_path)
         org="",
         url="",
         notes="",
-        puzzles=tiny_names(),
         leaderboard=board,
     )
     saved = json.loads(entry.read_text(encoding="utf-8"))
@@ -205,7 +223,8 @@ def rewrite(path, tamper):
         ),
     ],
 )
-def test_submit_refuses_games_outside_the_core_track(tmp_path, tamper, message):
+def test_submit_refuses_games_outside_the_core_track(tmp_path, tamper, message, monkeypatch):
+    scope(monkeypatch, tiny_names())
     path = tiny_file(tmp_path)
     rewrite(path, tamper)
     with pytest.raises(ValueError, match=message):
@@ -215,12 +234,12 @@ def test_submit_refuses_games_outside_the_core_track(tmp_path, tamper, message):
             org="",
             url="",
             notes="",
-            puzzles=tiny_names(),
             leaderboard=tmp_path / "b",
         )
 
 
-def test_submit_needs_a_kind_for_players_outside_the_baselines(tmp_path):
+def test_submit_needs_a_kind_for_players_outside_the_baselines(tmp_path, monkeypatch):
+    scope(monkeypatch, tiny_names())
     path = tiny_file(tmp_path)
     rewrite(
         path,
@@ -231,7 +250,6 @@ def test_submit_needs_a_kind_for_players_outside_the_baselines(tmp_path):
         "org": "",
         "url": "",
         "notes": "",
-        "puzzles": tiny_names(),
         "leaderboard": tmp_path / "b",
     }
     with pytest.raises(ValueError, match="--kind"):
@@ -274,18 +292,27 @@ def test_the_page_escapes_names_and_links():
     assert "&lt;/script&gt;" in page
 
 
-def test_submit_refuses_a_run_with_missing_or_mixed_players(tmp_path):
+def test_submit_refuses_a_run_with_missing_or_mixed_players(tmp_path, monkeypatch):
     path = tiny_file(tmp_path)
     names = tiny_names()
+    scope(monkeypatch, names | {"nope"})
     with pytest.raises(ValueError, match="missing game"):
-        submit([path], name="x", org="", url="", notes="", puzzles=names | {"nope"})
+        submit([path], name="x", org="", url="", notes="", leaderboard=tmp_path / "b")
+    scope(monkeypatch, names)
     lines = path.read_text(encoding="utf-8").splitlines()
     game = json.loads(lines[0])
     game["player"] = "impostor"
     lines[0] = json.dumps(game)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="one player"):
-        submit([path], name="x", org="", url="", notes="", puzzles=names)
+        submit([path], name="x", org="", url="", notes="", leaderboard=tmp_path / "b")
+
+
+def test_a_given_client_skips_the_api_key_lookup(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    client, _ = watching({"choices": [{"message": {"content": '{"option": "option_1"}'}}]})
+    player = LLMPlayer("m", reasoning=False, client=client)
+    assert player.choose(turn("####\n#AG#\n####")).move is not None
 
 
 def watching(reply) -> tuple[httpx.Client, list[dict]]:
@@ -297,6 +324,59 @@ def watching(reply) -> tuple[httpx.Client, list[dict]]:
         return httpx.Response(200, json=reply)
 
     return httpx.Client(transport=httpx.MockTransport(handle)), sent
+
+
+@pytest.mark.parametrize(
+    ("player", "kind", "message"),
+    [
+        ("fakegpt", "baseline", "only random, greedy, greedy-walls, solver are baselines"),
+        ("Bad Name!", None, "a-z0-9"),
+    ],
+    ids=["baseline kind for another player", "a player name outside [a-z0-9._-]"],
+)
+def test_submit_names_are_checked(tmp_path, monkeypatch, player, kind, message):
+    scope(monkeypatch, tiny_names())
+    path = tiny_file(tmp_path)
+    rewrite(
+        path,
+        lambda lines: [json.dumps(json.loads(line) | {"player": player}) for line in lines],
+    )
+    with pytest.raises(ValueError, match=message):
+        submit(
+            [path],
+            name="x",
+            org="",
+            url="",
+            notes="",
+            kind=kind,
+            leaderboard=tmp_path / "b",
+        )
+
+
+@pytest.mark.parametrize(
+    ("name", "url", "expected"),
+    [
+        ("m", "https://example.com/m", "[m](https://example.com/m)"),
+        ("m", "javascript:alert(1)", "m"),
+        ("m", "https://example.com/a)b", "m"),
+        ("a|b</>", "https://example.com", "[a/b&lt;/&gt;](https://example.com)"),
+    ],
+    ids=["a clean link", "no javascript links", "no brackets in links", "escaped text"],
+)
+def test_the_table_links_names_safely(name, url, expected):
+    assert player_cell({"name": name, "url": url}) == expected
+
+
+def test_rebuild_refuses_an_entry_named_for_another_player(tmp_path, monkeypatch):
+    scope(monkeypatch, tiny_names())
+    path = tiny_file(tmp_path)
+    board = tmp_path / "board"
+    submit([path], name="Tiny Solver", org="", url="", notes="", leaderboard=board)
+    entry = board / "entries" / "solver.json"
+    (board / "entries" / "x.json").write_text(entry.read_text(encoding="utf-8"), encoding="utf-8")
+    entry.unlink()
+    with pytest.raises(ValueError, match=r"x[.]json"):
+        rebuild(leaderboard=board, docs=tmp_path / "docs")
 
 
 def test_a_chat_model_elsewhere_gets_no_openrouter_fields():
