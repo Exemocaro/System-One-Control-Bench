@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from collections.abc import Sequence
 
-from system_one_control.players import Choice, Player, Turn
+from system_one_control.players.base import Choice, Player, Turn
 from system_one_control.world import Board, CompassRules, Move, Rules, Solver, next_target
 
 

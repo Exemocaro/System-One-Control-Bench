@@ -9,6 +9,7 @@ from pathlib import Path
 
 import yaml
 
+from system_one_control.players.baselines import WallAwareGreedyPlayer
 from system_one_control.world import (
     COMPASS,
     DOOR,
@@ -87,9 +88,6 @@ MAX_ATTEMPTS = 20000
 
 def greedy_wins(board: Board) -> bool:
     """Whether walking straight at each target, around nothing, reaches the goal in time."""
-    # Imported here: the players are built on the prompts, which are built on this module.
-    from system_one_control.players.baselines import WallAwareGreedyPlayer
-
     player = WallAwareGreedyPlayer()
     moves = SOLVER.fewest_moves(board)
     if moves is None:

@@ -3,16 +3,14 @@ from dataclasses import replace
 
 import pytest
 
-from system_one_control.prompts import (
-    COMPONENTS,
-    CONDITIONS,
+from system_one_control.examples import (
     EXAMPLE_DIR,
     EXAMPLE_PUZZLE,
-    Condition,
     example,
     example_moves,
     write_examples,
 )
+from system_one_control.prompts import COMPONENTS, CONDITIONS, Condition
 from system_one_control.puzzles import load_puzzles
 from system_one_control.world import (
     RULES,

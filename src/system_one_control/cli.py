@@ -20,8 +20,9 @@ from system_one_control.bench import (
     summarize,
     usage,
 )
+from system_one_control.examples import write_examples
 from system_one_control.players import PLAYERS
-from system_one_control.prompts import CONDITIONS, write_examples
+from system_one_control.prompts import CONDITIONS
 from system_one_control.puzzles import LEVELS, PUZZLE_DIR, load_puzzles, write_level
 from system_one_control.world import RULES, Rules, make_rules
 

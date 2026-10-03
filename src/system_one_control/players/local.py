@@ -13,8 +13,8 @@ import time
 from collections.abc import Callable, Collection, Sequence
 from typing import Any
 
-from system_one_control.players import Choice, Player, Turn, answer_choice
-from system_one_control.players.remote import llm_messages, setting
+from system_one_control.players.base import Choice, Player, Turn, answer_choice, setting
+from system_one_control.players.remote import llm_messages
 from system_one_control.prompts import Request
 
 DEVICE_NAME = "SOCB_DEVICE"  # such as cpu or cuda; by default the model picks

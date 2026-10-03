@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import time
 from collections.abc import Callable, Sequence
@@ -11,7 +10,6 @@ from dataclasses import replace
 from typing import Any, TypeVar
 
 import httpx
-from dotenv import load_dotenv
 from typesafe_sdk import (
     RetryPolicy,
     TypeSafeAPIConnectionError,
@@ -21,7 +19,7 @@ from typesafe_sdk import (
     TypeSafeRateLimitError,
 )
 
-from system_one_control.players import Choice, Player, Turn, answer_choice
+from system_one_control.players.base import Choice, Player, Turn, answer_choice, api_key
 from system_one_control.prompts import Request
 
 JEV_MODEL = "jev-1.13.0"
@@ -43,20 +41,6 @@ def server_turned_away(error: Exception) -> bool:
         return False
     refused = (TypeSafeRateLimitError, TypeSafeInternalServerError, TypeSafeAPIConnectionError)
     return isinstance(error, refused)
-
-
-def setting(name: str) -> str | None:
-    """A setting from the environment, or else from .env; None if empty."""
-    load_dotenv()
-    return os.environ.get(name) or None
-
-
-def api_key(names: Sequence[str], service: str) -> str:
-    """The first of these settings that is set: an API key for the service."""
-    for name in names:
-        if key := setting(name):
-            return key
-    raise RuntimeError(f"no {service} API key: set {' or '.join(names)} in .env")
 
 
 T = TypeVar("T")
