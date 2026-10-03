@@ -16,6 +16,15 @@ def puzzle(text: str, level: int) -> Puzzle:
     )
 
 
+def turn(text: str) -> Turn:
+    board = Board.parse(text)
+    return Turn(board, CompassRules(), MAP.render(board, CompassRules()))
+
+
+def option_for(turn: Turn, move: str) -> str:
+    return next(option.id for option in turn.request.options if option.move == move)
+
+
 class AlwaysPlayer(Player):
     """Always answers the same move, allowed or not."""
 
