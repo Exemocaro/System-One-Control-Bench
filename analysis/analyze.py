@@ -151,7 +151,8 @@ def write_table(name: str, header: list[str], rows: list[list]) -> None:
         for c in ([h, f"{h} low", f"{h} high"] if isinstance(cell, tuple) else [h])
     ]
     with (OUT / f"{name}.csv").open("w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, lineterminator="
+")
         writer.writerow(columns)
         writer.writerows(
             [v for cell in row for v in (cell if isinstance(cell, tuple) else (cell,))]
