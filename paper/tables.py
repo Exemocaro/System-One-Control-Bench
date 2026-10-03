@@ -74,7 +74,7 @@ def example():
     write(
         "example_request",
         "// src: examples/everything.json; complete fields, no added display line breaks\n"
-        "#show raw: set text(size: 7.5pt)\n#set par(leading: 0.2em)\n"
+        "#show raw: set text(size: 7.5pt)\n#set par(leading: 0.55em)\n"
         f'#raw({json.dumps(content)}, block: true, lang: "text")\n',
     )
     board = [

@@ -2,4 +2,4 @@
 #figure(table(columns: (1.1fr, 1fr, 1fr, 1fr, 1fr), stroke: none, inset: 3pt,
 table.header([Model/baseline], [Map: won [95% CI]], [Full: won [95% CI]], [Map: progress / SPL], [Full: progress / SPL]),
 @ROWS@
-), caption: [Compass completion and efficiency: Compass games: n=100 per available model/input. Won-rate intervals resample puzzles; baselines use the map alone. Full means full context.], placement: top) <tab:main>
+), caption: [Compass completion and efficiency. Each model/input has 100 games; intervals resample puzzles; baselines use the map alone. Full means full context.], placement: top) <tab:main>

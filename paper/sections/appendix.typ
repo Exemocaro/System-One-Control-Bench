@@ -10,9 +10,6 @@ This is the compass, full-context request for @fig:example, with every field and
 #pagebreak()
 = Hypotheses specified before the main evaluation <app:hypotheses>
 
-These hypotheses were specified before the main evaluation. The table reproduces their statements, results and verdicts from the current analysis.
-// src: analysis/out/hypotheses.md
-
 #include "hypothesis_table.typ"
 
 = Prompt history <app:history>
