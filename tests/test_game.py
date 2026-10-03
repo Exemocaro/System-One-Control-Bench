@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from system_one_control.game import Game
+from system_one_control.bench import Game
 from system_one_control.players import Choice, Player, Turn
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.prompts import CONDITIONS

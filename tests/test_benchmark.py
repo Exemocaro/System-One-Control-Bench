@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from system_one_control.benchmark import (
+from system_one_control.bench import (
     GameRecord,
     MoveRecord,
     estimate_paid_calls,

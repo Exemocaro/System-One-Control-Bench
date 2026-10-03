@@ -7,7 +7,7 @@ from typing import TypeVar
 
 import typer
 
-from system_one_control.benchmark import (
+from system_one_control.bench import (
     BENCHMARK_DIR,
     GameRecord,
     estimate_paid_calls,

@@ -170,7 +170,7 @@ def example_moves(puzzle: Puzzle) -> tuple[str, ...]:
 def example(condition: Condition, puzzle: Puzzle) -> str:
     """The JSON body sent to Jev under this condition, two moves into the puzzle."""
     # Imported here: the game and the players are built on this module's Request.
-    from system_one_control.game import Game
+    from system_one_control.bench import Game
     from system_one_control.players.baselines import ScriptedPlayer
     from system_one_control.players.remote import jev_body
 

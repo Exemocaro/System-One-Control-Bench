@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from system_one_control.game import Game, Step
+from system_one_control.bench import Game, Step
 from system_one_control.players import PLAYERS, make_player
 from system_one_control.prompts import CONDITIONS, Request
 from system_one_control.puzzles import load_puzzles
