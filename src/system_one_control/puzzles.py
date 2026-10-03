@@ -187,16 +187,16 @@ class PuzzleKind:
 
 
 ANY = PuzzleKind("")
-NEEDS_PLANNING = PuzzleKind("that walking straight at the target cannot solve", needs_planning=True)
+NEEDS_PLANNING = PuzzleKind("that walking straight at the target cannot win", needs_planning=True)
 # Up to level 4, a key leaves no room for a wrong turn: every target is at most two steps away.
 NEEDS_PLANNING_KEYLESS = PuzzleKind(
-    "without a key, that walking straight at the goal cannot solve",
+    "without a key, that walking straight at the goal cannot win",
     needs_planning=True,
     keyless=True,
 )
-GREEDY_CAN_WIN = PuzzleKind("that walking straight at the target solves", greedy_can_win=True)
+GREEDY_CAN_WIN = PuzzleKind("that walking straight at the target wins", greedy_can_win=True)
 LONGER_ROUTE = PuzzleKind(
-    "that walking straight at the target cannot solve, with a second, longer route",
+    "that walking straight at the target cannot win, with a second, longer route",
     needs_planning=True,
     longer_route=True,
 )
@@ -213,7 +213,7 @@ TIMES = {1: "once", 2: "twice", 3: "three times", 4: "four times", 5: "five time
 def with_detours(least: int) -> PuzzleKind:
     """Puzzles the greedy player cannot win, whose every shortest route turns away `least` times."""
     return PuzzleKind(
-        "that walking straight at the target cannot solve, whose every shortest route turns away "
+        "that walking straight at the target cannot win, whose every shortest route turns away "
         f"from its target at least {TIMES[least]}",
         needs_planning=True,
         min_detours=least,

@@ -1,4 +1,4 @@
-description: A generated 12x9 room that walking straight at the target cannot solve, with a second, longer route.
+description: A generated 12x9 room that walking straight at the target cannot win, with a second, longer route.
 level: 10
 map: |
   ############

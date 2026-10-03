@@ -1,4 +1,4 @@
-description: A generated 13x4 room without a key, that walking straight at the goal cannot solve.
+description: A generated 13x4 room without a key, that walking straight at the goal cannot win.
 level: 3
 map: |
   #############

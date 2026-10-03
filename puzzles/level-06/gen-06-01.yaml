@@ -1,4 +1,4 @@
-description: A generated 5x8 room that walking straight at the target cannot solve.
+description: A generated 5x8 room that walking straight at the target cannot win.
 level: 6
 map: |
   #####

@@ -1,4 +1,4 @@
-description: A generated 11x5 maze that walking straight at the target cannot solve.
+description: A generated 11x5 maze that walking straight at the target cannot win.
 level: 10
 map: |
   ###########

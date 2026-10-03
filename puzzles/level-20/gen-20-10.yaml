@@ -1,4 +1,4 @@
-description: A generated 15x21 maze that walking straight at the target cannot solve, whose every shortest route turns away from its target at least five times, inside an outer wall 5 thick.
+description: A generated 15x21 maze that walking straight at the target cannot win, whose every shortest route turns away from its target at least five times, inside an outer wall 5 thick.
 level: 20
 map: |
   ###############

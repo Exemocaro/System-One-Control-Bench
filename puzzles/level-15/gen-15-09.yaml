@@ -1,4 +1,4 @@
-description: A generated 12x6 room that walking straight at the target cannot solve, whose every shortest route turns away from its target at least three times.
+description: A generated 12x6 room that walking straight at the target cannot win, whose every shortest route turns away from its target at least three times.
 level: 15
 map: |
   ############

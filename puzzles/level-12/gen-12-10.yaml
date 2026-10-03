@@ -1,4 +1,4 @@
-description: A generated 14x13 room that walking straight at the target cannot solve, whose every shortest route turns away from its target at least twice, inside an outer wall 3 thick.
+description: A generated 14x13 room that walking straight at the target cannot win, whose every shortest route turns away from its target at least twice, inside an outer wall 3 thick.
 level: 12
 map: |
   ##############
