@@ -122,7 +122,7 @@ def submit(
     }
     (leaderboard / "entries").mkdir(parents=True, exist_ok=True)
     path = leaderboard / "entries" / f"{player}.json"
-    path.write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8", newline="")
     return path
 
 
@@ -245,8 +245,9 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     readme.write_text(
         "# Leaderboard\n\nCore track, best everything progress first.\n\n" + build_table(entries),
         encoding="utf-8",
+        newline="",
     )
     page = (docs or leaderboard.parents[0] / "docs") / "index.html"
     page.parent.mkdir(parents=True, exist_ok=True)
-    page.write_text(build_page(entries), encoding="utf-8")
+    page.write_text(build_page(entries), encoding="utf-8", newline="")
     return readme, page
