@@ -20,6 +20,18 @@ from system_one_control.bench import (
     summarize,
     usage,
 )
+from system_one_control.exam import (
+    EXAM_DIR,
+    ITEMS_FILE,
+    ExamItem,
+    ExamRecord,
+    check_same_exam,
+    exam_keys,
+    load_exam,
+    run_exam,
+    save_exam,
+    split_unanswered,
+)
 from system_one_control.examples import write_examples
 from system_one_control.players import PLAYERS
 from system_one_control.prompts import CONDITIONS
@@ -164,6 +176,87 @@ def benchmark(
     if errors:
         typer.echo(f"\n{errors} games ended in an error; --resume --out {out} plays them again")
     typer.echo(f"\nSaved to {out} and {out.with_suffix('.txt').name}")
+
+
+@app.command()
+def exam(
+    players: str = typer.Option(
+        "random,greedy,greedy-walls,solver", help="Comma-separated player names."
+    ),
+    conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
+    items: Path = typer.Option(ITEMS_FILE, help="The exam items file."),
+    allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
+    workers: int = typer.Option(3, help="How many answers to ask for at once."),
+    out: Path | None = typer.Option(
+        None,
+        help="Where to save every answer. Default: exam/<date>_<time>_<what was run>.jsonl",
+    ),
+    resume: bool = typer.Option(
+        False, help="Finish an earlier exam in --out: ask its missing items and its errors again."
+    ),
+) -> None:
+    """Ask every chosen player every exam item under every chosen condition, once each."""
+    lines = [line for line in items.read_text(encoding="utf-8").splitlines() if line.strip()]
+    chosen_items = [ExamItem.from_json(line) for line in lines]
+    chosen_conditions = _pick(CONDITIONS, conditions, "condition")
+    names = _pick({name: name for name in PLAYERS}, players, "player")
+    puzzles = load_puzzles()
+    keys = exam_keys(chosen_items, chosen_conditions, {name: PLAYERS[name].build for name in names})
+
+    if out is None:
+        name = _run_name(names, conditions, "all", "all", rules="compass")
+        out = EXAM_DIR / f"{name}.jsonl"
+    kept: list[ExamRecord] = []
+    if out.exists():
+        if not resume:
+            raise typer.BadParameter(
+                f"{out} already exists; add --resume to finish it, or choose another --out"
+            )
+        loaded = load_exam(out)
+        message = check_same_exam(loaded, keys)
+        if message:
+            raise typer.BadParameter(f"{out} {message}")
+        kept, _ = split_unanswered(loaded)
+    done = {record.key for record in kept}
+    calls = sum(1 for key in keys if key not in done and PLAYERS[key[4]].paid)
+    if calls and not allow_paid:
+        raise typer.BadParameter(f"this can ask up to {calls} paid questions; add --allow-paid")
+    if resume:
+        typer.echo(f"Keeping {len(kept)} answered items, asking {len(keys) - len(kept)}")
+
+    save_exam(kept, out)  # drops the errored answers, so they are asked again
+    try:
+        with out.open("a", encoding="utf-8", newline="") as file:
+
+            def write(record: ExamRecord) -> None:
+                file.write(record.to_json() + "\n")
+                file.flush()
+
+            fresh = run_exam(
+                puzzles,
+                chosen_items,
+                chosen_conditions,
+                {name: PLAYERS[name].build for name in names},
+                workers=workers,
+                done=done,
+                on_record=write,
+            )
+    except BaseException:
+        typer.echo(
+            f"\nStopped. Every finished answer is saved in {out}; to finish the exam, repeat the "
+            f"command with --resume --out {out}",
+            err=True,
+        )
+        raise
+
+    order = {key: index for index, key in enumerate(keys)}
+    records = sorted([*kept, *fresh], key=lambda record: order[record.key])
+    save_exam(records, out)
+
+    errors = sum(record.error is not None for record in records)
+    if errors:
+        typer.echo(f"\n{errors} answers ended in an error; --resume --out {out} asks them again")
+    typer.echo(f"\nSaved {len(records)} answers to {out}")
 
 
 def _run_name(
