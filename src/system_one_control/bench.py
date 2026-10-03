@@ -356,6 +356,66 @@ def load(path: Path) -> list[GameRecord]:
     return records
 
 
+def split_finished(records: Sequence[GameRecord]) -> tuple[list[GameRecord], list[GameRecord]]:
+    """The records split two ways: the finished games to keep, the errored ones to play again."""
+    kept = [record for record in records if record.error is None]
+    return kept, [record for record in records if record.error is not None]
+
+
+def check_same_run(
+    loaded: Sequence[GameRecord], keys: Collection[GameKey], rules_of: Mapping[str, str]
+) -> str | None:
+    """Why a results file cannot be resumed by this run, or None if it can."""
+    wanted = set(keys)
+    strays = [record.key for record in loaded if record.key not in wanted]
+    if strays:
+        return (
+            f"holds games this run would not play, such as {strays[0]}; "
+            "resume with the same --players, --levels, --puzzles and --conditions"
+        )
+    other = next((r for r in loaded if r.rules != rules_of[r.puzzle]), None)
+    if other:
+        return f"holds games played under {other.rules} rules; resume with the same --rules"
+    return None
+
+
+@dataclass(frozen=True)
+class Scores:
+    """One group's numbers: the games won at each level, then the scores over all games."""
+
+    by_level: dict[int, tuple[int, int]]  # level: (won, played)
+    won: int
+    played: int
+    progress: float
+    spl: float
+    errors: int
+
+
+def scores(records: Sequence[GameRecord]) -> dict[tuple[str, str], Scores]:
+    """The numbers behind `summarize`, per (player, condition)."""
+    groups: dict[tuple[str, str], list[GameRecord]] = defaultdict(list)
+    for record in records:
+        groups[(record.player, record.condition)].append(record)
+    return {key: _score(group) for key, group in groups.items()}
+
+
+def _score(group: Sequence[GameRecord]) -> Scores:
+    at_level: dict[int, list[GameRecord]] = defaultdict(list)
+    for record in group:
+        at_level[record.level].append(record)
+    return Scores(
+        by_level={
+            level: (sum(r.won for r in records), len(records))
+            for level, records in at_level.items()
+        },
+        won=sum(r.won for r in group),
+        played=len(group),
+        progress=sum(r.progress for r in group) / len(group),
+        spl=sum(r.fewest_moves / len(r.moves) if r.won else 0.0 for r in group) / len(group),
+        errors=sum(r.error is not None for r in group),
+    )
+
+
 def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
     """Per player and condition: the games won at each level, then scores over all games.
 
@@ -369,32 +429,31 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
     the best score in each column, the solver aside, is in bold.
     """
     levels = sorted({r.level for r in records})
-    groups: dict[tuple[str, str], list[GameRecord]] = defaultdict(list)
-    for record in records:
-        groups[(record.player, record.condition)].append(record)
+    all_scores = scores(records)
     order = list(PLAYERS)
-    ranked = sorted(groups, key=lambda key: order.index(key[0]) if key[0] in order else len(order))
+    ranked = sorted(
+        all_scores, key=lambda key: order.index(key[0]) if key[0] in order else len(order)
+    )
 
     header = ["player", "condition", *(f"{d} away" for d in levels), "won", "progress", "SPL"]
     header.append("errors")
     rows: list[tuple[str, str, list[tuple[str, float]], str]] = []  # (text, value) per score
     for player, condition in ranked:
-        group = groups[(player, condition)]
-        scores: list[tuple[str, float]] = []
+        group = all_scores[(player, condition)]
+        cells: list[tuple[str, float]] = []
         for level in levels:
-            at_level = [r for r in group if r.level == level]
-            won = sum(r.won for r in at_level)
-            scores.append((f"{won}/{len(at_level)}", won))
-        won = sum(r.won for r in group)
-        progress = sum(r.progress for r in group) / len(group)
-        spl = sum(r.fewest_moves / len(r.moves) if r.won else 0.0 for r in group) / len(group)
-        scores += [(f"{won}/{len(group)}", won), (f"{progress:.2f}", progress), (f"{spl:.2f}", spl)]
-        errors = str(sum(r.error is not None for r in group))
-        rows.append((player, condition, scores, errors))
+            won, played = group.by_level.get(level, (0, 0))
+            cells.append((f"{won}/{played}", won))
+        cells += [
+            (f"{group.won}/{group.played}", group.won),
+            (f"{group.progress:.2f}", group.progress),
+            (f"{group.spl:.2f}", group.spl),
+        ]
+        rows.append((player, condition, cells, str(group.errors)))
 
-    contenders = [scores for player, _, scores, _ in rows if player != CEILING]
+    contenders = [cells for player, _, cells, _ in rows if player != CEILING]
     best = [
-        max((scores[i][1] for scores in contenders), default=0.0) for i in range(len(header) - 3)
+        max((cells[i][1] for cells in contenders), default=0.0) for i in range(len(header) - 3)
     ]
     texts = [header, *([p, c, *(text for text, _ in s), e] for p, c, s, e in rows)]
     widths = [max(len(row[i]) for row in texts) for i in range(len(header))]
@@ -403,9 +462,9 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
         return "  ".join(cell.ljust(width) for cell, width in zip(cells, widths, strict=True))
 
     lines = [line(header), line(["-" * width for width in widths])]
-    for player, condition, scores, errors in rows:
+    for player, condition, cells, errors in rows:
         shown = [player.ljust(widths[0]), condition.ljust(widths[1])]
-        for (text, value), top, width in zip(scores, best, widths[2:-1], strict=True):
+        for (text, value), top, width in zip(cells, best, widths[2:-1], strict=True):
             cell = text.ljust(width)
             if bold_best and player != CEILING and value == top and value > 0:
                 cell = typer.style(cell, bold=True)

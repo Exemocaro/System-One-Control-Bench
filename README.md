@@ -69,9 +69,9 @@ uv run socb benchmark --players jev --allow-paid --resume --out benchmarks/<file
 | --- | --- | --- |
 | `--players` | `random,greedy,greedy-walls,solver` | comma-separated player names |
 | `--levels` | `all` | levels to play, such as `3`, `1,4` or `2-5` |
-| `--scenarios` | `all` | comma-separated scenario names |
+| `--puzzles` | `all` | comma-separated puzzle names |
 | `--conditions` | `map` | comma-separated [condition](#conditions) names, or `all` |
-| `--rules` | each scenario's own: `compass` | play every puzzle under these [rules](#rules-one-step-per-move-or-several): `compass`, `two-moves`, `three-moves`, `up-to-two-moves` or `up-to-three-moves` |
+| `--rules` | each puzzle's own: `compass` | play every puzzle under these [rules](#rules-one-step-per-move-or-several): `compass`, `two-moves`, `three-moves`, `up-to-two-moves` or `up-to-three-moves` |
 | `--allow-paid` | off | required for any player that costs money per move |
 | `--workers` | `3` | games played at once |
 | `--out` | `benchmarks/<date>_<time>_<what was run>.jsonl` | where the results go |
@@ -248,48 +248,47 @@ Half the puzzles at levels 12, 15 and 20 are also walled in more thickly than us
 **Local models.** `laya`, `gliclass` and `qwen3.5-4b` need `uv sync --extra local`, which installs PyTorch; on Windows it comes from PyTorch's CUDA 13.0 index, which needs an NVIDIA driver from 580 on (and runs on the CPU without a GPU). A plain `uv sync` afterwards removes it again, so run them with `uv run --extra local socb benchmark --players laya`. Each model downloads from Hugging Face the first time it plays (about 800 MB for Laya and GLiClass, 9 GB for Qwen3.5-4B), loads once and is shared by every game, and answers one move at a time: it already uses the GPU, or every core. On an RTX 5070 Ti laptop GPU, a Laya move takes about 0.1 s and a GLiClass move 0.3 s; Qwen3.5-4B takes 0.2 s with 4 options and 1.7 s with 84. On a 20-core CPU, Laya takes about 1 s under `compass` and 5 to 6 s under `three-moves`. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`. Qwen3.5-4B needs 9 GB of GPU memory: on a 12 GB GPU, play it alone, since a GPU with too little memory left can make the driver reset, which ends every game under way in an error (`--resume` plays them again).
 - Laya is asked the condition's question with the option texts alone, since their ids carry nothing and Laya gives each option only 48 tokens. Its token budget is stretched to fit the whole request (it defaults to 1,024 tokens, and would otherwise cut the state short without saying so). An option longer than 48 tokens ends the game as an error rather than being cut.
 - GLiClass reads the state as its text, the question as its task prompt and the option texts as its labels. It scores each option from 0 to 1 on its own; the scores are scaled to add up to 1.
-- Qwen3.5-4B is sent the chat the OpenRouter models get, laid out by its own chat template with thinking off, followed by the start of the answer they give, `{"option": "option_`. It writes nothing: the probability of each option is read from its odds for the digits of the option's number, shared at each digit among those that can still make one of the options, and it plays the likeliest. So it gives probabilities, as Jev does, and cannot reason first. Another model is a line in `LOCAL_LLM_MODELS` in `local_players.py`, if its tokenizer writes each digit as a token of its own (it is checked when the model loads).
+- Qwen3.5-4B is sent the chat the OpenRouter models get, laid out by its own chat template with thinking off, followed by the start of the answer they give, `{"option": "option_`. It writes nothing: the probability of each option is read from its odds for the digits of the option's number, shared at each digit among those that can still make one of the options, and it plays the likeliest. So it gives probabilities, as Jev does, and cannot reason first. Another model is a line in `LOCAL_LLM_MODELS` in `players/local.py`, if its tokenizer writes each digit as a token of its own (it is checked when the model loads).
 
-**Chat models.** Gemma 4 26B (`google/gemma-4-26b-a4b-it`), one of the cheapest recent models on OpenRouter whose reasoning can be switched off, at $0.09 per million input tokens and $0.30 per million output tokens (September 2026). DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash`) is a bigger model at $0.14 and $0.42. Both always run on DeepInfra: OpenRouter would otherwise send each call to whichever host is free, and hosts may run a model differently. Another model is a line in `LLM_MODELS` in `llm_players.py`. Each gets the same state, question and options as Jev, and replies with an option id. Without reasoning it may use only 64 tokens, so a model that thinks anyway ends the game as an error rather than running up a bill. A chat answer has no probabilities, so none are saved. The cost of every call is saved with the move. OpenRouter shares a model's capacity between its users and turns calls away when it is busy, so a call is tried again after 5, 15, 30 and 60 seconds; a game that still fails ends as an error, for `--resume`.
+**Chat models.** Gemma 4 26B (`google/gemma-4-26b-a4b-it`), one of the cheapest recent models on OpenRouter whose reasoning can be switched off, at $0.09 per million input tokens and $0.30 per million output tokens (September 2026). DeepSeek V4.1 Flash (`deepseek/deepseek-v4.1-flash`) is a bigger model at $0.14 and $0.42. Both always run on DeepInfra: OpenRouter would otherwise send each call to whichever host is free, and hosts may run a model differently. Another model is a line in `LLM_MODELS` in `players/remote.py`. Each gets the same state, question and options as Jev, and replies with an option id. Without reasoning it may use only 64 tokens, so a model that thinks anyway ends the game as an error rather than running up a bill. A chat answer has no probabilities, so none are saved. The cost of every call is saved with the move. OpenRouter shares a model's capacity between its users and turns calls away when it is busy, so a call is tried again after 5, 15, 30 and 60 seconds; a game that still fails ends as an error, for `--resume`.
 
 ## Project layout
 
 ```
 src/system_one_control/
-├── board.py        Board: the map, where the agent stands, and what it carries
-├── rules.py        Rules: the allowed moves, what each does, how to describe it (CompassRules, and
-│                   SequenceRules for several steps chosen at a time, such as TwoMoveRules)
-├── solver.py       Solver: fewest moves to the goal, and every move that starts such a path
-├── scenario.py     Scenario: a board, its rules and its level, loaded from scenarios/
-├── request.py      Request: exactly what a player is shown (state, question, options)
-├── conditions.py   Condition and CONDITIONS, the ablation
-├── players.py      Player, the simple players and JevPlayer
-├── llm_players.py  LLMPlayer: chat models on OpenRouter
-├── local_players.py LayaPlayer, GLiClassPlayer and LocalLLMPlayer, which run on this machine
-├── roster.py       PLAYERS: every player by name
-├── game.py         Game: one player on one scenario, a Step per move
-├── benchmark.py    every scenario × condition × player, played side by side, scored and saved
-├── generator.py    PuzzleGenerator: random rooms and mazes at an exact level
-├── examples.py     writes examples/
+├── world.py        Position, Board, Move; Rules: the allowed moves, what each does, how to
+│                   describe it (CompassRules, and SequenceRules for several steps chosen at
+│                   a time, such as TwoMoveRules); Solver: fewest moves, best moves
+├── puzzles.py      Puzzle: a board, its rules and its level, loaded from puzzles/;
+│                   PuzzleGenerator: random rooms and mazes at an exact level
+├── prompts.py      Option, Request: exactly what a player is shown (state, question, options);
+│                   Condition and CONDITIONS, the ablation; writes examples/
+├── players/
+│   ├── __init__.py Turn, Choice, Player, and PLAYERS: every player by name
+│   ├── baselines.py the players that read the board: Random, Scripted, Solver, Greedy
+│   ├── remote.py   JevPlayer, and LLMPlayer: chat models on OpenRouter
+│   └── local.py    LayaPlayer, GLiClassPlayer and LocalLLMPlayer, which run on this machine
+├── bench.py        Game: one player on one puzzle, a Step per move; every
+│                   puzzle × condition × player, played side by side, scored and saved
 ├── cli.py          the socb command
 └── web/            the FastAPI viewer
 ```
 
 ## Extending
 
-**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `roster.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS`, and one run on this machine a line in `LOCAL_LLM_MODELS`.
+**A new player.** Subclass `Player`, implement `choose(turn) -> Choice`, and add it to `PLAYERS` in `players/__init__.py`. A chat model on OpenRouter needs only a line in `LLM_MODELS`, and one run on this machine a line in `LOCAL_LLM_MODELS`.
 - A model player must read only `turn.request`, the text it is shown, never `turn.board`.
 - If it cannot answer, it may raise: the game records the error and ends.
 - A player that holds a connection releases it in `close()`, which is called after every game.
 
-**A new condition.** Add a line to `CONDITIONS` in `conditions.py`, then run `uv run socb examples` to write its example.
+**A new condition.** Add a line to `CONDITIONS` in `prompts.py`, then run `uv run socb examples` to write its example.
 
 **New rules**, such as MiniGrid-style turning:
 1. Subclass `Rules` and implement `moves`, `apply` and `is_won`.
 2. Implement `describe_outcome`, `describe_surroundings` and `describe_next_target`, which the conditions use to put the board into words. Override `subgoal_question` if "the first step of the shortest path" is the wrong thing to ask under them.
 3. If a move is several steps of other rules, return those rules from `step_rules` and say how many moves a level takes in `moves_for`, so levels and progress keep counting single steps.
-4. Add them to `RULES` in `rules.py`, then play them with `--rules <name>`, or select them in a scenario with `rules: <name>`. The viewer lists them too.
-5. Run `uv run socb examples --rules <name>` to write their examples. The examples play two moves first, a move and then a blocked one; `EXAMPLE_MOVES` in `examples.py` picks them, and rules not listed there get the first of their moves that goes anywhere, then the first that is blocked.
+4. Add them to `RULES` in `world.py`, then play them with `--rules <name>`, or select them in a puzzle with `rules: <name>`. The viewer lists them too.
+5. Run `uv run socb examples --rules <name>` to write their examples. The examples play two moves first, a move and then a blocked one; `EXAMPLE_MOVES` in `prompts.py` picks them, and rules not listed there get the first of their moves that goes anywhere, then the first that is blocked.
 
 ## License
 

@@ -63,7 +63,10 @@ T = TypeVar("T")
 
 
 def with_retries(
-    call: Callable[[], T], waits: Sequence[float], retryable: Callable[[Exception], bool]
+    call: Callable[[], T],
+    waits: Sequence[float],
+    retryable: Callable[[Exception], bool],
+    sleep: Callable[[float], None] = time.sleep,
 ) -> tuple[T, float, tuple[str, ...]]:
     """Make a call, trying again after each of `waits` while it fails in a way worth retrying.
 
@@ -79,7 +82,7 @@ def with_retries(
             if wait is None or not retryable(error):
                 raise
             retried.append(f"{type(error).__name__}: {error}")
-            time.sleep(wait)
+            sleep(wait)
             continue
         return result, time.perf_counter() - started, tuple(retried)
     raise AssertionError("unreachable: the last attempt returns or raises")
@@ -245,6 +248,22 @@ def parse_answer(text: str, request: Request) -> str | None:
     return found[-1] if found else None
 
 
+def chat_payload(request: Request, reasoning: bool) -> dict[str, Any]:
+    """The body sent to OpenRouter for a request, apart from the model and host choices."""
+    return {
+        "messages": llm_messages(request),
+        # The reasoning is billed either way; leaving its text out only saves the transfer.
+        "reasoning": {"enabled": reasoning, "exclude": True}
+        | ({"max_tokens": REASONING_BUDGET} if reasoning else {}),
+        "usage": {"include": True},  # adds the cost to the answer
+        # The answer must be JSON naming one of the options, so a model cannot answer in
+        # prose, or think aloud when its reasoning is off; only providers that enforce it.
+        "response_format": answer_format(request),
+        "provider": {"require_parameters": True},
+        "max_tokens": REASONING_BUDGET + ANSWER_TOKENS if reasoning else ANSWER_TOKENS,
+    }
+
+
 class LLMPlayer(Player):
     """A chat model on OpenRouter, asked for the id of one option. Sees only the request.
 
@@ -274,21 +293,9 @@ class LLMPlayer(Player):
         self._retry_waits = tuple(retry_waits)
 
     def body(self, request: Request) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "model": self.model,
-            "messages": llm_messages(request),
-            # The reasoning is billed either way; leaving its text out only saves the transfer.
-            "reasoning": {"enabled": self.reasoning, "exclude": True}
-            | ({"max_tokens": REASONING_BUDGET} if self.reasoning else {}),
-            "usage": {"include": True},  # adds the cost to the answer
-            # The answer must be JSON naming one of the options, so a model cannot answer in
-            # prose, or think aloud when its reasoning is off; only providers that enforce it.
-            "response_format": answer_format(request),
-            "provider": {"require_parameters": True},
-        }
+        body: dict[str, Any] = {"model": self.model, **chat_payload(request, self.reasoning)}
         if self.host:
             body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
-        body["max_tokens"] = REASONING_BUDGET + ANSWER_TOKENS if self.reasoning else ANSWER_TOKENS
         return body
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:

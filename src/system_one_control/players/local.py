@@ -79,6 +79,19 @@ def laya_budget(count: Callable[[str], int], request: Request) -> tuple[int, int
     return total, head
 
 
+def laya_inputs(request: Request, tok: Callable[..., Any]) -> tuple[str, dict[str, Any], int, int]:
+    """What Laya is asked: the state, its question with the options' texts, and the budgets."""
+    max_len, head_max_len = laya_budget(
+        lambda text: len(tok(text, add_special_tokens=False)["input_ids"]), request
+    )
+    question = {
+        "type": "choice",
+        "instructions": request.question,
+        "criteria": [option.text for option in request.options],
+    }
+    return request.state, {"move": question}, max_len, head_max_len
+
+
 class LayaPlayer(Player):
     """Laya's typed-decisions checkpoint, an open-weight model built to answer as Jev does.
 
@@ -93,19 +106,10 @@ class LayaPlayer(Player):
     def choose(self, turn: Turn) -> Choice:
         request = turn.request
         agent = self._laya or shared("laya", load_laya)
-        max_len, head_max_len = laya_budget(
-            lambda text: len(agent.tok(text, add_special_tokens=False)["input_ids"]), request
-        )
-        question = {
-            "type": "choice",
-            "instructions": request.question,
-            "criteria": [option.text for option in request.options],
-        }
+        state, questions, max_len, head_max_len = laya_inputs(request, agent.tok)
         with _running:
             started = time.perf_counter()
-            result = agent.system_one(
-                request.state, {"move": question}, max_len=max_len, head_max_len=head_max_len
-            )
+            result = agent.system_one(state, questions, max_len=max_len, head_max_len=head_max_len)
             seconds = time.perf_counter() - started
         answer = result["answers"]["move"]
         ids = {option.text: option.id for option in request.options}
@@ -140,6 +144,12 @@ def load_gliclass() -> Any:
     )
 
 
+def gliclass_inputs(request: Request) -> tuple[str, list[str], float, str]:
+    """What GLiClass is asked: the text to classify, its labels, the threshold and the prompt."""
+    labels = [option.text for option in request.options]
+    return request.state, labels, 0.0, request.question
+
+
 class GLiClassPlayer(Player):
     """GLiClass, an open-weight zero-shot classifier that scores every option in one pass.
 
@@ -154,10 +164,10 @@ class GLiClassPlayer(Player):
     def choose(self, turn: Turn) -> Choice:
         request = turn.request
         pipeline = self._pipeline or shared("gliclass", load_gliclass)
-        labels = [option.text for option in request.options]
+        text, labels, threshold, prompt = gliclass_inputs(request)
         with _running:
             started = time.perf_counter()
-            scored = pipeline(request.state, labels, threshold=0.0, prompt=request.question)[0]
+            scored = pipeline(text, labels, threshold=threshold, prompt=prompt)[0]
             seconds = time.perf_counter() - started
         ids = {option.text: option.id for option in request.options}
         scores = {ids[s["label"]]: float(s["score"]) for s in scored if s["label"] in ids}

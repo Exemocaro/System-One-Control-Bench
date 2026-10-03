@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -266,6 +267,28 @@ def thicken(board: Board, walls: int) -> Board:
     ring = (WALL * (len(board.rows[0]) + 2 * extra),) * extra
     rows = (*ring, *(WALL * extra + row + WALL * extra for row in board.rows), *ring)
     return Board(rows, board.agent.moved(extra, extra), board.holding)
+
+
+def count_kind(boards: Iterable[Board], kind: PuzzleKind) -> int:
+    """How many of these boards a kind accepts."""
+    return sum(kind.accepts(board) for board in boards)
+
+
+def outer_wall(board: Board) -> int:
+    """How many rings of solid wall surround the map."""
+    rings = 0
+    while (
+        all(set(row[rings]) == {WALL} and set(row[-1 - rings]) == {WALL} for row in board.rows)
+        and set(board.rows[rings]) == {WALL}
+        and set(board.rows[-1 - rings]) == {WALL}
+    ):
+        rings += 1
+    return rings
+
+
+def thick_wall_count(boards: Iterable[Board]) -> int:
+    """How many of these boards are walled in more thickly than the usual one ring."""
+    return sum(outer_wall(board) > 1 for board in boards)
 
 
 @dataclass(frozen=True)

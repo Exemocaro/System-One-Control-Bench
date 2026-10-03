@@ -10,11 +10,13 @@ import typer
 from system_one_control.bench import (
     BENCHMARK_DIR,
     GameRecord,
+    check_same_run,
     estimate_paid_calls,
     game_keys,
     load,
     run_benchmark,
     save,
+    split_finished,
     summarize,
     usage,
 )
@@ -113,19 +115,10 @@ def benchmark(
         # Every game in the file is checked, those that ended in an error too, though only the
         # finished ones are kept.
         loaded = load(out)
-        wanted = set(keys)
-        strays = [record.key for record in loaded if record.key not in wanted]
-        if strays:
-            raise typer.BadParameter(
-                f"{out} holds games this run would not play, such as {strays[0]}; "
-                "resume with the same --players, --levels, --puzzles and --conditions"
-            )
-        other = next((r for r in loaded if r.rules != rules_of[r.puzzle]), None)
-        if other:
-            raise typer.BadParameter(
-                f"{out} holds games played under {other.rules} rules; resume with the same --rules"
-            )
-        kept = [record for record in loaded if record.error is None]
+        message = check_same_run(loaded, keys, rules_of)
+        if message:
+            raise typer.BadParameter(f"{out} {message}")
+        kept, _ = split_finished(loaded)
     done = {record.key for record in kept}
     calls = estimate_paid_calls(chosen_puzzles, chosen_conditions, names, done=done)
     if calls and not allow_paid:
