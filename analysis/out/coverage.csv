@@ -9,16 +9,16 @@ DeepSeek V4.1 Flash,compass,map+lookahead,100,0
 DeepSeek V4.1 Flash,compass,map+memory,100,0
 DeepSeek V4.1 Flash,compass,map+subgoal,100,0
 DeepSeek V4.1 Flash,compass,map+surroundings,100,0
-DeepSeek V4.1 Flash (reasoning),compass,everything,90,0
-DeepSeek V4.1 Flash (reasoning),compass,everything-lookahead,89,0
-DeepSeek V4.1 Flash (reasoning),compass,everything-memory,90,0
-DeepSeek V4.1 Flash (reasoning),compass,everything-subgoal,89,0
-DeepSeek V4.1 Flash (reasoning),compass,everything-surroundings,90,0
-DeepSeek V4.1 Flash (reasoning),compass,map,90,0
-DeepSeek V4.1 Flash (reasoning),compass,map+lookahead,90,0
-DeepSeek V4.1 Flash (reasoning),compass,map+memory,90,0
-DeepSeek V4.1 Flash (reasoning),compass,map+subgoal,90,0
-DeepSeek V4.1 Flash (reasoning),compass,map+surroundings,90,0
+DeepSeek V4.1 Flash (reasoning),compass,everything,98,0
+DeepSeek V4.1 Flash (reasoning),compass,everything-lookahead,98,0
+DeepSeek V4.1 Flash (reasoning),compass,everything-memory,99,0
+DeepSeek V4.1 Flash (reasoning),compass,everything-subgoal,98,0
+DeepSeek V4.1 Flash (reasoning),compass,everything-surroundings,98,0
+DeepSeek V4.1 Flash (reasoning),compass,map,99,0
+DeepSeek V4.1 Flash (reasoning),compass,map+lookahead,98,0
+DeepSeek V4.1 Flash (reasoning),compass,map+memory,99,0
+DeepSeek V4.1 Flash (reasoning),compass,map+subgoal,99,0
+DeepSeek V4.1 Flash (reasoning),compass,map+surroundings,99,0
 Gemma 4 26B,compass,everything,100,0
 Gemma 4 26B,compass,everything-lookahead,100,0
 Gemma 4 26B,compass,everything-memory,100,0

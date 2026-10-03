@@ -186,6 +186,7 @@
 | DeepSeek V4.1 Flash (reasoning) | map only | 10 | 10 | 0.60 [0.30, 0.90] |
 | DeepSeek V4.1 Flash (reasoning) | map only | 12 | 10 | 0.50 [0.20, 0.80] |
 | DeepSeek V4.1 Flash (reasoning) | map only | 15 | 10 | 0.20 [0.00, 0.50] |
+| DeepSeek V4.1 Flash (reasoning) | map only | 20 | 9 | 0.22 [0.00, 0.56] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 1 | 5 | 1.00 [1.00, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 2 | 5 | 1.00 [1.00, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 3 | 10 | 1.00 [1.00, 1.00] |
@@ -196,3 +197,4 @@
 | DeepSeek V4.1 Flash (reasoning) | full context | 10 | 10 | 0.90 [0.70, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 12 | 10 | 0.70 [0.40, 1.00] |
 | DeepSeek V4.1 Flash (reasoning) | full context | 15 | 10 | 0.40 [0.10, 0.70] |
+| DeepSeek V4.1 Flash (reasoning) | full context | 20 | 8 | 0.25 [0.00, 0.50] |
