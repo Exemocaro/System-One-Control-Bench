@@ -1,0 +1,10 @@
+description: A generated 6x7 room that walking straight at the target wins.
+level: 4
+map: |
+  ######
+  #.DG##
+  #KA#.#
+  #....#
+  #....#
+  #....#
+  ######

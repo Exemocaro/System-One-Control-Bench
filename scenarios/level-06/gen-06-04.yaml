@@ -1,8 +1,0 @@
-description: A generated 7x5 maze without a key, whose every shortest route turns away from the goal at least twice to get round a wall.
-moves_to_goal: 6
-map: |
-  #######
-  #.#A..#
-  #.###.#
-  #..G..#
-  #######

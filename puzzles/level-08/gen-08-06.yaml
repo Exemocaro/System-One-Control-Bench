@@ -1,0 +1,10 @@
+description: A generated 7x7 maze without a key, whose every shortest route turns away from the goal at least twice to get round a wall.
+level: 8
+map: |
+  #######
+  #A....#
+  #####.#
+  #.#G..#
+  #.#.###
+  #.....#
+  #######

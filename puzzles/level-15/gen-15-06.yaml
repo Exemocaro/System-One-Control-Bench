@@ -1,0 +1,12 @@
+description: A generated 17x9 room that walking straight at the target cannot win, whose every shortest route turns away from its target at least three times, inside an outer wall 3 thick.
+level: 15
+map: |
+  #################
+  #################
+  #################
+  ###..........####
+  ###.....#.#...###
+  ###A....K#GD..###
+  #################
+  #################
+  #################

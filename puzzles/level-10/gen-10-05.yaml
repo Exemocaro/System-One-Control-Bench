@@ -1,0 +1,11 @@
+description: A generated 7x8 room that walking straight at the target cannot win, with a second, longer route.
+level: 10
+map: |
+  #######
+  #..#..#
+  #.DG#.#
+  #..#..#
+  #A...K#
+  #.....#
+  #.....#
+  #######

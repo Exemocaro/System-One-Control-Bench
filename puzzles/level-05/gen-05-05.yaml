@@ -1,0 +1,11 @@
+description: A generated 11x8 room without a key, whose every shortest route turns away from the goal at least once to get round a wall.
+level: 5
+map: |
+  ###########
+  #....#..#.#
+  ##.#..A...#
+  #.#..#.#..#
+  #..##.#G..#
+  #....##.#.#
+  #.#.......#
+  ###########

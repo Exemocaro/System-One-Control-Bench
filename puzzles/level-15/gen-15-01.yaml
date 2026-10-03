@@ -1,0 +1,16 @@
+description: A generated 15x13 maze that walking straight at the target cannot win, whose every shortest route turns away from its target at least four times.
+level: 15
+map: |
+  ###############
+  #...#......#..#
+  ###.#######G#.#
+  #.#.#......D#.#
+  #.#.#.#######.#
+  #.#.#....K#...#
+  #.#.#####.###.#
+  #...#...#A..#.#
+  #.###.#.###.#.#
+  #.#...#...#.#.#
+  #.#.#####.#.#.#
+  #...#.......#.#
+  ###############

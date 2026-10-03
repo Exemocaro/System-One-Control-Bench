@@ -1,0 +1,14 @@
+description: A generated 17x11 maze that walking straight at the target cannot win, whose every shortest route turns away from its target at least six times, inside an outer wall 2 thick.
+level: 20
+map: |
+  #################
+  #################
+  ##.....#...#...##
+  ######.#.###.#.##
+  ##...#.#...A.#.##
+  ##.#.#.#######.##
+  ##.#...#DK.#...##
+  ##.#####G#.#.#.##
+  ##......##...#.##
+  #################
+  #################

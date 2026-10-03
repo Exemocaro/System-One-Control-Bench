@@ -1,0 +1,13 @@
+description: A generated 9x10 room that walking straight at the target cannot win, whose every shortest route turns away from its target at least twice, inside an outer wall 2 thick.
+level: 12
+map: |
+  #########
+  #########
+  ###DA..##
+  ###G#..##
+  ##.#...##
+  ##..K..##
+  ##.#...##
+  ##....###
+  #########
+  #########

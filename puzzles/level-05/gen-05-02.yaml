@@ -1,0 +1,10 @@
+description: A generated 9x7 maze that walking straight at the target cannot win.
+level: 5
+map: |
+  #########
+  #..#GD#.#
+  #####K#.#
+  #...#..A#
+  #.#####.#
+  #.......#
+  #########

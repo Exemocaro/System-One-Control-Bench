@@ -7,23 +7,24 @@ from typing import TypeVar
 
 import typer
 
-from system_one_control.benchmark import (
+from system_one_control.bench import (
     BENCHMARK_DIR,
     GameRecord,
+    check_same_run,
     estimate_paid_calls,
     game_keys,
     load,
     run_benchmark,
     save,
+    split_finished,
     summarize,
     usage,
 )
-from system_one_control.conditions import CONDITIONS
 from system_one_control.examples import write_examples
-from system_one_control.generator import LEVELS, write_level
-from system_one_control.roster import PLAYERS
-from system_one_control.rules import RULES, Rules, make_rules
-from system_one_control.scenario import SCENARIO_DIR, load_scenarios
+from system_one_control.players import PLAYERS
+from system_one_control.prompts import CONDITIONS
+from system_one_control.puzzles import LEVELS, PUZZLE_DIR, load_puzzles, write_level
+from system_one_control.world import RULES, Rules, make_rules
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 T = TypeVar("T")
@@ -68,12 +69,12 @@ def benchmark(
         "random,greedy,greedy-walls,solver", help="Comma-separated player names."
     ),
     levels: str = typer.Option("all", help="Levels to play, such as 3, 1,4 or 2-5, or all."),
-    scenarios: str = typer.Option("all", help="Comma-separated scenario names, or all."),
+    puzzles: str = typer.Option("all", help="Comma-separated puzzle names, or all."),
     conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
     rules: str | None = typer.Option(
         None,
-        help=f"Play every scenario under these rules: {', '.join(RULES)}. "
-        "Default: each scenario's own, which is compass.",
+        help=f"Play every puzzle under these rules: {', '.join(RULES)}. "
+        "Default: each puzzle's own, which is compass.",
     ),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
     workers: int = typer.Option(3, help="How many games to play at once."),
@@ -85,26 +86,26 @@ def benchmark(
         False, help="Finish an earlier run in --out: replay its missing games and its errors."
     ),
 ) -> None:
-    """Play every chosen player on every chosen scenario under every chosen condition."""
-    chosen_scenarios = _pick(load_scenarios(), scenarios, "scenario")
+    """Play every chosen player on every chosen puzzle under every chosen condition."""
+    chosen_puzzles = _pick(load_puzzles(), puzzles, "puzzle")
     chosen_levels = _levels(levels)
     if chosen_levels is not None:
-        chosen_scenarios = [s for s in chosen_scenarios if s.moves_to_goal in chosen_levels]
-    if not chosen_scenarios:
-        raise typer.BadParameter("no scenario matches the chosen --levels and --scenarios")
+        chosen_puzzles = [p for p in chosen_puzzles if p.level in chosen_levels]
+    if not chosen_puzzles:
+        raise typer.BadParameter("no puzzle matches the chosen --levels and --puzzles")
     if rules is not None:
         chosen_rules = _rules(rules)
-        chosen_scenarios = [replace(s, rules=chosen_rules) for s in chosen_scenarios]
+        chosen_puzzles = [replace(p, rules=chosen_rules) for p in chosen_puzzles]
     chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
     compass_only = [n for n in names if PLAYERS[n].compass_only]
-    if compass_only and any(s.rules.name != "compass" for s in chosen_scenarios):
+    if compass_only and any(p.rules.name != "compass" for p in chosen_puzzles):
         raise typer.BadParameter(f"{', '.join(compass_only)} can only play compass rules")
-    keys = game_keys(chosen_scenarios, chosen_conditions, names)
-    rules_of = {s.name: s.rules.name for s in chosen_scenarios}
+    keys = game_keys(chosen_puzzles, chosen_conditions, names)
+    rules_of = {p.name: p.rules.name for p in chosen_puzzles}
 
     if out is None:
-        name = _run_name(names, conditions, levels, scenarios, rules=rules)
+        name = _run_name(names, conditions, levels, puzzles, rules=rules)
         out = BENCHMARK_DIR / f"{name}.jsonl"
     kept: list[GameRecord] = []
     if out.exists():
@@ -115,21 +116,12 @@ def benchmark(
         # Every game in the file is checked, those that ended in an error too, though only the
         # finished ones are kept.
         loaded = load(out)
-        wanted = set(keys)
-        strays = [record.key for record in loaded if record.key not in wanted]
-        if strays:
-            raise typer.BadParameter(
-                f"{out} holds games this run would not play, such as {strays[0]}; "
-                "resume with the same --players, --levels, --scenarios and --conditions"
-            )
-        other = next((r for r in loaded if r.rules != rules_of[r.scenario]), None)
-        if other:
-            raise typer.BadParameter(
-                f"{out} holds games played under {other.rules} rules; resume with the same --rules"
-            )
-        kept = [record for record in loaded if record.error is None]
+        message = check_same_run(loaded, keys, rules_of)
+        if message:
+            raise typer.BadParameter(f"{out} {message}")
+        kept, _ = split_finished(loaded)
     done = {record.key for record in kept}
-    calls = estimate_paid_calls(chosen_scenarios, chosen_conditions, names, done=done)
+    calls = estimate_paid_calls(chosen_puzzles, chosen_conditions, names, done=done)
     if calls and not allow_paid:
         raise typer.BadParameter(f"this can make up to {calls} paid calls; add --allow-paid")
     if resume:
@@ -144,7 +136,7 @@ def benchmark(
                 file.flush()
 
             played = run_benchmark(
-                chosen_scenarios,
+                chosen_puzzles,
                 chosen_conditions,
                 {name: PLAYERS[name].build for name in names},
                 workers=workers,
@@ -178,7 +170,7 @@ def _run_name(
     players: list[str],
     conditions: str,
     levels: str,
-    scenarios: str,
+    puzzles: str,
     when: datetime | None = None,
     rules: str | None = None,
 ) -> str:
@@ -190,8 +182,8 @@ def _run_name(
         parts.append(rules)
     if levels != "all":
         parts.append(f"levels-{_plus(levels)}")
-    if scenarios != "all":
-        parts.append(_plus(scenarios))
+    if puzzles != "all":
+        parts.append(_plus(puzzles))
     return "_".join(parts)
 
 
@@ -205,7 +197,7 @@ def generate(
         None, help="Puzzles per level, hand-made ones included. Default: as LEVELS says."
     ),
     seed: int = typer.Option(0, help="Change it for a fresh set of puzzles."),
-    folder: Path = typer.Option(SCENARIO_DIR, help="The scenarios folder."),
+    folder: Path = typer.Option(PUZZLE_DIR, help="The puzzles folder."),
 ) -> None:
     """Top up every level in LEVELS with generated puzzles checked by the solver."""
     for level, count in LEVELS.items():

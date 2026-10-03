@@ -1,0 +1,12 @@
+description: A generated 8x9 room that walking straight at the target cannot win, whose every shortest route turns away from its target at least twice.
+level: 12
+map: |
+  ########
+  #..#.#.#
+  ##..#.K#
+  #.#A..##
+  #....#G#
+  #.....D#
+  #......#
+  ##.....#
+  ########

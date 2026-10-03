@@ -9,26 +9,24 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from system_one_control.board import Board
-from system_one_control.conditions import CONDITIONS
-from system_one_control.game import Game, Step
-from system_one_control.request import Request
-from system_one_control.roster import PLAYERS, make_player
-from system_one_control.rules import RULES, make_rules
-from system_one_control.scenario import load_scenarios
+from system_one_control.bench import Game, Played
+from system_one_control.players import PLAYERS, make_player
+from system_one_control.prompts import CONDITIONS, Request
+from system_one_control.puzzles import load_puzzles
+from system_one_control.world import RULES, Board, make_rules
 
 PAGE = Path(__file__).with_name("index.html")
 
 
 class NewGame(BaseModel):
-    scenario: str
+    puzzle: str
     player: str
     condition: str
     rules: str = "compass"
 
 
 def create_app() -> FastAPI:
-    scenarios = load_scenarios()
+    puzzles = load_puzzles()
     games: dict[str, Game] = {}
     player_names: dict[str, str] = {}  # by game: the name it was chosen by, as the page lists it
     app = FastAPI(title="System-One Control Bench")
@@ -45,9 +43,9 @@ def create_app() -> FastAPI:
     @app.get("/api/catalog")
     def catalog() -> dict[str, Any]:
         return {
-            "scenarios": [
-                {"name": s.name, "description": s.description, "moves_to_goal": s.moves_to_goal}
-                for s in scenarios.values()
+            "puzzles": [
+                {"name": p.name, "description": p.description, "level": p.level}
+                for p in puzzles.values()
             ],
             "players": [
                 {"name": name, "paid": entry.paid, "compass_only": entry.compass_only}
@@ -62,7 +60,7 @@ def create_app() -> FastAPI:
     @app.post("/api/games")
     def new_game(body: NewGame) -> dict[str, Any]:
         for kind, name, known in (
-            ("scenario", body.scenario, scenarios),
+            ("puzzle", body.puzzle, puzzles),
             ("condition", body.condition, CONDITIONS),
             ("player", body.player, PLAYERS),
             ("rules", body.rules, RULES),
@@ -76,8 +74,8 @@ def create_app() -> FastAPI:
         except (ImportError, RuntimeError) as error:
             raise HTTPException(400, str(error)) from error
         game_id = uuid4().hex[:8]
-        scenario = replace(scenarios[body.scenario], rules=make_rules(body.rules))
-        games[game_id] = Game(scenario, player, CONDITIONS[body.condition])
+        puzzle = replace(puzzles[body.puzzle], rules=make_rules(body.rules))
+        games[game_id] = Game(puzzle, player, CONDITIONS[body.condition])
         player_names[game_id] = body.player
         return game_json(game_id, games[game_id], body.player)
 
@@ -86,7 +84,7 @@ def create_app() -> FastAPI:
         game = find_game(game_id)
         if game.is_over:
             raise HTTPException(409, "the game is over")
-        game.step()
+        game.play_move()
         return game_json(game_id, game, player_names[game_id])
 
     @app.post("/api/games/{game_id}/play")
@@ -114,20 +112,20 @@ def request_json(request: Request) -> dict[str, Any]:
     }
 
 
-def step_json(step: Step) -> dict[str, Any]:
+def played_json(played: Played) -> dict[str, Any]:
     return {
-        "number": step.number,
-        "before": board_json(step.before),
-        "after": board_json(step.after),
-        "request": request_json(step.request),
+        "number": played.number,
+        "before": board_json(played.before),
+        "after": board_json(played.after),
+        "request": request_json(played.request),
         "choice": {
-            "move": step.choice.move,
-            "probabilities": step.choice.probabilities,
-            "error": step.choice.error,
+            "move": played.choice.move,
+            "probabilities": played.choice.probabilities,
+            "error": played.choice.error,
         },
-        "best_moves": list(step.best_moves),
-        "optimal": step.optimal,
-        "seconds": round(step.seconds, 3),
+        "best_moves": list(played.best_moves),
+        "optimal": played.optimal,
+        "seconds": round(played.seconds, 3),
     }
 
 
@@ -140,16 +138,16 @@ def game_json(game_id: str, game: Game, player: str) -> dict[str, Any]:
         }
     return {
         "id": game_id,
-        "scenario": game.scenario.name,
+        "puzzle": game.puzzle.name,
         "player": player,
         "condition": game.condition.name,
         "rules": game.rules.name,
-        "moves_to_goal": game.scenario.moves_to_goal,
-        "fewest_moves": game.scenario.fewest_moves,
-        "max_moves": game.scenario.max_moves,
+        "level": game.puzzle.level,
+        "fewest_moves": game.puzzle.fewest_moves,
+        "max_moves": game.puzzle.max_moves,
         "board": board_json(game.board),
         "won": game.won,
         "over": game.is_over,
-        "steps": [step_json(step) for step in game.steps],
+        "played": [played_json(played) for played in game.played],
         "next": upcoming,
     }

@@ -1,0 +1,9 @@
+description: A generated 12x6 room that walking straight at the target cannot win.
+level: 10
+map: |
+  ############
+  #..........#
+  #..........#
+  #.#.......##
+  #DG#K.A#...#
+  ############

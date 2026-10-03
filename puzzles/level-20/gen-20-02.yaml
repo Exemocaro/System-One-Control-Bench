@@ -1,0 +1,18 @@
+description: A generated 9x15 maze that walking straight at the target cannot win, whose every shortest route turns away from its target at least six times, inside an outer wall 2 thick.
+level: 20
+map: |
+  #########
+  #########
+  ##K#...##
+  ##.#.####
+  ##A#...##
+  ##.#D#.##
+  ##.#G#.##
+  ##.###.##
+  ##.....##
+  ######.##
+  ##.#...##
+  ##.#.####
+  ##.....##
+  #########
+  #########

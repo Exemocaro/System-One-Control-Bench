@@ -1,9 +1,0 @@
-description: A generated 12x6 room that walking straight at the target cannot solve, whose every shortest route turns away from its target at least three times.
-moves_to_goal: 15
-map: |
-  ############
-  #...A#..K#.#
-  #......#...#
-  ##...##G##.#
-  #..###.D...#
-  ############
