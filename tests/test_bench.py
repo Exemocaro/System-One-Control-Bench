@@ -66,8 +66,8 @@ def untimed(records):
 @pytest.mark.parametrize("name", PUZZLES)
 def test_the_solver_wins_every_puzzle_in_the_fewest_moves(name):
     game = Game(PUZZLES[name], SolverPlayer(), MAP)
-    steps = game.play()
-    assert (game.won, len(steps), all(s.optimal for s in steps)) == (
+    played = game.play()
+    assert (game.won, len(played), all(p.optimal for p in played)) == (
         True,
         PUZZLES[name].level,
         True,
@@ -89,8 +89,8 @@ def test_the_solver_wins_every_puzzle_in_the_fewest_moves(name):
 )
 def test_a_game_that_ends_without_a_win(text, level, player, moves, error):
     game = Game(puzzle(text, level), player, MAP)
-    steps = game.play()
-    assert (len(steps), game.is_over, game.won, steps[-1].choice.error) == (
+    played = game.play()
+    assert (len(played), game.is_over, game.won, played[-1].choice.error) == (
         moves,
         True,
         False,
@@ -98,26 +98,26 @@ def test_a_game_that_ends_without_a_win(text, level, player, moves, error):
     )
 
 
-def test_a_step_records_the_board_before_and_after_and_whether_it_was_best():
-    step = Game(puzzle(SHORT, 2), AlwaysPlayer("west"), MAP).step()
-    assert (step.number, step.before == step.after, step.best_moves, step.optimal) == (
+def test_a_move_records_the_board_before_and_after_and_whether_it_was_best():
+    played = Game(puzzle(SHORT, 2), AlwaysPlayer("west"), MAP).play_move()
+    assert (played.number, played.before == played.after, played.best_moves, played.optimal) == (
         1,
         True,
         ("east",),
         False,
     )
-    assert "#A.G#" in step.request.state
+    assert "#A.G#" in played.request.state
 
 
 def test_no_move_can_be_played_after_the_game_is_over():
     game = Game(puzzle(ONE_MOVE, 1), SolverPlayer(), MAP)
     game.play()
     with pytest.raises(RuntimeError, match="over"):
-        game.step()
+        game.play_move()
 
 
 @pytest.mark.parametrize(
-    ("player", "condition", "steps", "fragment"),
+    ("player", "condition", "moves", "fragment"),
     [
         (SolverPlayer(), MAP, 1, "#.AG#"),
         (
@@ -129,44 +129,44 @@ def test_no_move_can_be_played_after_the_game_is_over():
     ],
     ids=["the board after a move", "the memory of every move"],
 )
-def test_the_next_request_shows_what_has_happened(player, condition, steps, fragment):
+def test_the_next_request_shows_what_has_happened(player, condition, moves, fragment):
     game = Game(puzzle(SHORT, 2), player, condition)
-    for _ in range(steps):
-        game.step()
+    for _ in range(moves):
+        game.play_move()
     assert fragment in game.next_request().state
 
 
 def test_the_previewed_request_is_exactly_what_the_player_is_then_asked():
     game = Game(puzzle(SHORT, 2), SolverPlayer(), MAP)
     preview = game.next_request()
-    assert game.step().request == preview
+    assert game.play_move().request == preview
 
 
 def test_each_move_is_asked_with_its_own_option_order():
     game = Game(puzzle("########\n#A....G#\n########", 5), SolverPlayer(), MAP)
-    assert len({tuple(o.move for o in s.request.options) for s in game.play()}) > 1
+    assert len({tuple(o.move for o in p.request.options) for p in game.play()}) > 1
 
 
 def test_a_game_asked_to_stop_stops_between_moves():
     game = Game(puzzle("########\n#A....G#\n########", 5), SolverPlayer(), MAP)
     stop = threading.Event()
-    game.step()
+    game.play_move()
     stop.set()
     assert (len(game.play(stop)), game.is_over) == (1, False)
 
 
 def test_under_sequence_rules_the_solver_wins_in_the_fewest_sequences():
-    played = replace(PUZZLES["gen-10-01"], rules=ThreeMoveRules())
-    game = Game(played, SolverPlayer(), MAP)
-    steps = game.play()
-    assert (game.won, len(steps), all(s.optimal for s in steps)) == (True, 4, True)
-    assert "," in steps[0].choice.move
+    sequenced = replace(PUZZLES["gen-10-01"], rules=ThreeMoveRules())
+    game = Game(sequenced, SolverPlayer(), MAP)
+    played = game.play()
+    assert (game.won, len(played), all(p.optimal for p in played)) == (True, 4, True)
+    assert "," in played[0].choice.move
 
 
 @pytest.mark.parametrize("answer", ["east,north", "east,west"], ids=["a step nearer", "back again"])
 def test_under_sequence_rules_the_closest_distance_counts_compass_moves_along_the_way(answer):
     game = Game(replace(puzzle(CORRIDOR, 4), rules=TwoMoveRules()), AlwaysPlayer(answer), MAP)
-    game.step()
+    game.play_move()
     assert game.closest == 3  # one compass move nearer, though no sequence was saved
 
 

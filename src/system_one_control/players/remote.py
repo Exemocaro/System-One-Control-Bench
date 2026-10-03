@@ -149,6 +149,7 @@ LLM_MODELS = {
     "deepseek-v4.1-flash": ("deepseek/deepseek-v4.1-flash", "deepinfra"),
 }
 
+# Frozen prompt text: sent to chat models verbatim, so changing it changes results.
 LLM_SYSTEM = (
     "You are playing a puzzle on a grid. You are given the state of the game, a question and "
     "a list of options, each with an id such as option_3. Reply with the id of the one option "

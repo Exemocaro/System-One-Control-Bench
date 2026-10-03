@@ -105,11 +105,11 @@ class LayaPlayer(Player):
 
     def choose(self, turn: Turn) -> Choice:
         request = turn.request
-        agent = self._laya or shared("laya", load_laya)
-        state, questions, max_len, head_max_len = laya_inputs(request, agent.tok)
+        model = self._laya or shared("laya", load_laya)
+        state, questions, max_len, head_max_len = laya_inputs(request, model.tok)
         with _running:
             started = time.perf_counter()
-            result = agent.system_one(state, questions, max_len=max_len, head_max_len=head_max_len)
+            result = model.system_one(state, questions, max_len=max_len, head_max_len=head_max_len)
             seconds = time.perf_counter() - started
         answer = result["answers"]["move"]
         ids = {option.text: option.id for option in request.options}

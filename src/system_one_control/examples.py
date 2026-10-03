@@ -42,7 +42,7 @@ def example(condition: Condition, puzzle: Puzzle) -> str:
     moves = example_moves(puzzle)
     game = Game(puzzle, ScriptedPlayer(moves), condition)
     for _ in moves:
-        game.step()
+        game.play_move()
     return json.dumps(jev_body(game.next_request()), indent=2, ensure_ascii=False) + "\n"
 
 

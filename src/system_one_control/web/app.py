@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from system_one_control.bench import Game, Step
+from system_one_control.bench import Game, Played
 from system_one_control.players import PLAYERS, make_player
 from system_one_control.prompts import CONDITIONS, Request
 from system_one_control.puzzles import load_puzzles
@@ -19,8 +19,7 @@ PAGE = Path(__file__).with_name("index.html")
 
 
 class NewGame(BaseModel):
-    # Field names are the page's wire format, so they stay while the code says puzzle.
-    scenario: str
+    puzzle: str
     player: str
     condition: str
     rules: str = "compass"
@@ -44,8 +43,8 @@ def create_app() -> FastAPI:
     @app.get("/api/catalog")
     def catalog() -> dict[str, Any]:
         return {
-            "scenarios": [
-                {"name": p.name, "description": p.description, "moves_to_goal": p.level}
+            "puzzles": [
+                {"name": p.name, "description": p.description, "level": p.level}
                 for p in puzzles.values()
             ],
             "players": [
@@ -61,7 +60,7 @@ def create_app() -> FastAPI:
     @app.post("/api/games")
     def new_game(body: NewGame) -> dict[str, Any]:
         for kind, name, known in (
-            ("puzzle", body.scenario, puzzles),
+            ("puzzle", body.puzzle, puzzles),
             ("condition", body.condition, CONDITIONS),
             ("player", body.player, PLAYERS),
             ("rules", body.rules, RULES),
@@ -75,7 +74,7 @@ def create_app() -> FastAPI:
         except (ImportError, RuntimeError) as error:
             raise HTTPException(400, str(error)) from error
         game_id = uuid4().hex[:8]
-        puzzle = replace(puzzles[body.scenario], rules=make_rules(body.rules))
+        puzzle = replace(puzzles[body.puzzle], rules=make_rules(body.rules))
         games[game_id] = Game(puzzle, player, CONDITIONS[body.condition])
         player_names[game_id] = body.player
         return game_json(game_id, games[game_id], body.player)
@@ -85,7 +84,7 @@ def create_app() -> FastAPI:
         game = find_game(game_id)
         if game.is_over:
             raise HTTPException(409, "the game is over")
-        game.step()
+        game.play_move()
         return game_json(game_id, game, player_names[game_id])
 
     @app.post("/api/games/{game_id}/play")
@@ -113,20 +112,20 @@ def request_json(request: Request) -> dict[str, Any]:
     }
 
 
-def step_json(step: Step) -> dict[str, Any]:
+def played_json(played: Played) -> dict[str, Any]:
     return {
-        "number": step.number,
-        "before": board_json(step.before),
-        "after": board_json(step.after),
-        "request": request_json(step.request),
+        "number": played.number,
+        "before": board_json(played.before),
+        "after": board_json(played.after),
+        "request": request_json(played.request),
         "choice": {
-            "move": step.choice.move,
-            "probabilities": step.choice.probabilities,
-            "error": step.choice.error,
+            "move": played.choice.move,
+            "probabilities": played.choice.probabilities,
+            "error": played.choice.error,
         },
-        "best_moves": list(step.best_moves),
-        "optimal": step.optimal,
-        "seconds": round(step.seconds, 3),
+        "best_moves": list(played.best_moves),
+        "optimal": played.optimal,
+        "seconds": round(played.seconds, 3),
     }
 
 
@@ -139,16 +138,16 @@ def game_json(game_id: str, game: Game, player: str) -> dict[str, Any]:
         }
     return {
         "id": game_id,
-        "scenario": game.puzzle.name,
+        "puzzle": game.puzzle.name,
         "player": player,
         "condition": game.condition.name,
         "rules": game.rules.name,
-        "moves_to_goal": game.puzzle.level,
+        "level": game.puzzle.level,
         "fewest_moves": game.puzzle.fewest_moves,
         "max_moves": game.puzzle.max_moves,
         "board": board_json(game.board),
         "won": game.won,
         "over": game.is_over,
-        "steps": [step_json(step) for step in game.steps],
+        "played": [played_json(played) for played in game.played],
         "next": upcoming,
     }

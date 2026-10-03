@@ -25,7 +25,9 @@ GameKey = tuple[str, str, str]  # puzzle, condition, player
 
 
 @dataclass(frozen=True)
-class Step:
+class Played:
+    """One move a game played: what was shown, what was answered, and where it led."""
+
     number: int
     before: Board
     request: Request
@@ -52,7 +54,7 @@ class Game:
         self._distances = self.solver.distances(self.board)
         # Counted in the moves a level is counted in, which may be shorter than these rules'.
         self._step_distances = Solver(puzzle.rules.step_rules()).distances(self.board)
-        self.steps: list[Step] = []
+        self.played: list[Played] = []
 
     @property
     def rules(self) -> Rules:
@@ -70,10 +72,10 @@ class Game:
         every board a move passed through, not only the one it ended on.
         """
         boards = {self.puzzle.board}
-        for step in self.steps:
-            move = self.rules.find_move(step.before, step.choice.move)
+        for played in self.played:
+            move = self.rules.find_move(played.before, played.choice.move)
             if move is not None:
-                boards.update(self.rules.passes(step.before, move))
+                boards.update(self.rules.passes(played.before, move))
         distances = (self._step_distances.get(board) for board in boards)
         return min((d for d in distances if d is not None), default=None)
 
@@ -83,18 +85,18 @@ class Game:
 
     @property
     def is_over(self) -> bool:
-        failed = bool(self.steps) and self.steps[-1].choice.move is None
-        return self.won or failed or len(self.steps) >= self.puzzle.max_moves
+        failed = bool(self.played) and self.played[-1].choice.move is None
+        return self.won or failed or len(self.played) >= self.puzzle.max_moves
 
     def next_request(self) -> Request:
         memory = [
-            f"{step.choice.move}: {self.rules.describe_outcome(step.before, step.after)}"
-            for step in self.steps
+            f"{played.choice.move}: {self.rules.describe_outcome(played.before, played.after)}"
+            for played in self.played
         ]
-        seed = f"{self.puzzle.name}:{len(self.steps) + 1}"
+        seed = f"{self.puzzle.name}:{len(self.played) + 1}"
         return self.condition.render(self.board, self.rules, shuffle_seed=seed, memory=memory)
 
-    def step(self) -> Step:
+    def play_move(self) -> Played:
         if self.is_over:
             raise RuntimeError("the game is over")
         request = self.next_request()
@@ -110,8 +112,8 @@ class Game:
             choice = replace(choice, move=None, error=f"{choice.move!r} is not an allowed move")
         after = self.board if move is None else self.rules.apply(self.board, move)
 
-        step = Step(
-            number=len(self.steps) + 1,
+        played = Played(
+            number=len(self.played) + 1,
             before=self.board,
             request=request,
             choice=choice,
@@ -119,15 +121,15 @@ class Game:
             after=after,
             seconds=seconds,
         )
-        self.steps.append(step)
+        self.played.append(played)
         self.board = after
-        return step
+        return played
 
-    def play(self, stop: threading.Event | None = None) -> list[Step]:
+    def play(self, stop: threading.Event | None = None) -> list[Played]:
         """Play to the end, or until `stop` is set, which takes effect between moves."""
         while not self.is_over and not (stop and stop.is_set()):
-            self.step()
-        return self.steps
+            self.play_move()
+        return self.played
 
 
 @dataclass(frozen=True)
@@ -217,12 +219,12 @@ def play(
     """One game, or None if `stop` was set before it finished."""
     game = Game(puzzle, player, condition)
     try:
-        steps = game.play(stop)
+        played = game.play(stop)
     finally:
         player.close()
     if not game.is_over:
         return None
-    errors = [step.choice.error for step in steps if step.choice.error]
+    errors = [move.choice.error for move in played if move.choice.error]
     return GameRecord(
         puzzle=puzzle.name,
         condition=condition.name,
@@ -234,27 +236,27 @@ def play(
         rules=puzzle.rules.name,
         moves=tuple(
             MoveRecord(
-                options=tuple(option.move for option in step.request.options),
-                move=step.choice.move,
-                probabilities=step.choice.probabilities,
-                best_moves=step.best_moves,
-                optimal=step.optimal,
-                input_tokens=step.choice.input_tokens,
-                output_tokens=step.choice.output_tokens,
-                confidence=step.choice.confidence,
-                model=step.choice.model,
-                seconds=answer_time(step),
-                retried=step.choice.retried,
-                cost=step.choice.cost,
+                options=tuple(option.move for option in move.request.options),
+                move=move.choice.move,
+                probabilities=move.choice.probabilities,
+                best_moves=move.best_moves,
+                optimal=move.optimal,
+                input_tokens=move.choice.input_tokens,
+                output_tokens=move.choice.output_tokens,
+                confidence=move.choice.confidence,
+                model=move.choice.model,
+                seconds=answer_time(move),
+                retried=move.choice.retried,
+                cost=move.choice.cost,
             )
-            for step in steps
+            for move in played
         ),
     )
 
 
-def answer_time(step: Step) -> float:
+def answer_time(played: Played) -> float:
     """The player's own time for its answer where it keeps one, else the whole move's."""
-    return round(step.seconds if step.choice.seconds is None else step.choice.seconds, 3)
+    return round(played.seconds if played.choice.seconds is None else played.choice.seconds, 3)
 
 
 def run_benchmark(
