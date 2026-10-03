@@ -11,6 +11,6 @@ Edit prose directly in `sections/*.typ`, preserving the `// src:` comments. No s
 
 Check the script with `uv run ruff check paper` and `uv run ruff format --check paper` (line length 100).
 
-The six figures are the example, main results, component effects, action formulations, completion by level and reliability. All source plots remain unchanged.
+The seven figures are the example, main results, component effects, action formulations, the fixed-state exam, completion by level and reliability. All source plots remain unchanged.
 
-The appendix contains one complete example request, all seven hypotheses with verbatim analysis verdicts, prompt history and all component contrasts for every model. The body keeps three visible TODOs: author, repository URL and fixed-state results. Other follow-up work is recorded in `.team/paper-todo.md`. Page-boundary metadata in `main.typ` records the main-text end, appendix start and total page count.
+The appendix contains one complete example request, all seven hypotheses with verbatim analysis verdicts, prompt history and all component contrasts for every model. The body keeps two visible TODOs: author and repository URL. Other follow-up work is recorded in `.team/paper-todo.md`. Page-boundary metadata in `main.typ` records the main-text end, appendix start and total page count.

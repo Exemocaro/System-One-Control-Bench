@@ -39,7 +39,15 @@ For Jev with the map alone, won rate is 32% with compass moves, 40% with two-ste
 
 == Fixed-state evaluation
 
-The planned shared-position experiment will ask every model the same compass questions with the map alone and with full context. It will complement complete games, where different models may encounter very different positions. #todo[fixed-state evaluation results]
+On the fixed-state exam, capped reasoning reaches 94% [91, 96] optimality with full context. Jev and Gemma both reach 90% [87, 93], ahead of DeepSeek without reasoning at 86% [83, 90]. Gemma and non-reasoning DeepSeek have higher observed game completion than Jev; exam optimality measures a different outcome. Full context improves exam optimality for every model: 16 percentage points for Jev, 21 for Laya, 21 for GLiClass, 20 for Gemma, 30 for Qwen, 19 for non-reasoning DeepSeek and 5 for capped reasoning. All paired intervals exclude zero.
+// src: analysis/out/exam.md; analysis/out/exam_inputs.md; analysis/out/main.md
+
+Jev's map-only optimality is 74% on the exam versus 16% in its own games; with full context it is 90% versus 64%. Failures can leave models answering repeatedly in difficult positions. The exam removes that selection, but covers scripted positions. Jev scores 86% at starts and 97% on late-route items with full context; distance and inventory also differ, so this does not isolate history's effect.
+// src: analysis/out/exam.md
+
+#figure(image("../../analysis/out/fig_exam.pdf", width: 70%), placement: top,
+  caption: [Optimality on the same 495 exam items. Pale and dark bars show map alone and full context, with intervals over puzzles. Diamonds show each model's optimal-move share in its own games under the same input.]) <fig:exam>
+// src: analysis/out/exam.md
 
 == Blocked moves and progress
 
@@ -57,13 +65,13 @@ At levels 12, 15, 20, Jev's full-context won rates are 20%, 10%, 0%. Each level 
 
 == Probability analysis
 
-We pool all compass conditions and ask whether the chosen move was optimal. Jev assigns its chosen move a mean probability of 0.719, while 51% of those moves are optimal. Its ECE is 0.209 and binary Brier score 0.283 over 14,642 moves. Laya's ECE is 0.133 with 17.5% optimality; Qwen's is 0.064 with 47.5% optimality. Low calibration error alone does not establish effective navigation. The models also reach different positions, so these scores are not comparisons on a shared set of questions.
-// src: analysis/out/calibration.md
+We pool all compass conditions and ask whether the chosen move was optimal. Jev assigns its chosen move a mean probability of 0.719, while 51% of those moves are optimal. Its ECE is 0.209 and binary Brier score 0.283 over 14,642 moves. Laya's ECE is 0.133 with 17.5% optimality; Qwen's is 0.064 with 47.5% optimality. Low calibration error alone does not establish effective navigation. These scores use each model's own positions and pool ten inputs; the exam instead measures calibration on common questions separately by input, with Jev ECE 0.063 for map alone and 0.059 for full context.
+// src: analysis/out/calibration.md; analysis/out/exam.md
 
 TypeSafe defines Choice confidence as $c = (p_(max) - 1/n) / (1 - 1/n)$ @typesafeconfidence. On all 14,642 Jev compass moves, the reported confidence differs from $(p_(max) - 1/n) / (1 - 1/n)$ by at most 0.023. For a fixed number of options, the formula ranks moves exactly as the top probability does. Reported confidence is therefore a rescaled score rather than an independent prediction of correctness.
 // src: analysis/out/calibration.md (move count); TypeSafe confidence documentation; recorded confidence-formula check
 
-#figure(image("../../analysis/out/fig_calibration.pdf", width: 60%), placement: none,
+#figure(image("../../analysis/out/fig_calibration.pdf", width: 60%), placement: top,
   caption: [Reliability after pooling all compass conditions. Each point compares mean chosen-move probability with the fraction of those moves that are optimal, accepting any tied best move. The diagonal indicates agreement between probability and observed optimality. Only four models appear because Gemma and DeepSeek return an option ID rather than probabilities.]) <fig:reliability>
 // src: analysis/out/calibration.md
 
