@@ -2,8 +2,7 @@
 
 For each combination: the move-1 request, and the request after the first 3 recorded moves
 of a saved game for that puzzle under those rules (or a NO-SAVED-GAME marker where no
-saved game has 3 valid moves). Runs under the old code and the new code; diff the two
-output files, which must be identical. Usage: dump_requests.py <out path>.
+saved game has 3 valid moves). Usage: dump_requests.py <out path>.
 """
 
 from __future__ import annotations
@@ -14,34 +13,19 @@ from dataclasses import replace
 from pathlib import Path
 
 import system_one_control
+from system_one_control.bench import Game
+from system_one_control.players.baselines import ScriptedPlayer
+from system_one_control.prompts import CONDITIONS
+from system_one_control.puzzles import load_puzzles
+from system_one_control.world import RULES, make_rules
 
-try:  # new layout
-    from system_one_control.bench import Game
-    from system_one_control.players.baselines import ScriptedPlayer
-    from system_one_control.prompts import CONDITIONS
-    from system_one_control.puzzles import load_puzzles
-    from system_one_control.world import RULES, make_rules
-
-    ITEMS = load_puzzles()
-except ImportError:  # old layout on main
-    from system_one_control.conditions import CONDITIONS
-    from system_one_control.game import Game
-    from system_one_control.rules import RULES, make_rules
-    from system_one_control.scenario import load_scenarios as load_puzzles
-
-    from system_one_control.players import ScriptedPlayer
-
-    ITEMS = load_puzzles()
-
+ITEMS = load_puzzles()
 REPO = Path(system_one_control.__file__).resolve().parents[2]
 
 
 def advance(game: Game, moves: int) -> None:
     for _ in range(moves):
-        if hasattr(game, "play_move"):
-            game.play_move()
-        else:
-            game.step()
+        game.play_move()
 
 
 def saved_opener(name: str, rules: str) -> list | None:

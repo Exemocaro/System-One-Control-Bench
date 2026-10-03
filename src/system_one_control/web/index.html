@@ -192,7 +192,7 @@
     <div id="board"></div>
     <div class="status" id="status"></div>
     <div class="controls">
-      <button id="step">Play one move</button>
+      <button id="move">Play one move</button>
       <button id="play">Play to the end</button>
     </div>
     <div class="moves" id="moves"></div>
@@ -301,8 +301,8 @@
   }
 
   function outcome() {
-    const moves = game.played.length;
-    const failed = game.played.at(-1)?.choice.move === null && game.played.length > 0;
+    const moves = game.moves.length;
+    const failed = game.moves.at(-1)?.choice.move === null && game.moves.length > 0;
     if (game.won) return `<span class="pill won">Won in ${moves} move${moves === 1 ? "" : "s"}</span>`;
     if (failed) return `<span class="pill lost">Stopped: no valid answer</span>`;
     if (game.over) return `<span class="pill lost">Out of moves</span>`;
@@ -313,18 +313,18 @@
     const puzzle = catalog.puzzles.find((s) => s.name === game.puzzle);
     $("name").textContent = game.puzzle;
     $("description").textContent = puzzle.description;
-    $("status").innerHTML = `${outcome()}<span>${game.played.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.fewest_moves}</span><span>${game.player} · ${game.condition}${game.rules === "compass" ? "" : ` · ${game.rules}`}</span>`;
+    $("status").innerHTML = `${outcome()}<span>${game.moves.length} of at most ${game.max_moves} moves</span><span>best possible: ${game.fewest_moves}</span><span>${game.player} · ${game.condition}${game.rules === "compass" ? "" : ` · ${game.rules}`}</span>`;
 
-    const played = viewing === null ? null : game.played[viewing];
+    const played = viewing === null ? null : game.moves[viewing];
     $("board").innerHTML = drawBoard(played ? played.before : game.board, played?.choice.move);
 
-    $("moves").innerHTML = game.played.map((s, i) =>
+    $("moves").innerHTML = game.moves.map((s, i) =>
       `<button class="chip ${s.optimal ? "good" : "bad"} ${viewing === i ? "active" : ""}" data-i="${i}">${s.number} ${s.choice.move ?? "—"} ${s.optimal ? "✓" : "✗"}</button>`).join("")
       + (game.over ? "" : `<button class="chip ${viewing === null ? "active" : ""}" data-i="now">next</button>`);
 
     const paid = catalog.players.find((p) => p.name === game.player)?.paid;
-    const left = game.max_moves - game.played.length;
-    $("step").disabled = busy || game.over;
+    const left = game.max_moves - game.moves.length;
+    $("move").disabled = busy || game.over;
     $("play").disabled = busy || game.over;
     $("play").textContent = paid && !game.over ? `Play to the end (up to ${left} paid calls)` : "Play to the end";
 
@@ -343,7 +343,7 @@
     }
     const best = played ? played.best_moves : game.next.best_moves;
     const probabilities = played ? played.choice.probabilities : {};
-    $("viewing").textContent = played ? `Move ${played.number}: what the player was asked` : `Move ${game.played.length + 1}: what the player will be asked`;
+    $("viewing").textContent = played ? `Move ${played.number}: what the player was asked` : `Move ${game.moves.length + 1}: what the player will be asked`;
     $("state").textContent = request.state;
     $("question").textContent = request.question;
     $("options").innerHTML = request.options.map((o) => {
@@ -405,24 +405,24 @@
   }
 
   async function playOne() {
-    game = await call("POST", `/api/games/${game.id}/step`);
+    game = await call("POST", `/api/games/${game.id}/move`);
     viewing = null;
   }
 
   async function playAll() {
-    const before = game.played.length;
+    const before = game.moves.length;
     game = await call("POST", `/api/games/${game.id}/play`);
-    for (let i = before; i < game.played.length; i++) {
+    for (let i = before; i < game.moves.length; i++) {
       viewing = i;
       render();
       await sleep(150);
     }
-    viewing = game.over ? game.played.length - 1 : null;
+    viewing = game.over ? game.moves.length - 1 : null;
   }
 
   $("new").addEventListener("click", () => run(newGame));
   $("next-puzzle").addEventListener("click", () => run(nextPuzzle));
-  $("step").addEventListener("click", () => run(playOne));
+  $("move").addEventListener("click", () => run(playOne));
   $("play").addEventListener("click", () => run(playAll));
   for (const id of ["puzzle", "player", "condition", "rules"]) $(id).addEventListener("change", () => run(newGame));
   $("moves").addEventListener("click", (event) => {
@@ -433,7 +433,7 @@
   });
   document.addEventListener("keydown", (event) => {
     if (!game || event.target.tagName === "SELECT") return;
-    const last = game.played.length - 1;
+    const last = game.moves.length - 1;
     const current = viewing ?? (game.over ? last : last + 1);
     const next = event.key === "ArrowLeft" ? current - 1 : event.key === "ArrowRight" ? current + 1 : null;
     if (next === null || next < 0) return;

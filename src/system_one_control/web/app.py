@@ -79,8 +79,8 @@ def create_app() -> FastAPI:
         player_names[game_id] = body.player
         return game_json(game_id, games[game_id], body.player)
 
-    @app.post("/api/games/{game_id}/step")
-    def step(game_id: str) -> dict[str, Any]:
+    @app.post("/api/games/{game_id}/move")
+    def play_move(game_id: str) -> dict[str, Any]:
         game = find_game(game_id)
         if game.is_over:
             raise HTTPException(409, "the game is over")
@@ -148,6 +148,6 @@ def game_json(game_id: str, game: Game, player: str) -> dict[str, Any]:
         "board": board_json(game.board),
         "won": game.won,
         "over": game.is_over,
-        "played": [played_json(played) for played in game.played],
+        "moves": [played_json(played) for played in game.moves],
         "next": upcoming,
     }

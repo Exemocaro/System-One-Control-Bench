@@ -24,7 +24,7 @@ def test_the_catalog_lists_puzzles_players_and_conditions():
 
 def test_a_new_game_shows_the_board_and_what_the_player_will_be_asked():
     game = new_game().json()
-    assert game["played"] == []
+    assert game["moves"] == []
     assert game["board"]["rows"][1] == "#..G.....#"  # the goal is up and to the left
     assert game["next"]["best_moves"] == ["north", "west"]
     assert "#...A....#" in game["next"]["request"]["state"]
@@ -32,24 +32,24 @@ def test_a_new_game_shows_the_board_and_what_the_player_will_be_asked():
 
 def test_one_move_plays_one_move():
     game_id = new_game().json()["id"]
-    game = client.post(f"/api/games/{game_id}/step").json()
-    assert len(game["played"]) == 1
-    assert game["played"][0]["choice"]["move"] == "north"
-    assert game["played"][0]["optimal"]
+    game = client.post(f"/api/games/{game_id}/move").json()
+    assert len(game["moves"]) == 1
+    assert game["moves"][0]["choice"]["move"] == "north"
+    assert game["moves"][0]["optimal"]
 
 
 def test_play_runs_the_game_to_the_end():
     game_id = new_game().json()["id"]
     game = client.post(f"/api/games/{game_id}/play").json()
     assert game["won"] and game["over"]
-    assert len(game["played"]) == 2
+    assert len(game["moves"]) == 2
     assert game["next"] is None
 
 
 def test_moving_a_finished_game_is_refused():
     game_id = new_game().json()["id"]
     client.post(f"/api/games/{game_id}/play")
-    assert client.post(f"/api/games/{game_id}/step").status_code == 409
+    assert client.post(f"/api/games/{game_id}/move").status_code == 409
 
 
 def test_unknown_names_are_reported():

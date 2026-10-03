@@ -54,7 +54,7 @@ class Game:
         self._distances = self.solver.distances(self.board)
         # Counted in the moves a level is counted in, which may be shorter than these rules'.
         self._step_distances = Solver(puzzle.rules.step_rules()).distances(self.board)
-        self.played: list[Played] = []
+        self.moves: list[Played] = []
 
     @property
     def rules(self) -> Rules:
@@ -72,10 +72,10 @@ class Game:
         every board a move passed through, not only the one it ended on.
         """
         boards = {self.puzzle.board}
-        for played in self.played:
-            move = self.rules.find_move(played.before, played.choice.move)
+        for each in self.moves:
+            move = self.rules.find_move(each.before, each.choice.move)
             if move is not None:
-                boards.update(self.rules.passes(played.before, move))
+                boards.update(self.rules.passes(each.before, move))
         distances = (self._step_distances.get(board) for board in boards)
         return min((d for d in distances if d is not None), default=None)
 
@@ -85,15 +85,15 @@ class Game:
 
     @property
     def is_over(self) -> bool:
-        failed = bool(self.played) and self.played[-1].choice.move is None
-        return self.won or failed or len(self.played) >= self.puzzle.max_moves
+        failed = bool(self.moves) and self.moves[-1].choice.move is None
+        return self.won or failed or len(self.moves) >= self.puzzle.max_moves
 
     def next_request(self) -> Request:
         memory = [
-            f"{played.choice.move}: {self.rules.describe_outcome(played.before, played.after)}"
-            for played in self.played
+            f"{each.choice.move}: {self.rules.describe_outcome(each.before, each.after)}"
+            for each in self.moves
         ]
-        seed = f"{self.puzzle.name}:{len(self.played) + 1}"
+        seed = f"{self.puzzle.name}:{len(self.moves) + 1}"
         return self.condition.render(self.board, self.rules, shuffle_seed=seed, memory=memory)
 
     def play_move(self) -> Played:
@@ -113,7 +113,7 @@ class Game:
         after = self.board if move is None else self.rules.apply(self.board, move)
 
         played = Played(
-            number=len(self.played) + 1,
+            number=len(self.moves) + 1,
             before=self.board,
             request=request,
             choice=choice,
@@ -121,7 +121,7 @@ class Game:
             after=after,
             seconds=seconds,
         )
-        self.played.append(played)
+        self.moves.append(played)
         self.board = after
         return played
 
@@ -129,7 +129,7 @@ class Game:
         """Play to the end, or until `stop` is set, which takes effect between moves."""
         while not self.is_over and not (stop and stop.is_set()):
             self.play_move()
-        return self.played
+        return self.moves
 
 
 @dataclass(frozen=True)
@@ -209,7 +209,25 @@ def game_keys(
     return [(p.name, c.name, name) for p in puzzles for c in conditions for name in names]
 
 
-def play(
+def record_of(played: Played) -> MoveRecord:
+    """One played move as a saved move record."""
+    return MoveRecord(
+        options=tuple(option.move for option in played.request.options),
+        move=played.choice.move,
+        probabilities=played.choice.probabilities,
+        best_moves=played.best_moves,
+        optimal=played.optimal,
+        input_tokens=played.choice.input_tokens,
+        output_tokens=played.choice.output_tokens,
+        confidence=played.choice.confidence,
+        model=played.choice.model,
+        seconds=answer_time(played),
+        retried=played.choice.retried,
+        cost=played.choice.cost,
+    )
+
+
+def play_game(
     puzzle: Puzzle,
     condition: Condition,
     name: str,
@@ -219,12 +237,12 @@ def play(
     """One game, or None if `stop` was set before it finished."""
     game = Game(puzzle, player, condition)
     try:
-        played = game.play(stop)
+        moves_played = game.play(stop)
     finally:
         player.close()
     if not game.is_over:
         return None
-    errors = [move.choice.error for move in played if move.choice.error]
+    errors = [each.choice.error for each in moves_played if each.choice.error]
     return GameRecord(
         puzzle=puzzle.name,
         condition=condition.name,
@@ -234,23 +252,7 @@ def play(
         closest=game.closest,
         error=errors[0] if errors else None,
         rules=puzzle.rules.name,
-        moves=tuple(
-            MoveRecord(
-                options=tuple(option.move for option in move.request.options),
-                move=move.choice.move,
-                probabilities=move.choice.probabilities,
-                best_moves=move.best_moves,
-                optimal=move.optimal,
-                input_tokens=move.choice.input_tokens,
-                output_tokens=move.choice.output_tokens,
-                confidence=move.choice.confidence,
-                model=move.choice.model,
-                seconds=answer_time(move),
-                retried=move.choice.retried,
-                cost=move.choice.cost,
-            )
-            for move in played
-        ),
+        moves=tuple(record_of(each) for each in moves_played),
     )
 
 
@@ -290,7 +292,7 @@ def run_benchmark(
         puzzle, condition, name = key
         try:
             player = players[name]()
-            return play(by_name[puzzle], by_condition[condition], name, player, stop)
+            return play_game(by_name[puzzle], by_condition[condition], name, player, stop)
         except BaseException:
             stop.set()
             raise
@@ -454,9 +456,7 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
         rows.append((player, condition, cells, str(group.errors)))
 
     contenders = [cells for player, _, cells, _ in rows if player != CEILING]
-    best = [
-        max((cells[i][1] for cells in contenders), default=0.0) for i in range(len(header) - 3)
-    ]
+    best = [max((cells[i][1] for cells in contenders), default=0.0) for i in range(len(header) - 3)]
     texts = [header, *([p, c, *(text for text, _ in s), e] for p, c, s, e in rows)]
     widths = [max(len(row[i]) for row in texts) for i in range(len(header))]
 
