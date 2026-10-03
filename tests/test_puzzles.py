@@ -74,8 +74,8 @@ def test_where_there_is_a_key_the_goal_cannot_be_reached_without_it(name):
 
 
 def test_every_level_has_the_number_of_puzzles_levels_asks_for():
-    counts = [sum(p.level == level for p in PUZZLES.values()) for level in LEVELS]
-    assert counts == [*LEVELS.values()]
+    levels = [p.level for p in PUZZLES.values()]
+    assert {level: levels.count(level) for level in set(levels)} == LEVELS
 
 
 def test_puzzles_are_named_after_their_file_and_sorted_by_difficulty():
