@@ -50,9 +50,9 @@
 | DeepSeek V4.1 Flash | explicit subgoal | removed from full context | -0.04 [-0.11, 0.03] | -0.07 [-0.13, -0.01] | 0.388 | 1.000 |
 | DeepSeek V4.1 Flash (reasoning) | local state description | added to map only | 0.07 [0.00, 0.14] | 0.05 [-0.00, 0.10] | 0.092 | 0.646 |
 | DeepSeek V4.1 Flash (reasoning) | local state description | removed from full context | 0.06 [-0.01, 0.13] | 0.03 [-0.02, 0.07] | 0.146 | 0.730 |
-| DeepSeek V4.1 Flash (reasoning) | interaction history | added to map only | 0.04 [-0.03, 0.11] | 0.02 [-0.03, 0.07] | 0.424 | 1.000 |
+| DeepSeek V4.1 Flash (reasoning) | interaction history | added to map only | 0.04 [-0.03, 0.11] | 0.02 [-0.03, 0.08] | 0.424 | 1.000 |
 | DeepSeek V4.1 Flash (reasoning) | interaction history | removed from full context | 0.04 [-0.01, 0.10] | 0.02 [-0.01, 0.06] | 0.289 | 1.000 |
-| DeepSeek V4.1 Flash (reasoning) | simulated action outcomes | added to map only | 0.09 [0.03, 0.16] | 0.05 [0.01, 0.09] | 0.012 | 0.094 |
+| DeepSeek V4.1 Flash (reasoning) | simulated action outcomes | added to map only | 0.09 [0.03, 0.15] | 0.05 [0.01, 0.09] | 0.012 | 0.094 |
 | DeepSeek V4.1 Flash (reasoning) | simulated action outcomes | removed from full context | 0.04 [-0.03, 0.11] | 0.02 [-0.03, 0.06] | 0.388 | 1.000 |
 | DeepSeek V4.1 Flash (reasoning) | explicit subgoal | added to map only | 0.07 [0.00, 0.14] | 0.04 [-0.01, 0.09] | 0.092 | 0.646 |
 | DeepSeek V4.1 Flash (reasoning) | explicit subgoal | removed from full context | 0.03 [-0.03, 0.10] | 0.01 [-0.03, 0.06] | 0.549 | 1.000 |
