@@ -14,7 +14,7 @@ This is the compass, full-context request for @fig:example, with every field and
 
 = Prompt history <app:history>
 
-Prompts were developed by inspecting a few games on one or two puzzles at a few levels before generating the benchmark puzzles. Compass text is unchanged since `35408d3` (23 September 2026, 20:10), before Jev's reported results in `9b6d9dd` (22:01) and `f23d6af` (23:48). Sequence rules entered in `a6504d7` (24 September, 00:36); their two-/three-step prompts were fixed in `b4cbdc4` (11:43), before runs at 13:41 committed in `54c1131` (14:12). Times are local, UTC+02:00. On 26 September the up-to-subgoal question was corrected to ask for the route taking the fewest turns, and every affected game was replayed by every model or baseline that had evaluated it. The analysis uses the corrected records.
+Prompts were developed by inspecting a few games on one or two puzzles at a few levels before generating the benchmark puzzles. Compass text is unchanged since `4d9a877` (23 September 2026, 20:10), before Jev's reported results in `b90ab4b` (22:01) and `808785f` (23:48). Sequence rules entered in `4da2c7d` (24 September, 00:36); their two-/three-step prompts were fixed in `5f135ed` (11:43), before runs at 13:41 committed in `1144516` (14:12). Times are local, UTC+02:00. On 26 September the up-to-subgoal question was corrected to ask for the route taking the fewest turns, and every affected game was replayed by every model or baseline that had evaluated it. The analysis uses the corrected records.
 // src: cited git commits; docs/DECISIONS.md correction 27; analysis/manifest.toml
 
 #pagebreak()
