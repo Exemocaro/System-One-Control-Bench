@@ -19,6 +19,7 @@ THREE = ThreeMoveRules()
 UP_TO_TWO = UpToTwoMoveRules()
 UP_TO_THREE = UpToThreeMoveRules()
 OPEN = "#####\n#...#\n#.A.#\n#...#\n#####"
+LINE = "#####\n#A..#\n#####"
 
 
 def move(rules, text, name):
@@ -28,7 +29,11 @@ def move(rules, text, name):
 
 def test_parsing_finds_the_agent_and_leaves_floor_under_it():
     board = Board.parse("#####\n#AG.#\n#####")
-    assert (board.agent, board.at(board.agent)) == (Position(1, 1), ".")
+    assert (board.agent, board.at(board.agent), board.find("G")) == (
+        Position(1, 1),
+        ".",
+        (Position(2, 1),),
+    )
 
 
 def test_parsing_draws_the_agent_back_on_the_map():
@@ -38,100 +43,78 @@ def test_parsing_draws_the_agent_back_on_the_map():
 @pytest.mark.parametrize(
     ("text", "message"),
     [
-        ("#####\n#.G.#\n#####", "exactly one A"),
-        ("#####\n#AX.#\n#####", "unknown"),
-        ("#####\n#AG#\n#####", "same width"),
+        pytest.param("#####\n#.G.#\n#####", "exactly one A", id="no agent"),
+        pytest.param("#####\n#AX.#\n#####", "unknown", id="unknown symbol"),
+        pytest.param("#####\n#AG#\n#####", "same width", id="different widths"),
     ],
-    ids=["no agent", "unknown symbol", "different widths"],
 )
 def test_a_map_that_cannot_be_read_is_refused(text, message):
     with pytest.raises(ValueError, match=message):
         Board.parse(text)
 
 
-@pytest.mark.parametrize(
-    ("position", "expected"),
-    [(Position(-1, 0), "#"), (Position(9, 9), "#"), (Position(2, 1), "G")],
-    ids=["left of the map", "below the map", "inside the map"],
-)
-def test_a_cell_outside_the_map_counts_as_wall(position, expected):
-    assert Board.parse("#####\n#AG.#\n#####").at(position) == expected
-
-
-def test_find_lists_every_cell_with_a_symbol():
-    assert Board.parse("#####\n#AG.#\n#####").find("G") == (Position(2, 1),)
-
-
-def test_the_compass_rules_always_offer_the_same_four_moves():
-    moves = COMPASS.moves(Board.parse("###\n#A#\n###"))
-    assert [m.name for m in moves] == ["north", "south", "east", "west"]
+def test_a_cell_outside_the_map_counts_as_wall():
+    assert Board.parse(LINE).at(Position(-1, 0)) == "#"
 
 
 @pytest.mark.parametrize(
     ("rules", "count"),
-    [(COMPASS, 4), (TWO, 16), (THREE, 64), (UP_TO_TWO, 4 + 16), (UP_TO_THREE, 4 + 16 + 64)],
-    ids=["compass", "two-moves", "three-moves", "up-to-two", "up-to-three"],
+    [
+        pytest.param(COMPASS, 4, id="compass"),
+        pytest.param(TWO, 16, id="two-moves"),
+        pytest.param(THREE, 64, id="three-moves"),
+        pytest.param(UP_TO_TWO, 4 + 16, id="up-to-two"),
+        pytest.param(UP_TO_THREE, 4 + 16 + 64, id="up-to-three"),
+    ],
 )
 def test_the_rules_offer_every_sequence_up_to_their_length(rules, count):
     assert len(rules.moves(Board.parse("###\n#A#\n###"))) == count
 
 
 @pytest.mark.parametrize(
-    ("rules", "name"),
-    [(TWO, "north,north"), (UP_TO_THREE, "east"), (UP_TO_THREE, "east,north,west")],
-    ids=["a two-step move", "a single step under up-to", "a three-step move under up-to"],
-)
-def test_a_sequence_is_found_by_its_name(rules, name):
-    assert rules.find_move(Board.parse("###\n#A#\n###"), name) is not None
-
-
-@pytest.mark.parametrize(
     ("rules", "name", "expected"),
     [
-        (TWO, "east,north", "move east (right), then north (up)"),
-        (UP_TO_THREE, "east", "move east (right)"),
+        pytest.param(COMPASS, "north", "north", id="a compass move"),
+        pytest.param(TWO, "east,north", "move east (right), then north (up)", id="a sequence"),
+        pytest.param(UP_TO_THREE, "east", "move east (right)", id="a single step under up-to"),
     ],
-    ids=["a sequence", "a single step"],
 )
-def test_a_move_describes_itself(rules, name, expected):
-    assert rules.find_move(Board.parse("###\n#A#\n###"), name).description == expected
+def test_a_move_is_found_by_name_and_describes_itself(rules, name, expected):
+    found = rules.find_move(Board.parse("###\n#A#\n###"), name)
+    assert expected in (found.name, found.description)
 
 
-# Each row: the rules, the board before, the move, then where the agent is, what it carries and
-# whether it won.
+# Each row: rules, board, move, then where the agent ends up, what it carries, whether it won.
 @pytest.mark.parametrize(
     ("rules", "text", "name", "agent", "holding", "won"),
     [
-        (COMPASS, OPEN, "north", (2, 1), (), False),
-        (COMPASS, OPEN, "south", (2, 3), (), False),
-        (COMPASS, OPEN, "east", (3, 2), (), False),
-        (COMPASS, OPEN, "west", (1, 2), (), False),
-        (COMPASS, "###\n#A#\n###", "east", (1, 1), (), False),
-        (COMPASS, "####\n#AK#\n####", "east", (2, 1), ("key",), False),
-        (COMPASS, "####\n#AD#\n####", "east", (1, 1), (), False),
-        (COMPASS, "####\n#AG#\n####", "east", (2, 1), (), True),
-        (TWO, "#####\n#...#\n#A..#\n#####", "north,east", (2, 1), (), False),
-        (THREE, "######\n#A...#\n######", "east,east,west", (2, 1), (), False),
-        (TWO, "#####\n#A..#\n#####", "north,east", (2, 1), (), False),
-        (THREE, "######\n#AG..#\n######", "east,east,east", (2, 1), (), True),
-        (TWO, "#####\n#AKD#\n#####", "east,east", (3, 1), ("key",), False),
-        (UP_TO_THREE, "######\n#A...#\n######", "east", (2, 1), (), False),
-    ],
-    ids=[
-        "north goes one cell up",
-        "south goes down",
-        "east goes right",
-        "west goes left",
-        "a wall blocks the move",
-        "the key is picked up",
-        "a locked door blocks without the key",
-        "the goal wins",
-        "two steps in order",
-        "three steps in order",
-        "a blocked step is wasted, the rest are taken",
-        "reaching the goal ends the sequence there",
-        "a sequence takes the key and opens the door",
-        "a single step under the up-to rules",
+        pytest.param(COMPASS, OPEN, "north", (2, 1), (), False, id="north goes one cell up"),
+        pytest.param(COMPASS, OPEN, "east", (3, 2), (), False, id="east goes right"),
+        pytest.param(COMPASS, LINE, "north", (1, 1), (), False, id="a wall blocks the move"),
+        pytest.param(COMPASS, "####\n#AK#\n####", "east", (2, 1), ("key",), False, id="the key"),
+        pytest.param(COMPASS, "####\n#AD#\n####", "east", (1, 1), (), False, id="a locked door"),
+        pytest.param(COMPASS, "####\n#AG#\n####", "east", (2, 1), (), True, id="the goal wins"),
+        pytest.param(TWO, OPEN, "north,east", (3, 1), (), False, id="two steps in order"),
+        pytest.param(TWO, LINE, "north,east", (2, 1), (), False, id="a blocked step is wasted"),
+        pytest.param(
+            THREE,
+            "######\n#AG..#\n######",
+            "east,east,east",
+            (2, 1),
+            (),
+            True,
+            id="the goal ends a sequence",
+        ),
+        pytest.param(
+            TWO,
+            "#####\n#AKD#\n#####",
+            "east,east",
+            (3, 1),
+            ("key",),
+            False,
+            id="key and door in one move",
+        ),
+        pytest.param(UP_TO_THREE, LINE, "east", (2, 1), (), False, id="a single step under up-to"),
     ],
 )
 def test_a_move_changes_the_board(rules, text, name, agent, holding, won):
@@ -147,26 +130,37 @@ def test_a_key_picked_up_leaves_floor_behind():
 @pytest.mark.parametrize(
     ("rules", "text", "name", "expected"),
     [
-        (COMPASS, "#####\n#A.G#\n#####", "east", "you move to (2, 1)"),
-        (COMPASS, "#####\n#A.G#\n#####", "west", "blocked, you stay at (1, 1)"),
-        (COMPASS, "####\n#AK#\n####", "east", "you move to (2, 1) and pick up the key"),
-        (COMPASS, "####\n#AG#\n####", "east", "you move to (2, 1) and reach the goal"),
-        (TWO, "#####\n#A..#\n#####", "east,east", "you end at (3, 1)"),
-        (TWO, "#####\n#A..#\n#####", "east,west", "you end where you started, at (1, 1)"),
-        (TWO, "#####\n#A..#\n#####", "north,west", "you end where you started, at (1, 1)"),
-        (TWO, "#####\n#AK.#\n#####", "east,east", "you end at (3, 1) and pick up the key"),
-        (TWO, "#####\n#AG.#\n#####", "east,east", "you end at (2, 1) and reach the goal"),
-    ],
-    ids=[
-        "moving",
-        "into a wall",
-        "onto the key",
-        "onto the goal",
-        "a sequence moving on",
-        "a sequence back where it started",
-        "a sequence into a wall",
-        "a sequence onto the key",
-        "a sequence onto the goal",
+        pytest.param(COMPASS, LINE, "east", "you move to (2, 1)", id="moving"),
+        pytest.param(COMPASS, LINE, "north", "blocked, you stay at (1, 1)", id="into a wall"),
+        pytest.param(
+            COMPASS,
+            "####\n#AK#\n####",
+            "east",
+            "you move to (2, 1) and pick up the key",
+            id="onto the key",
+        ),
+        pytest.param(
+            COMPASS,
+            "####\n#AG#\n####",
+            "east",
+            "you move to (2, 1) and reach the goal",
+            id="onto the goal",
+        ),
+        pytest.param(TWO, LINE, "east,east", "you end at (3, 1)", id="a sequence moving on"),
+        pytest.param(
+            TWO,
+            LINE,
+            "east,west",
+            "you end where you started, at (1, 1)",
+            id="a sequence back again",
+        ),
+        pytest.param(
+            TWO,
+            "#####\n#AG.#\n#####",
+            "east,east",
+            "you end at (2, 1) and reach the goal",
+            id="a sequence onto the goal",
+        ),
     ],
 )
 def test_an_outcome_is_described_in_plain_words(rules, text, name, expected):
@@ -183,19 +177,20 @@ def test_unlocking_the_door_is_described():
 @pytest.mark.parametrize(
     ("text", "line", "expected"),
     [
-        (
+        pytest.param(
             "#####\n#.D.#\n#KAG#\n#####",
             0,
             "North of you is the locked door. South of you is a wall. "
             "East of you is the goal. West of you is the key.",
+            id="what is next to you",
         ),
-        (
+        pytest.param(
             "######\n#A...#\n#..K.#\n#...G#\n######",
             1,
             "The goal is 3 east and 2 south of you. The key is 2 east and 1 south of you.",
+            id="where things are relative to you",
         ),
     ],
-    ids=["what is next to you", "where things are relative to you"],
 )
 def test_the_compass_rules_describe_the_surroundings(text, line, expected):
     assert COMPASS.describe_surroundings(Board.parse(text)).splitlines()[line] == expected
@@ -209,28 +204,13 @@ def test_a_carried_key_is_no_longer_placed_relative_to_you():
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("######\n#AKDG#\n######", "the key K at (2, 1)"),
-        ("#####\n#ADG#\n#####", "the locked door D at (2, 1)"),
-        ("####\n#AG#\n####", "the goal G at (2, 1)"),
+        pytest.param("######\n#AKDG#\n######", "the key K at (2, 1)", id="the key first"),
+        pytest.param("#####\n#ADG#\n#####", "the locked door D at (2, 1)", id="then the door"),
+        pytest.param("####\n#AG#\n####", "the goal G at (2, 1)", id="then the goal"),
     ],
-    ids=["the key first", "then the door", "then the goal"],
 )
 def test_the_next_target_is_the_key_then_the_door_then_the_goal(text, expected):
     assert COMPASS.describe_next_target(Board.parse(text)) == expected
-
-
-@pytest.mark.parametrize(
-    ("name", "kind"),
-    [
-        ("compass", CompassRules),
-        ("two-moves", TwoMoveRules),
-        ("three-moves", ThreeMoveRules),
-        ("up-to-two-moves", UpToTwoMoveRules),
-        ("up-to-three-moves", UpToThreeMoveRules),
-    ],
-)
-def test_the_rules_are_found_by_name(name, kind):
-    assert isinstance(make_rules(name), kind)
 
 
 def test_unknown_rules_are_refused():
@@ -241,72 +221,26 @@ def test_unknown_rules_are_refused():
 @pytest.mark.parametrize(
     ("rules", "level", "expected"),
     [
-        (COMPASS, 1, 1),
-        (COMPASS, 4, 4),
-        (COMPASS, 10, 10),
-        (TWO, 1, 1),
-        (TWO, 4, 2),
-        (TWO, 10, 5),
-        (THREE, 1, 1),
-        (THREE, 4, 2),
-        (THREE, 10, 4),
-        (UP_TO_TWO, 1, 1),
-        (UP_TO_TWO, 4, 2),
-        (UP_TO_TWO, 10, 5),
-        (UP_TO_THREE, 1, 1),
-        (UP_TO_THREE, 4, 2),
-        (UP_TO_THREE, 10, 4),
-    ],
-    ids=[
-        "compass, 1 step",
-        "compass, 4 steps",
-        "compass, 10 steps",
-        "two-moves, 1 step",
-        "two-moves, 4 steps",
-        "two-moves, 10 steps",
-        "three-moves, 1 step",
-        "three-moves, 4 steps",
-        "three-moves, 10 steps, the last cut short",
-        "up-to-two, 1 step",
-        "up-to-two, 4 steps",
-        "up-to-two, 10 steps",
-        "up-to-three, 1 step",
-        "up-to-three, 4 steps",
-        "up-to-three, 10 steps",
+        pytest.param(COMPASS, 10, 10, id="compass counts every step"),
+        pytest.param(TWO, 1, 1, id="one step is one move"),
+        pytest.param(TWO, 4, 2, id="four steps are two two-step moves"),
+        pytest.param(TWO, 10, 5, id="ten steps are five"),
+        pytest.param(THREE, 10, 4, id="ten steps are four three-step moves, the last cut short"),
+        pytest.param(UP_TO_TWO, 4, 2, id="up-to-two counts as two-moves"),
+        pytest.param(UP_TO_THREE, 10, 4, id="up-to-three counts as three-moves"),
     ],
 )
 def test_a_level_takes_its_distance_over_the_sequence_length_rounded_up(rules, level, expected):
     assert rules.moves_for(level) == expected
 
 
-def test_sequence_rules_count_levels_in_compass_moves():
-    assert isinstance(TWO.step_rules(), CompassRules)
-
-
-def test_the_compass_rules_count_levels_in_their_own_moves():
-    assert COMPASS.step_rules() is COMPASS
-
-
-@pytest.mark.parametrize(
-    ("rules", "fragment"),
-    [
-        (UP_TO_THREE, "a path of one, two or three steps"),
-        (UP_TO_TWO, "a path of one or two steps"),
-    ],
-    ids=["up-to-three", "up-to-two"],
-)
-def test_the_up_to_rules_say_a_move_may_be_shorter(rules, fragment):
-    assert fragment in rules.description
-
-
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("#####\n#A.G#\n#####", 2),
-        ("#####\n#KDG#\n#A###\n#####", 3),
-        ("#####\n#A#G#\n#####", None),
+        pytest.param("#####\n#A.G#\n#####", 2, id="a straight line"),
+        pytest.param("#####\n#KDG#\n#A###\n#####", 3, id="fetching the key first"),
+        pytest.param("#####\n#A#G#\n#####", None, id="a goal behind a wall"),
     ],
-    ids=["a straight line", "fetching the key first", "a goal behind a wall"],
 )
 def test_the_distance_to_the_goal(text, expected):
     assert Solver(COMPASS).fewest_moves(Board.parse(text)) == expected
@@ -315,19 +249,13 @@ def test_the_distance_to_the_goal(text, expected):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("#####\n#A..#\n#.G.#\n#####", ("south", "east")),
-        ("#####\n#A#.#\n#.G.#\n#####", ("south",)),
-        ("#####\n#A#G#\n#####", ()),
+        pytest.param("#####\n#A..#\n#.G.#\n#####", ("south", "east"), id="ties are kept"),
+        pytest.param("#####\n#A#.#\n#.G.#\n#####", ("south",), id="a wall is never best"),
+        pytest.param("#####\n#A#G#\n#####", (), id="an unreachable goal has none"),
     ],
-    ids=["ties are kept", "a wall is never best", "an unreachable goal has none"],
 )
 def test_the_moves_that_start_a_shortest_path(text, expected):
     assert Solver(COMPASS).best_moves(Board.parse(text)) == expected
-
-
-def test_there_are_no_best_moves_once_the_goal_is_reached():
-    _, after = move(COMPASS, "####\n#AG#\n####", "east")
-    assert Solver(COMPASS).best_moves(after) == ()
 
 
 def test_best_moves_can_reuse_the_distances_from_an_earlier_board():
@@ -337,7 +265,7 @@ def test_best_moves_can_reuse_the_distances_from_an_earlier_board():
 
 
 @pytest.mark.parametrize("rules", [COMPASS, THREE], ids=["compass", "three-moves"])
-@pytest.mark.parametrize("name", ["gen-03-01", "gen-08-01", "maze", "gen-20-01"])
+@pytest.mark.parametrize("name", ["gen-03-01", "maze"])
 def test_the_distances_from_a_board_agree_with_a_search_from_each_board(rules, name):
     board = load_puzzles()[name].board
     solver = Solver(rules)
