@@ -1,9 +1,9 @@
 {
-  "name": "random",
+  "name": "Random",
   "player": "random",
   "org": "",
   "url": "",
-  "notes": "seeded",
+  "notes": "A random allowed move",
   "kind": "baseline",
   "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973",
   "track": "core",

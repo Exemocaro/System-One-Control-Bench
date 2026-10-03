@@ -12,7 +12,7 @@ from system_one_control.bench import (
     validate_file,
 )
 from system_one_control.cli import app
-from system_one_control.leaderboard import build_page, player_cell, rebuild, safe, submit
+from system_one_control.leaderboard import build_page, player_cell, rebuild, safe, shown, submit
 from system_one_control.players import PlayerEntry, players_from_toml
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.players.remote import DecisionPlayer, LLMPlayer
@@ -414,3 +414,10 @@ def test_a_decision_endpoint_answers_probabilities_or_a_choice(reply, move, erro
     if error:
         assert error in choice.error
     assert sent[0]["options"] == [{"id": o.id, "text": o.text} for o in t.request.options]
+
+
+def test_unreported_cost_is_na_and_free_is_zero():
+    assert shown(None, "chat") == "n/a"
+    assert shown(None, "baseline") == "0"
+    assert shown(0.0, "decision") == "0"
+    assert shown(0.7121, "chat") == "0.7121"

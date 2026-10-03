@@ -18,7 +18,8 @@ from system_one_control.puzzles import load_puzzles
 LEADERBOARD_DIR = Path(__file__).resolve().parents[2] / "leaderboard"
 CORE_CONDITIONS = ("map", "everything")
 
-KINDS = ("baseline", "local", "chat", "bounded decision")
+KINDS = ("baseline", "chat", "decision")
+REPO = "https://github.com/Exemocaro/JevStuff"
 BASELINES = ("random", "greedy", "greedy-walls", "solver")
 
 
@@ -137,6 +138,27 @@ def ranked(entries: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: e["conditions"]["everything"]["progress"][0], reverse=True)
 
 
+def shown(value: float | None, kind: str) -> str:
+    """A cost or latency for the table: n/a when unreported, 0 for a baseline, else the number."""
+    if value is None:
+        return "0" if kind == "baseline" else "n/a"
+    return f"{value:g}"
+
+
+LEGEND = """- **everything / map**: the core track conditions (compass rules, 100 puzzles each);
+  `everything` is the full context.
+- **won**: share of the 100 puzzles where the goal was reached before the move limit.
+- **progress**: how close a game got to the goal at its closest point (1 for a win).
+- **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
+- **[lo-hi]**: 95% bootstrap interval over puzzles.
+- **cost**: USD for one core run (200 games), as reported by the player; n/a means not reported.
+- **latency**: median seconds per answer (the successful call alone).
+- **kind**: baseline, chat model or decision model.
+
+How to submit: [SUBMITTING.md](../SUBMITTING.md).
+"""
+
+
 def player_cell(entry: dict[str, Any]) -> str:
     """The markdown player cell: a link for clean http(s) urls, else escaped text."""
     name = html.escape(safe(entry["name"]))
@@ -150,6 +172,8 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
     """The core leaderboard as markdown, sorted by everything progress."""
     header = [
         "player",
+        "org",
+        "kind",
         "everything won",
         "everything progress",
         "everything SPL",
@@ -158,15 +182,17 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
         "map SPL",
         "cost",
         "latency",
+        "notes",
     ]
     lines = ["|" + "|".join(header) + "|", "|" + "|".join(["---"] * len(header)) + "|"]
     for entry in ranked(entries):
-        row = [player_cell(entry)]
+        row = [player_cell(entry), html.escape(safe(entry["org"])), entry["kind"]]
         for condition in ("everything", "map"):
             for metric in ("won", "progress", "spl"):
                 mean, lo, hi = entry["conditions"][condition][metric]
                 row.append(f"{mean:.2f} [{lo:.2f}-{hi:.2f}]")
-        row += [str(entry["cost"] or "-"), str(entry["latency"] or "-")]
+        row += [shown(entry["cost"], entry["kind"]), shown(entry["latency"], entry["kind"])]
+        row.append(html.escape(safe(entry["notes"])))
         lines.append("|" + "|".join(row) + "|")
     return "\n".join(lines) + "\n"
 
@@ -186,12 +212,14 @@ def build_page(entries: Sequence[dict[str, Any]]) -> str:
         ev, mp = entry["conditions"]["everything"], entry["conditions"]["map"]
         cost = entry["cost"]
         rows.append(
-            f"<tr><td>{player}</td><td>{html.escape(entry['kind'])}</td>"
+            f"<tr><td>{player}</td><td>{html.escape(entry['org'])}</td>"
+            f"<td>{html.escape(entry['kind'])}</td>"
             f'<td data-v="{ev["progress"][0]}">{ev["progress"][0]:.2f}</td>'
             f'<td data-v="{mp["progress"][0]}">{mp["progress"][0]:.2f}</td>'
             f'<td data-v="{ev["won"][0]}">{ev["won"][0]:.2f}</td>'
             f'<td data-v="{cost if cost is not None else ""}">'
-            f"{cost if cost is not None else '-'}</td></tr>"
+            f"{shown(cost, entry['kind'])}</td>"
+            f"<td>{html.escape(entry['notes'])}</td></tr>"
         )
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -202,18 +230,31 @@ def build_page(entries: Sequence[dict[str, Any]]) -> str:
 :root {{ color-scheme: light dark; }}
 table {{ border-collapse: collapse; }}
 th, td {{ border: 1px solid gray; padding: 4px 8px; text-align: right; }}
-th:first-child, td:first-child, td:nth-child(2) {{ text-align: left; }}
+th:first-child, td:first-child, td:nth-child(2), td:nth-child(3), td:last-child
+  {{ text-align: left; }}
 th {{ cursor: pointer; }}
 </style>
 </head>
 <body>
 <h1>System-One Control Bench leaderboard</h1>
 <table id="board"><thead><tr>
-<th>player</th><th>kind</th><th>everything progress</th>
-<th>map progress</th><th>everything won</th><th>cost</th>
+<th>player</th><th>org</th><th>kind</th><th>everything progress</th>
+<th>map progress</th><th>everything won</th><th>cost (USD)</th><th>notes</th>
 </tr></thead><tbody>
 {"".join(rows)}
 </tbody></table>
+<ul>
+<li><b>everything / map</b>: the two conditions of the core track (compass rules, 100 puzzles each);
+<b>everything</b> is the full context.</li>
+<li><b>won</b>: share of puzzles where the goal was reached before the move limit.</li>
+<li><b>progress</b>: how close a game got to the goal at its closest point (1 for a win).</li>
+<li><b>cost</b>: USD for one core run (200 games), as reported by the player;
+n/a means not reported.</li>
+<li><b>kind</b>: baseline, chat model or decision model. Click a header to sort.</li>
+<li>Intervals, SPL and latency (median seconds per answer) are in the
+<a href="{REPO}/blob/main/leaderboard/README.md">full table</a>.</li>
+</ul>
+<p>How to submit: <a href="{REPO}/blob/main/SUBMITTING.md">SUBMITTING.md</a>.</p>
 <script>
 document.querySelectorAll("th").forEach((h, i) => h.addEventListener("click", () => {{
   const rows = [...document.querySelectorAll("#board tbody tr")];
@@ -255,7 +296,10 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     readme = leaderboard / "README.md"
     readme.parent.mkdir(parents=True, exist_ok=True)
     readme.write_text(
-        "# Leaderboard\n\nCore track, best everything progress first.\n\n" + build_table(entries),
+        "# Leaderboard\n\nCore track, best everything progress first.\n\n"
+        + LEGEND
+        + "\n"
+        + build_table(entries),
         encoding="utf-8",
         newline="",
     )

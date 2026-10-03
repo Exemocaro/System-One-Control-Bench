@@ -372,7 +372,7 @@ def submit(
     url: str = typer.Option("", help="A link shown beside the entry name."),
     notes: str = typer.Option("", help="Anything to say about the run."),
     player: str | None = typer.Option(None, help="Whose games to take; needed with several."),
-    kind: str | None = typer.Option(None, help="bounded decision, chat, local or baseline."),
+    kind: str | None = typer.Option(None, help="baseline, chat or decision."),
 ) -> None:
     """Validate core-track results and write the player's leaderboard entry."""
     try:

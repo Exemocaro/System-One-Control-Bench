@@ -7,18 +7,31 @@
 :root { color-scheme: light dark; }
 table { border-collapse: collapse; }
 th, td { border: 1px solid gray; padding: 4px 8px; text-align: right; }
-th:first-child, td:first-child, td:nth-child(2) { text-align: left; }
+th:first-child, td:first-child, td:nth-child(2), td:nth-child(3), td:last-child
+  { text-align: left; }
 th { cursor: pointer; }
 </style>
 </head>
 <body>
 <h1>System-One Control Bench leaderboard</h1>
 <table id="board"><thead><tr>
-<th>player</th><th>kind</th><th>everything progress</th>
-<th>map progress</th><th>everything won</th><th>cost</th>
+<th>player</th><th>org</th><th>kind</th><th>everything progress</th>
+<th>map progress</th><th>everything won</th><th>cost (USD)</th><th>notes</th>
 </tr></thead><tbody>
-<tr><td>solver</td><td>baseline</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="">-</td></tr><tr><td>deepseek-v4.1-flash-think</td><td>chat</td><td data-v="0.8639999999999999">0.86</td><td data-v="0.7866666666666668">0.79</td><td data-v="0.8">0.80</td><td data-v="0.7121">0.7121</td></tr><tr><td>deepseek-v4.1-flash</td><td>chat</td><td data-v="0.71525">0.72</td><td data-v="0.5453333333333336">0.55</td><td data-v="0.6">0.60</td><td data-v="0.0954">0.0954</td></tr><tr><td>gemma-4-26b</td><td>chat</td><td data-v="0.7140833333333332">0.71</td><td data-v="0.45225000000000015">0.45</td><td data-v="0.61">0.61</td><td data-v="0.119">0.119</td></tr><tr><td>jev</td><td>bounded decision</td><td data-v="0.6825833333333334">0.68</td><td data-v="0.4250833333333335">0.43</td><td data-v="0.57">0.57</td><td data-v="">-</td></tr><tr><td>qwen3.5-4b</td><td>local</td><td data-v="0.6606666666666663">0.66</td><td data-v="0.33533333333333337">0.34</td><td data-v="0.45">0.45</td><td data-v="">-</td></tr><tr><td>greedy-walls</td><td>baseline</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.37">0.37</td><td data-v="">-</td></tr><tr><td>greedy</td><td>baseline</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.28">0.28</td><td data-v="">-</td></tr><tr><td>laya</td><td>local</td><td data-v="0.2635">0.26</td><td data-v="0.10483333333333335">0.10</td><td data-v="0.12">0.12</td><td data-v="">-</td></tr><tr><td>random</td><td>baseline</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.04">0.04</td><td data-v="">-</td></tr><tr><td>gliclass</td><td>local</td><td data-v="0.2158333333333333">0.22</td><td data-v="0.10425">0.10</td><td data-v="0.13">0.13</td><td data-v="">-</td></tr>
+<tr><td>Solver</td><td></td><td>baseline</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="">0</td><td>Always plays a best move; the upper bound</td></tr><tr><td>DeepSeek V4.1 Flash (reasoning)</td><td>DeepSeek</td><td>chat</td><td data-v="0.8639999999999999">0.86</td><td data-v="0.7866666666666668">0.79</td><td data-v="0.8">0.80</td><td data-v="0.7121">0.7121</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning capped at 1,024 tokens</td></tr><tr><td>DeepSeek V4.1 Flash</td><td>DeepSeek</td><td>chat</td><td data-v="0.71525">0.72</td><td data-v="0.5453333333333336">0.55</td><td data-v="0.6">0.60</td><td data-v="0.0954">0.0954</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td><a href="https://huggingface.co/google/gemma-4-26b-a4b-it">Gemma 4 26B</a></td><td>Google</td><td>chat</td><td data-v="0.7140833333333332">0.71</td><td data-v="0.45225000000000015">0.45</td><td data-v="0.61">0.61</td><td data-v="0.119">0.119</td><td>google/gemma-4-26b-a4b-it via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td>Jev</td><td></td><td>decision</td><td data-v="0.6825833333333334">0.68</td><td data-v="0.4250833333333335">0.43</td><td data-v="0.57">0.57</td><td data-v="">n/a</td><td>jev-1.13.0 through its API; cost not reported</td></tr><tr><td><a href="https://huggingface.co/Qwen/Qwen3.5-4B">Qwen3.5-4B</a></td><td>Alibaba (Qwen)</td><td>chat</td><td data-v="0.6606666666666663">0.66</td><td data-v="0.33533333333333337">0.34</td><td data-v="0.45">0.45</td><td data-v="">n/a</td><td>Qwen/Qwen3.5-4B in bfloat16, run locally, thinking off, scored on option-number probabilities</td></tr><tr><td>Greedy-walls</td><td></td><td>baseline</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.37">0.37</td><td data-v="">0</td><td>Straight at the next target, never into a wall</td></tr><tr><td>Greedy</td><td></td><td>baseline</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.28">0.28</td><td data-v="">0</td><td>Straight at the next target, ignoring walls</td></tr><tr><td><a href="https://huggingface.co/convaiinnovations/laya">Laya</a></td><td>ConvAI Innovations</td><td>decision</td><td data-v="0.2635">0.26</td><td data-v="0.10483333333333335">0.10</td><td data-v="0.12">0.12</td><td data-v="">n/a</td><td>convaiinnovations/laya, typed-decisions, run locally on a consumer GPU</td></tr><tr><td>Random</td><td></td><td>baseline</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.04">0.04</td><td data-v="">0</td><td>A random allowed move</td></tr><tr><td><a href="https://huggingface.co/knowledgator/gliclass-modern-large-v3.0">GLiClass</a></td><td>Knowledgator</td><td>decision</td><td data-v="0.2158333333333333">0.22</td><td data-v="0.10425">0.10</td><td data-v="0.13">0.13</td><td data-v="">n/a</td><td>knowledgator/gliclass-modern-large-v3.0, run locally on a consumer GPU</td></tr>
 </tbody></table>
+<ul>
+<li><b>everything / map</b>: the two conditions of the core track (compass rules, 100 puzzles each);
+<b>everything</b> is the full context.</li>
+<li><b>won</b>: share of puzzles where the goal was reached before the move limit.</li>
+<li><b>progress</b>: how close a game got to the goal at its closest point (1 for a win).</li>
+<li><b>cost</b>: USD for one core run (200 games), as reported by the player;
+n/a means not reported.</li>
+<li><b>kind</b>: baseline, chat model or decision model. Click a header to sort.</li>
+<li>Intervals, SPL and latency (median seconds per answer) are in the
+<a href="https://github.com/Exemocaro/JevStuff/blob/main/leaderboard/README.md">full table</a>.</li>
+</ul>
+<p>How to submit: <a href="https://github.com/Exemocaro/JevStuff/blob/main/SUBMITTING.md">SUBMITTING.md</a>.</p>
 <script>
 document.querySelectorAll("th").forEach((h, i) => h.addEventListener("click", () => {
   const rows = [...document.querySelectorAll("#board tbody tr")];

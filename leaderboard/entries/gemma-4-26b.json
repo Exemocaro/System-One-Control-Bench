@@ -1,9 +1,9 @@
 {
-  "name": "gemma-4-26b",
+  "name": "Gemma 4 26B",
   "player": "gemma-4-26b",
-  "org": "",
-  "url": "",
-  "notes": "seeded",
+  "org": "Google",
+  "url": "https://huggingface.co/google/gemma-4-26b-a4b-it",
+  "notes": "google/gemma-4-26b-a4b-it via OpenRouter (DeepInfra), reasoning off",
   "kind": "chat",
   "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973",
   "track": "core",

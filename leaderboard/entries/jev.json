@@ -1,10 +1,10 @@
 {
-  "name": "jev",
+  "name": "Jev",
   "player": "jev",
   "org": "",
   "url": "",
-  "notes": "seeded",
-  "kind": "bounded decision",
+  "notes": "jev-1.13.0 through its API; cost not reported",
+  "kind": "decision",
   "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973",
   "track": "core",
   "results": "jev.jsonl",
