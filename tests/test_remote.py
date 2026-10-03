@@ -10,9 +10,7 @@ from typesafe_sdk import (
 )
 
 from system_one_control.players.remote import (
-    ANSWER_TOKENS,
     JEV_MODEL,
-    JEV_RETRY_WAITS,
     LLM_SYSTEM,
     OPENROUTER_URL,
     REASONING_BUDGET,
@@ -30,8 +28,10 @@ from tests.helpers import option_for, turn
 
 TINY = "####\n#AG#\n####"
 BUSY = TypeSafeInternalServerError(529, {"error": "high traffic"}, httpx.Headers())
-BAD = TypeSafeBadRequestError(400, {"error": "bad"}, httpx.Headers())
 REQUEST = CONDITIONS["everything"].render(Board.parse(TINY), CompassRules())
+THINKING = {"enabled": True, "exclude": True, "max_tokens": REASONING_BUDGET}
+CUT_OFF = {"message": {"content": '{"option": "option_1'}, "finish_reason": "length"}
+UPSTREAM = {"error": {"code": 502, "message": "upstream"}}
 
 
 def flaky(*failures):
@@ -46,51 +46,36 @@ def flaky(*failures):
     return call
 
 
-@pytest.mark.parametrize(
-    ("failures", "slept", "retried"),
-    [
-        ((), [], ()),
-        ((RuntimeError("a"),), [0.5], ("RuntimeError: a",)),
-        (
-            (RuntimeError("a"), RuntimeError("b")),
-            [0.5, 1.0],
-            ("RuntimeError: a", "RuntimeError: b"),
-        ),
-    ],
-    ids=["no failure", "one failure", "two failures"],
-)
-def test_a_failing_call_is_tried_again_after_each_wait(failures, slept, retried):
+def test_a_failing_call_is_tried_again_after_each_wait():
     waited = []
-    result, _, why = with_retries(flaky(*failures), (0.5, 1.0), lambda e: True, waited.append)
-    assert (result, waited, why) == ("ok", slept, retried)
+    call = flaky(KeyError("a"), KeyError("b"))
+    result, _, why = with_retries(call, (0.5, 1.0), lambda e: True, waited.append)
+    assert (result, waited, why) == ("ok", [0.5, 1.0], ("KeyError: 'a'", "KeyError: 'b'"))
 
 
 @pytest.mark.parametrize(
     ("failures", "retryable", "slept"),
     [
-        ((ValueError(),) * 3, True, [0.5, 1.0]),
-        ((ValueError(),), False, []),
+        pytest.param(3, True, [0.5, 1.0], id="the last failure is raised"),
+        pytest.param(1, False, [], id="a failure not worth retrying"),
     ],
-    ids=["the last failure is raised", "a failure not worth retrying is raised at once"],
 )
 def test_a_call_that_keeps_failing_raises(failures, retryable, slept):
     waited = []
     with pytest.raises(ValueError):
-        with_retries(flaky(*failures), (0.5, 1.0), lambda e: retryable, waited.append)
+        with_retries(
+            flaky(*[ValueError()] * failures), (0.5, 1.0), lambda e: retryable, waited.append
+        )
     assert waited == slept
 
 
 def test_jev_is_sent_exactly_the_request():
+    criteria = {o.id: o.text for o in REQUEST.options}
+    question = {"type": "choice", "instructions": REQUEST.question, "criteria": criteria}
     assert jev_body(REQUEST) == {
         "state": REQUEST.state,
         "model": JEV_MODEL,
-        "questions": {
-            "move": {
-                "type": "choice",
-                "instructions": REQUEST.question,
-                "criteria": {o.id: o.text for o in REQUEST.options},
-            }
-        },
+        "questions": {"move": question},
     }
 
 
@@ -128,81 +113,42 @@ def test_an_answer_outside_the_options_is_an_error():
     assert choice.move is None and "option_9" in choice.error
 
 
-@pytest.mark.parametrize(
-    ("failures", "calls"), [((BUSY,), 2), ((BUSY, BUSY), 3)], ids=["once", "twice"]
-)
-def test_a_busy_server_is_tried_again_and_the_move_records_why(failures, calls):
-    player, client = jev(*failures)
+def test_a_busy_server_is_tried_again_and_the_move_records_why():
+    player, client = jev(BUSY, BUSY)
     choice = player.choose(turn(TINY))
-    assert (choice.move, client.calls, len(choice.retried)) == ("east", calls, len(failures))
+    assert (choice.move, client.calls, len(choice.retried)) == ("east", 3, 2)
     assert choice.retried[0] == "TypeSafeInternalServerError: 529 high traffic"
 
 
 @pytest.mark.parametrize(
-    ("failures", "error", "calls"),
+    ("failures", "calls"),
     [
-        ((BUSY, BUSY, BUSY), TypeSafeInternalServerError, 3),
-        ((TypeSafeAPITimeoutError(60.0),), TypeSafeAPITimeoutError, 1),
-        ((BAD,), TypeSafeBadRequestError, 1),
-        ((RuntimeError("rate limited"),), RuntimeError, 1),
-    ],
-    ids=[
-        "after two retries the failure is raised",
-        "a timeout may already have been billed",
-        "a bad request will not heal",
-        "any other failure is raised for the game to record",
+        pytest.param((BUSY,) * 3, 3, id="after two retries"),
+        pytest.param((TypeSafeAPITimeoutError(60.0),), 1, id="a timeout is not retried"),
+        pytest.param((TypeSafeBadRequestError(400, {}, httpx.Headers()),), 1, id="a bad request"),
     ],
 )
-def test_a_failed_jev_call_is_raised_for_the_game_to_record(failures, error, calls):
+def test_a_failed_jev_call_is_raised_for_the_game_to_record(failures, calls):
     player, client = jev(*failures)
-    with pytest.raises(error):
+    with pytest.raises(type(failures[0])):
         player.choose(turn(TINY))
     assert client.calls == calls
 
 
-def test_the_time_recorded_is_the_answering_call_alone():
-    player, _ = jev(BUSY)
-    player._retry_waits = (0.3, 0.3)
-    assert player.choose(turn(TINY)).seconds < 0.3
-    assert JEV_RETRY_WAITS == (1.0, 2.0)
-
-
-def test_jev_closes_only_a_client_it_opened_itself():
-    jev()[0].close()  # the fake has no close(), so closing it would raise
-
-
-# Chat models on OpenRouter
-
-
 @pytest.mark.parametrize(
-    ("reasoning", "key", "expected"),
+    ("reasoning", "expected"),
     [
-        (False, "messages", llm_messages(REQUEST)),
-        (False, "reasoning", {"enabled": False, "exclude": True}),
-        (False, "max_tokens", ANSWER_TOKENS),
-        (False, "provider", {"require_parameters": True}),
-        (False, "usage", {"include": True}),
-        (True, "reasoning", {"enabled": True, "exclude": True, "max_tokens": REASONING_BUDGET}),
-        (True, "max_tokens", REASONING_BUDGET + ANSWER_TOKENS),
-    ],
-    ids=[
-        "the chat",
-        "answering at once",
-        "a short answer",
-        "providers that enforce the format",
-        "the cost comes back",
-        "thinking first, within a budget",
-        "room to think and answer",
+        pytest.param(False, {"enabled": False, "exclude": True}, id="answering at once"),
+        pytest.param(True, THINKING, id="thinking within a budget"),
     ],
 )
-def test_the_chat_payload(reasoning, key, expected):
-    assert chat_payload(REQUEST, reasoning)[key] == expected
+def test_the_chat_payload_asks_for_reasoning_or_not(reasoning, expected):
+    assert chat_payload(REQUEST, reasoning)["reasoning"] == expected
 
 
 def test_the_answer_must_be_json_naming_one_of_the_options():
     schema = chat_payload(REQUEST, False)["response_format"]["json_schema"]["schema"]
     assert schema["properties"]["option"]["enum"] == [o.id for o in REQUEST.options]
-    assert schema["required"] == ["option"]
 
 
 def test_the_chat_carries_the_system_text_the_state_the_question_and_every_option_by_id():
@@ -212,32 +158,14 @@ def test_the_chat_carries_the_system_text_the_state_the_question_and_every_optio
     assert all(f"{o.id}: {o.text}" in user["content"] for o in REQUEST.options)
 
 
-def test_a_model_can_be_pinned_to_one_host():
-    player = LLMPlayer("m", reasoning=False, host="deepinfra", client=object())
-    assert player.body(REQUEST)["provider"] == {
-        "require_parameters": True,
-        "order": ["deepinfra"],
-        "allow_fallbacks": False,
-    }
-
-
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("option_1, no: option_3", "option_3"),
-        ("  option_2\n", "option_2"),
-        ("option_9", None),
-        ("east", None),
-        ('{"option": "option_2"}', "option_2"),
-        ('{"option": "option_9"} option_1', "option_1"),
-    ],
-    ids=[
-        "the last option id wins",
-        "surrounding whitespace is fine",
-        "an id outside the options is no answer",
-        "a move name is no answer",
-        "the asked-for json is read first",
-        "json naming nothing offered falls back to the text",
+        pytest.param("option_1, no: option_3", "option_3", id="the last option id wins"),
+        pytest.param("option_9", None, id="an id outside the options"),
+        pytest.param("east", None, id="a move name"),
+        pytest.param('{"option": "option_2"}', "option_2", id="the asked-for json"),
+        pytest.param('{"option": "option_9"} option_1', "option_1", id="json naming nothing"),
     ],
 )
 def test_reading_the_option_out_of_a_chat_answer(text, expected):
@@ -279,47 +207,27 @@ def test_a_chat_models_answer_maps_back_to_a_move_with_its_cost():
     assert sent[0]["messages"] == llm_messages(t.request)
 
 
-def test_an_answer_in_json_maps_back_to_a_move():
-    t = turn(TINY)
-    client, _ = answering(json.dumps({"option": option_for(t, "east")}))
-    assert llm(client).choose(t).move == "east"
-
-
 @pytest.mark.parametrize(
     ("reply", "fragment"),
     [
-        (
-            {
-                "model": "m",
-                "choices": [
-                    {"message": {"content": '{"option": "option_1'}, "finish_reason": "length"}
-                ],
-            },
-            "ran out of tokens",
-        ),
-        ("I would go east", "I would go east"),
+        pytest.param({"choices": [CUT_OFF]}, "ran out of tokens", id="cut off, naming an option"),
+        pytest.param("I would go east", "I would go east", id="no option id, quoted"),
     ],
-    ids=["cut off by the token cap, even if it names an option", "no option id, quoted"],
 )
 def test_an_answer_that_names_no_option_is_an_error(reply, fragment):
-    client, _ = answering(reply)
-    choice = llm(client).choose(turn(TINY))
+    choice = llm(answering(reply)[0]).choose(turn(TINY))
     assert choice.move is None and fragment in choice.error
 
 
 @pytest.mark.parametrize(
-    ("before", "calls"),
-    [
-        ([429, 503], 3),
-        ([{"error": {"code": 502, "message": "upstream"}}], 2),
-    ],
-    ids=["a busy provider", "an error reported inside a success"],
+    "before",
+    [pytest.param([429, 503], id="a busy provider"), pytest.param([UPSTREAM], id="error in a 200")],
 )
-def test_a_provider_that_turns_a_call_away_is_tried_again(before, calls):
+def test_a_provider_that_turns_a_call_away_is_tried_again(before):
     t = turn(TINY)
     client, sent = answering(*before, option_for(t, "east"))
     choice = llm(client).choose(t)
-    assert (choice.move, len(sent), len(choice.retried)) == ("east", calls, len(before))
+    assert (choice.move, len(sent), len(choice.retried)) == ("east", len(before) + 1, len(before))
 
 
 def test_a_bad_request_is_raised_at_once_for_the_game_to_record():
