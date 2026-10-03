@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -421,31 +421,38 @@ def split_finished(records: Sequence[Any]) -> tuple[list[Any], list[Any]]:
     return kept, [record for record in records if record.error is not None]
 
 
-def validate_file(
-    path: Path, scope: Collection[tuple[str, str, str, str]] | None = None
-) -> list[str]:
+def validate_file(path: Path) -> list[str]:
     """Replay every game in a results file and list what does not check out (empty = valid).
 
-    Checks options, answers, best moves, won/closest and probabilities; `scope` defaults to
-    the file's own cross product. Games saved before `benchmark` stamps count as version 1.0.
+    Checks options, answers, best moves, won/closest and probabilities; every puzzle times
+    every condition times every player times every rules in the file must be present.
+    Games saved before `benchmark` stamps count as version 1.0.
     """
     records = load(path)
     have = {(r.puzzle, r.condition, r.player, r.rules) for r in records}
-    if scope is None:
-        names, conditions, players, rules = (sorted({k[i] for k in have}) for i in range(4))
-        scope = [
-            (puzzle, condition, player, rule)
-            for puzzle in names
-            for condition in conditions
-            for player in players
-            for rule in rules
-        ]
+    names, conditions, players, rules = (sorted({k[i] for k in have}) for i in range(4))
+    scope = [
+        (puzzle, condition, player, rule)
+        for puzzle in names
+        for condition in conditions
+        for player in players
+        for rule in rules
+    ]
     failures = [f"missing game {key}" for key in sorted(set(scope) - have)]
     puzzles = load_puzzles()
     solved: dict[tuple[str, str], tuple[dict[Board, int], dict[Board, int]]] = {}
     for record in records:
         failures += check_game(record, puzzles, solved)
     return failures
+
+
+def plays_argmax(name: str) -> bool:
+    """Whether this registry player always plays one of its top-probability moves."""
+    if name not in PLAYERS:
+        return False
+    build = PLAYERS[name].build
+    cls = build.func if isinstance(build, partial) else build
+    return isinstance(cls, type) and issubclass(cls, Player) and cls.plays_argmax
 
 
 def check_game(
@@ -483,6 +490,13 @@ def check_game(
             or abs(sum(move.probabilities.values()) - 1) > 0.02
         ):
             failures.append(f"{where} move {number}: probabilities off the options or off 1")
+        if (
+            move.move is not None
+            and move.probabilities
+            and plays_argmax(record.player)
+            and move.probabilities.get(move.move, float("-inf")) < max(move.probabilities.values())
+        ):
+            failures.append(f"{where} move {number}: move is not the argmax of its probabilities")
     if game.won != record.won or game.closest != record.closest:
         failures.append(f"{where}: end differs (won {record.won}, closest {record.closest})")
     return failures

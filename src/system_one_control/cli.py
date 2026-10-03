@@ -146,15 +146,6 @@ def _append_fresh(
     return records
 
 
-def expand_track(track: str) -> list[tuple[str, str | None]]:
-    """The (conditions, rules) each job of a track plays."""
-    if track == "core":
-        return [("map,everything", None)]
-    if track == "full":
-        return [("all", name) for name in RULES]
-    raise typer.BadParameter(f"unknown track {track!r}; known: core, full")
-
-
 @app.command()
 def benchmark(
     players: str = typer.Option(
@@ -171,7 +162,7 @@ def benchmark(
         "Default: each puzzle's own, which is compass.",
     ),
     track: str | None = typer.Option(
-        None, help="Shorthand for --conditions/--rules: core (compass map+everything) or full."
+        None, help="Shorthand for --rules compass --conditions map,everything: core."
     ),
     players_file: Path | None = typer.Option(
         None, help="A players.toml with extra players. Default: players.toml, if present."
@@ -194,11 +185,12 @@ def benchmark(
             register_toml_players(players_file)
         except ValueError as error:
             raise typer.BadParameter(str(error)) from None
-    if track is not None and (conditions is not None or rules is not None):
-        raise typer.BadParameter("--track cannot be combined with --conditions or --rules")
-    jobs = expand_track(track) if track is not None else [(conditions or "map", rules)]
-    if len(jobs) > 1 and out is not None:
-        raise typer.BadParameter("--track full writes one file per rules; drop --out")
+    if track is not None:
+        if track != "core":
+            raise typer.BadParameter(f"unknown track {track!r}; known: core")
+        if conditions is not None or rules is not None:
+            raise typer.BadParameter("--track cannot be combined with --conditions or --rules")
+        conditions, rules = "map,everything", "compass"
     chosen_puzzles = _pick(load_puzzles(), puzzles, "puzzle")
     chosen_levels = _levels(levels)
     if chosen_levels is not None:
@@ -206,19 +198,18 @@ def benchmark(
     if not chosen_puzzles:
         raise typer.BadParameter("no puzzle matches the chosen --levels and --puzzles")
     names = _pick({name: name for name in PLAYERS}, players, "player")
-    for conditions_spec, rules_spec in jobs:
-        _benchmark_once(
-            chosen_puzzles,
-            conditions_spec,
-            rules_spec,
-            names,
-            workers,
-            out,
-            resume,
-            levels,
-            puzzles,
-            allow_paid,
-        )
+    _benchmark_once(
+        chosen_puzzles,
+        conditions or "map",
+        rules,
+        names,
+        workers,
+        out,
+        resume,
+        levels,
+        puzzles,
+        allow_paid,
+    )
 
 
 def _benchmark_once(

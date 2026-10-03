@@ -59,6 +59,8 @@ def answer_choice(
 class Player(ABC):
     """Chooses a move from what a turn shows it. Known by its name in PLAYERS."""
 
+    plays_argmax = False  # whether its move is always one of its top-probability options
+
     @abstractmethod
     def choose(self, turn: Turn) -> Choice: ...
 

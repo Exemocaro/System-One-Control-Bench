@@ -19,4 +19,4 @@ jobs:
             uv run socb validate "$file"
           done
       - run: uv run socb leaderboard
-      - run: git diff --exit-code -- leaderboard/README.md docs/index.html
+      - run: git diff --exit-code -- leaderboard/ docs/index.html

@@ -11,8 +11,8 @@ from system_one_control.bench import (
     save,
     validate_file,
 )
-from system_one_control.cli import app, expand_track
-from system_one_control.leaderboard import rebuild, submit
+from system_one_control.cli import app
+from system_one_control.leaderboard import build_page, rebuild, safe, submit
 from system_one_control.players import PlayerEntry, players_from_toml
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.players.remote import DecisionPlayer, LLMPlayer
@@ -24,18 +24,19 @@ runner = CliRunner()
 EVERYTHING = CONDITIONS["everything"]
 
 
-def test_track_core_is_compass_map_and_everything():
-    assert expand_track("core") == [("map,everything", None)]
-
-
-def test_track_full_is_every_condition_under_each_rules():
-    assert [rules for (_, rules) in expand_track("full")] == [
-        "compass",
-        "two-moves",
-        "three-moves",
-        "up-to-two-moves",
-        "up-to-three-moves",
-    ]
+def test_track_core_plays_compass_map_and_everything(tmp_path):
+    out = tmp_path / "core.jsonl"
+    result = runner.invoke(
+        app,
+        ["benchmark", "--track", "core", "--players", "solver", "--levels", "1", "--out", str(out)],
+    )
+    assert result.exit_code == 0, result.output
+    games = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert {(g["condition"], g["rules"]) for g in games} == {
+        ("map", "compass"),
+        ("everything", "compass"),
+    }
+    assert {g["puzzle"] for g in games} == {f"gen-01-0{n}" for n in range(1, 6)}
 
 
 def test_a_track_cannot_be_combined_with_conditions_or_rules(tmp_path):
@@ -154,7 +155,7 @@ def test_validate_fails_a_tampered_game(tmp_path, tamper):
     assert validate_file(path) != []
 
 
-def test_submit_writes_an_entry_and_rebuild_makes_the_table(tmp_path):
+def test_submit_writes_an_entry_and_core_games_then_rebuilds_the_table(tmp_path):
     path = tiny_file(tmp_path)
     board = tmp_path / "board"
     entry = submit(
@@ -168,11 +169,101 @@ def test_submit_writes_an_entry_and_rebuild_makes_the_table(tmp_path):
     )
     saved = json.loads(entry.read_text(encoding="utf-8"))
     assert saved["player"] == "solver" and saved["track"] == "core"
+    assert saved["results"] == "solver.jsonl"
     assert set(saved["conditions"]) == {"map", "everything"}
     assert saved["conditions"]["map"]["progress"][0] == 1.0
+    assert len((board / "results" / "solver.jsonl").read_text(encoding="utf-8").splitlines()) == 4
     readme, page = rebuild(leaderboard=board, docs=tmp_path / "docs")
     assert "Tiny Solver" in readme.read_text(encoding="utf-8")
     assert "Tiny Solver" in page.read_text(encoding="utf-8")
+
+
+def rewrite(path, tamper):
+    lines = path.read_text(encoding="utf-8").splitlines()
+    path.write_text("\n".join(tamper(lines)) + "\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        pytest.param(lambda lines: lines + lines[:1], "duplicate games", id="a duplicated game"),
+        pytest.param(
+            lambda lines: [
+                json.dumps(json.loads(lines[0]) | {"rules": "two-moves"}),
+                *lines[1:],
+            ],
+            "only compass",
+            id="a non-compass game",
+        ),
+    ],
+)
+def test_submit_refuses_games_outside_the_core_track(tmp_path, tamper, message):
+    path = tiny_file(tmp_path)
+    rewrite(path, tamper)
+    with pytest.raises(ValueError, match=message):
+        submit(
+            [path],
+            name="x",
+            org="",
+            url="",
+            notes="",
+            puzzles=tiny_names(),
+            leaderboard=tmp_path / "b",
+        )
+
+
+def test_submit_needs_a_kind_for_players_outside_the_baselines(tmp_path):
+    path = tiny_file(tmp_path)
+    rewrite(
+        path,
+        lambda lines: [json.dumps(json.loads(line) | {"player": "fakegpt"}) for line in lines],
+    )
+    args = {
+        "name": "x",
+        "org": "",
+        "url": "",
+        "notes": "",
+        "puzzles": tiny_names(),
+        "leaderboard": tmp_path / "b",
+    }
+    with pytest.raises(ValueError, match="--kind"):
+        submit([path], **args)
+    entry = submit([path], kind="chat", **args)
+    assert json.loads(entry.read_text(encoding="utf-8"))["kind"] == "chat"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("a|b", "a/b"), ("a\nb", "a b"), ("plain", "plain")],
+    ids=["pipes become slashes", "newlines become spaces", "plain text stays"],
+)
+def test_names_are_safe_for_the_markdown_table(text, expected):
+    assert safe(text) == expected
+
+
+def hostile_entry():
+    stats = {"won": [0.5, 0.4, 0.6], "progress": [0.5, 0.4, 0.6], "spl": [0.5, 0.4, 0.6]}
+    return {
+        "name": "x</script><img src=x onerror=y>",
+        "player": "x",
+        "org": "",
+        "url": "javascript:alert(1)",
+        "notes": "",
+        "kind": "chat",
+        "benchmark": "1.0+abc",
+        "track": "core",
+        "results": "x.jsonl",
+        "conditions": {"map": stats, "everything": stats},
+        "cost": 0.1,
+        "latency": 0.5,
+        "date": "2026-10-03",
+    }
+
+
+def test_the_page_escapes_names_and_links():
+    page = build_page([hostile_entry()])
+    assert "</script><img" not in page and "javascript:" not in page
+    assert "&lt;/script&gt;" in page
 
 
 def test_submit_refuses_a_run_with_missing_or_mixed_players(tmp_path):
