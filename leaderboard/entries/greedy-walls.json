@@ -1,0 +1,49 @@
+{
+  "name": "greedy-walls",
+  "player": "greedy-walls",
+  "org": "",
+  "url": "",
+  "notes": "seeded",
+  "kind": "baseline",
+  "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973",
+  "track": "core",
+  "conditions": {
+    "map": {
+      "won": [
+        0.37,
+        0.28,
+        0.48
+      ],
+      "progress": [
+        0.4746666666666667,
+        0.39399999999999996,
+        0.565
+      ],
+      "spl": [
+        0.37,
+        0.28,
+        0.48
+      ]
+    },
+    "everything": {
+      "won": [
+        0.37,
+        0.28,
+        0.48
+      ],
+      "progress": [
+        0.4746666666666667,
+        0.39399999999999996,
+        0.565
+      ],
+      "spl": [
+        0.37,
+        0.28,
+        0.48
+      ]
+    }
+  },
+  "cost": null,
+  "latency": 0.0,
+  "date": "2026-10-03"
+}

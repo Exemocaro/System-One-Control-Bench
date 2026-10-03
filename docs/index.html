@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>System-One Control Bench leaderboard</title>
+<style>
+:root { color-scheme: light dark; }
+body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid gray; padding: 4px 8px; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>System-One Control Bench leaderboard</h1>
+<table id="board"><thead><tr>
+<th data-k="name">player</th><th data-k="progress">everything progress</th>
+<th data-k="map">map progress</th><th data-k="won">everything won</th><th data-k="cost">cost</th>
+</tr></thead><tbody></tbody></table>
+<script>
+const entries = [{"name": "deepseek-v4.1-flash", "player": "deepseek-v4.1-flash", "org": "", "url": "", "notes": "seeded", "kind": "chat", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.39, 0.3, 0.49], "progress": [0.5453333333333336, 0.46649999999999997, 0.6328333333333334], "spl": [0.3472012987012987, 0.26421428571428573, 0.44248701298701293]}, "everything": {"won": [0.6, 0.51, 0.7], "progress": [0.71525, 0.64, 0.7908333333333332], "spl": [0.5415909368409367, 0.45677242202242213, 0.6364567932067932]}}, "cost": 0.4682, "latency": 0.81, "date": "2026-10-03"}, {"name": "deepseek-v4.1-flash-think", "player": "deepseek-v4.1-flash-think", "org": "", "url": "", "notes": "seeded", "kind": "chat", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.67, 0.58, 0.76], "progress": [0.7866666666666668, 0.72275, 0.8501666666666666], "spl": [0.6176421435909925, 0.5278091787439614, 0.7066881466075838]}, "everything": {"won": [0.8, 0.72, 0.88], "progress": [0.8639999999999999, 0.8035, 0.9206666666666667], "spl": [0.7405905635946202, 0.6613393665158371, 0.8147706775982638]}}, "cost": 3.4848, "latency": 6.82, "date": "2026-10-03"}, {"name": "gemma-4-26b", "player": "gemma-4-26b", "org": "", "url": "", "notes": "seeded", "kind": "chat", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.35, 0.26, 0.45], "progress": [0.45225000000000015, 0.36816666666666664, 0.5390833333333334], "spl": [0.3218846153846154, 0.2337692307692308, 0.4137692307692308]}, "everything": {"won": [0.61, 0.52, 0.7], "progress": [0.7140833333333332, 0.6410833333333332, 0.7881666666666667], "spl": [0.5684206349206349, 0.4821666666666667, 0.6597777777777779]}}, "cost": 0.5873, "latency": 0.65, "date": "2026-10-03"}, {"name": "gliclass", "player": "gliclass", "org": "", "url": "", "notes": "seeded", "kind": "local", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.03, 0.0, 0.07], "progress": [0.10425, 0.06916666666666665, 0.14666666666666667], "spl": [0.03, 0.0, 0.07]}, "everything": {"won": [0.13, 0.07, 0.2], "progress": [0.2158333333333333, 0.15408333333333335, 0.2886666666666666], "spl": [0.13, 0.07, 0.2]}}, "cost": null, "latency": 1.77, "date": "2026-10-03"}, {"name": "greedy", "player": "greedy", "org": "", "url": "", "notes": "seeded", "kind": "baseline", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.28, 0.19, 0.37], "progress": [0.3561666666666669, 0.2771666666666667, 0.4406666666666667], "spl": [0.28, 0.19, 0.37]}, "everything": {"won": [0.28, 0.19, 0.37], "progress": [0.3561666666666669, 0.2771666666666667, 0.4406666666666667], "spl": [0.28, 0.19, 0.37]}}, "cost": null, "latency": 0.0, "date": "2026-10-03"}, {"name": "greedy-walls", "player": "greedy-walls", "org": "", "url": "", "notes": "seeded", "kind": "baseline", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.37, 0.28, 0.48], "progress": [0.4746666666666667, 0.39399999999999996, 0.565], "spl": [0.37, 0.28, 0.48]}, "everything": {"won": [0.37, 0.28, 0.48], "progress": [0.4746666666666667, 0.39399999999999996, 0.565], "spl": [0.37, 0.28, 0.48]}}, "cost": null, "latency": 0.0, "date": "2026-10-03"}, {"name": "jev", "player": "jev", "org": "", "url": "", "notes": "seeded", "kind": "bounded decision", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.32, 0.23, 0.41], "progress": [0.4250833333333335, 0.34608333333333335, 0.5099999999999999], "spl": [0.31857142857142856, 0.23, 0.41]}, "everything": {"won": [0.57, 0.47, 0.67], "progress": [0.6825833333333334, 0.6009166666666668, 0.7576666666666667], "spl": [0.5408114035087719, 0.4441823308270677, 0.6359523809523809]}}, "cost": null, "latency": 0.5, "date": "2026-10-03"}, {"name": "laya", "player": "laya", "org": "", "url": "", "notes": "seeded", "kind": "local", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.02, 0.0, 0.05], "progress": [0.10483333333333335, 0.06941666666666667, 0.14708333333333334], "spl": [0.02, 0.0, 0.05]}, "everything": {"won": [0.12, 0.06, 0.19], "progress": [0.2635, 0.20566666666666666, 0.33058333333333345], "spl": [0.105, 0.05333333333333333, 0.16666666666666663]}}, "cost": null, "latency": 1.8, "date": "2026-10-03"}, {"name": "qwen3.5-4b", "player": "qwen3.5-4b", "org": "", "url": "", "notes": "seeded", "kind": "local", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.14, 0.08, 0.22], "progress": [0.33533333333333337, 0.27199999999999996, 0.40991666666666665], "spl": [0.12391666666666666, 0.06391666666666666, 0.19266666666666665]}, "everything": {"won": [0.45, 0.35, 0.55], "progress": [0.6606666666666663, 0.5927499999999999, 0.7336666666666665], "spl": [0.38691452991453007, 0.3011581196581197, 0.47811111111111104]}}, "cost": null, "latency": 0.23, "date": "2026-10-03"}, {"name": "random", "player": "random", "org": "", "url": "", "notes": "seeded", "kind": "baseline", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [0.04, 0.01, 0.08], "progress": [0.24908333333333338, 0.20074999999999998, 0.3011666666666668], "spl": [0.0325, 0.005, 0.07]}, "everything": {"won": [0.04, 0.01, 0.08], "progress": [0.24908333333333338, 0.20074999999999998, 0.3011666666666668], "spl": [0.0325, 0.005, 0.07]}}, "cost": null, "latency": 0.0, "date": "2026-10-03"}, {"name": "solver", "player": "solver", "org": "", "url": "", "notes": "seeded", "kind": "baseline", "benchmark": "1.0+e52f6f91a7b24e258c6c23e1a812c5078929f5d52a97138d0891be36e1bff973", "track": "core", "conditions": {"map": {"won": [1.0, 1.0, 1.0], "progress": [1.0, 1.0, 1.0], "spl": [1.0, 1.0, 1.0]}, "everything": {"won": [1.0, 1.0, 1.0], "progress": [1.0, 1.0, 1.0], "spl": [1.0, 1.0, 1.0]}}, "cost": null, "latency": 0.0, "date": "2026-10-03"}];
+const body = document.querySelector("#board tbody");
+let key = "progress", down = true;
+function cell(e, k) {
+  if (k === "name") return e.url ? `<a href="${e.url}">${e.name}</a>` : e.name;
+  if (k === "cost") return e.cost ?? "-";
+  if (k === "map") return e.conditions.map.progress[0].toFixed(2);
+  if (k === "won") return e.conditions.everything.won[0].toFixed(2);
+  return e.conditions.everything.progress[0].toFixed(2);
+}
+function render() {
+  const rows = [...entries].sort((a, b) => {
+    const x = cell(a, key), y = cell(b, key);
+    return (isNaN(x) ? x.localeCompare(y) : x - y) * (down ? -1 : 1);
+  });
+  body.innerHTML = rows.map(e =>
+    `<tr><td>${cell(e, "name")}</td><td>${cell(e, "progress")}</td>` +
+    `<td>${cell(e, "map")}</td><td>${cell(e, "won")}</td>` +
+    `<td>${cell(e, "cost")}</td></tr>`).join("");
+}
+document.querySelectorAll("th").forEach(h => h.addEventListener("click", () => {
+  if (h.dataset.k === key) down = !down; else { key = h.dataset.k; down = true; }
+  render();
+}));
+render();
+</script>
+</body>
+</html>
