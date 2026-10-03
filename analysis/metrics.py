@@ -29,6 +29,12 @@ def bootstrap_interval(
     return float(low), float(high)
 
 
+def rescaled_top(probabilities: dict[str, float]) -> float:
+    """TypeSafe's Choice confidence: the top probability rescaled so 1/n gives 0 and 1 gives 1."""
+    n = len(probabilities)
+    return (max(probabilities.values()) - 1 / n) / (1 - 1 / n)
+
+
 def mcnemar_p(a_won: list[bool], b_won: list[bool]) -> float:
     """Exact two-sided McNemar p-value from the discordant pairs."""
     a_only = sum(a and not b for a, b in zip(a_won, b_won, strict=True))

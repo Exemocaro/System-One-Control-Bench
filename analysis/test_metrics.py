@@ -52,6 +52,19 @@ def test_bootstrap_interval_of_nothing():
 
 
 @pytest.mark.parametrize(
+    ("probabilities", "expected"),
+    [
+        ({"north": 0.25, "south": 0.25, "east": 0.25, "west": 0.25}, 0.0),
+        ({"north": 1.0, "south": 0.0}, 1.0),
+        ({"north": 0.625, "south": 0.125, "east": 0.125, "west": 0.125}, 0.5),
+    ],
+    ids=["chance", "certain", "halfway"],
+)
+def test_rescaled_top(probabilities, expected):
+    assert metrics.rescaled_top(probabilities) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
     ("a", "b", "expected"),
     [
         ([True, False], [True, False], 1.0),

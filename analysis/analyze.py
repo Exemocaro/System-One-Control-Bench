@@ -211,14 +211,14 @@ def tables(games: dict) -> None:
 
     rows = []
     for player, (name, _) in MODELS.items():
-        confidence, optimal, ties = calibration_moves(games, player)
+        confidence, optimal, ties, gap = calibration_moves(games, player)
         if confidence:
             rows.append([name, len(confidence), statistics.mean(confidence)])
             rows[-1] += [statistics.mean(optimal)]
             rows[-1] += [metrics.expected_calibration_error(confidence, optimal)]
-            rows[-1] += [metrics.brier_score(confidence, optimal), ties]
-    header = ["Model", "Moves", "Mean p(chosen)", "Optimal share", "ECE", "Brier"]
-    write_table("calibration", [*header, "Share of moves with tied best moves"], rows)
+            rows[-1] += [metrics.brier_score(confidence, optimal), ties, gap]
+    header = ["Model", "Moves", "Mean p(chosen)", "Optimal share", "ECE", "Brier", "Tied share"]
+    write_table("calibration", [*header, "Max confidence - rescaled p_max"], rows)
 
     rows = []
     for player, (name, _) in MODELS.items():
@@ -316,9 +316,10 @@ def fig_exam(games: dict, exam: dict) -> None:
     save(fig, "fig_exam")
 
 
-def calibration_moves(games: dict, player: str) -> tuple[list[float], list[bool], float]:
+def calibration_moves(games: dict, player: str) -> tuple[list, list, float, float | str]:
     """Compass moves with probabilities: p(chosen), whether the move was optimal (any tied
-    best move counts), and the share of those moves that had more than one best move."""
+    best move counts), the share of those moves that had more than one best move, and the
+    largest gap between a returned `confidence` and (p_max - 1/n) / (1 - 1/n) ("" if none)."""
     moves = [
         m
         for (p, r, _), v in games.items()
@@ -329,7 +330,9 @@ def calibration_moves(games: dict, player: str) -> tuple[list[float], list[bool]
     ]
     confidence = [min(1.0, max(0.0, m.probabilities[m.move])) for m in moves]
     ties = sum(len(m.best_moves) > 1 for m in moves) / len(moves) if moves else 0.0
-    return confidence, [m.optimal for m in moves], ties
+    rescaled = [(m.confidence, metrics.rescaled_top(m.probabilities)) for m in moves]
+    gap = max((abs(c - r) for c, r in rescaled if c is not None), default="")
+    return confidence, [m.optimal for m in moves], ties, gap
 
 
 def hypotheses(games: dict) -> list[list]:
@@ -428,7 +431,7 @@ def hypotheses(games: dict) -> list[list]:
         ]
     )
 
-    confidence, optimal, _ = calibration_moves(
+    confidence, optimal, *_ = calibration_moves(
         {k: v for k, v in games.items() if k[0] == "jev"}, "jev"
     )
     sure = [o for c, o in zip(confidence, optimal, strict=True) if c >= 0.9]
@@ -607,7 +610,7 @@ def fig_calibration(games: dict) -> None:
     fig, ax = plt.subplots(figsize=(4.6, 3.6))
     ax.plot([0, 1], [0, 1], color="0.6", ls=":", lw=1)
     for player, (name, color) in MODELS.items():
-        confidence, optimal, _ = calibration_moves(games, player)
+        confidence, optimal, *_ = calibration_moves(games, player)
         bins = [b for b in metrics.calibration_bins(confidence, optimal) if b[2] >= 30]
         if bins:
             ax.plot(
