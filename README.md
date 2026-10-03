@@ -131,8 +131,8 @@ Coming soon: a core track (compass rules, `map` and `everything`, 200 games per 
 
 ## Citation
 
-Report: *Can Bounded Decision Models Steer? A Small Grid Benchmark for Choosing, Not Writing, Moves* (`paper/`). A `CITATION.cff` will come with it.
+Report: *Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks* (`paper/`). Cite it with `CITATION.cff`.
 
 ## License
 
-MIT (the LICENSE file will be added).
+MIT; see `LICENSE`.
