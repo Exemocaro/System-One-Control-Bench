@@ -34,7 +34,7 @@ file = "2026-09-25_15-19_deepseek-v4.1-flash_all.jsonl"
 [[results]]
 rules = "two-moves"
 players = ["random", "solver"]
-file = "2026-09-24_00-09_random+solver_map_two-moves.jsonl"
+file = "2026-10-03_13-10_random+solver_map_two-moves.jsonl"
 
 [[results]]
 rules = "two-moves"
@@ -59,7 +59,7 @@ file = "2026-09-26_10-02_gliclass_all_two-moves.jsonl"
 [[results]]
 rules = "three-moves"
 players = ["random", "solver"]
-file = "2026-09-24_00-22_random+solver_map_three-moves.jsonl"
+file = "2026-10-03_13-10_random+solver_map_three-moves.jsonl"
 
 [[results]]
 rules = "three-moves"

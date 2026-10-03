@@ -8,9 +8,9 @@
 | Greedy (walls) | compass (4) | map only | 100 | 0.37 [0.28, 0.46] | 0.47 [0.39, 0.56] |
 | Greedy | compass (4) | map only | 100 | 0.28 [0.20, 0.37] | 0.36 [0.28, 0.44] |
 | Random | compass (4) | map only | 100 | 0.04 [0.01, 0.08] | 0.25 [0.20, 0.30] |
-| Random | two-moves (16) | map only | 100 | 0.02 [0.00, 0.05] | 0.24 [0.19, 0.29] |
+| Random | two-moves (16) | map only | 100 | 0.02 [0.00, 0.05] | 0.27 [0.22, 0.32] |
 | Random | up-to-two-moves (20) | map only | 100 | 0.07 [0.02, 0.12] | 0.27 [0.22, 0.32] |
-| Random | three-moves (64) | map only | 100 | 0.06 [0.02, 0.11] | 0.27 [0.22, 0.33] |
+| Random | three-moves (64) | map only | 100 | 0.06 [0.02, 0.11] | 0.30 [0.25, 0.35] |
 | Random | up-to-three-moves (84) | map only | 100 | 0.04 [0.01, 0.08] | 0.27 [0.22, 0.32] |
 | Jev | compass (4) | map only | 100 | 0.32 [0.23, 0.41] | 0.43 [0.35, 0.51] |
 | Jev | compass (4) | full context | 100 | 0.57 [0.47, 0.66] | 0.68 [0.61, 0.76] |
