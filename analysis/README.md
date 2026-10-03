@@ -5,7 +5,8 @@ Every table and figure in the paper, recomputed from the saved results files. No
     uv run --with matplotlib python analysis/analyze.py      # writes analysis/out/ (about 20 s)
     uv run --with matplotlib pytest analysis -q
 
-- `manifest.toml`: which results file holds each player under each rules. Add a run here, nothing else.
+- `manifest.toml`: which results file holds each player under each rules, and each player's exam file. Add a run here,
+  nothing else.
 - `metrics.py`: the numbers, as small pure functions.
 - `analyze.py`: loads the games, writes the tables (`out/*.md` and `.csv`) and the figures (`out/fig_*.png` and `.pdf`).
 - `test_metrics.py`: one table test per metric.
@@ -42,5 +43,8 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
   optimal, where any of several tied best moves counts. This is computed on compass moves only, pooling all ten
   conditions, and the bins have equal width. Jev's own `confidence` field is (p_max − 1/n)/(1 − 1/n), a rescaled top
   probability, so it is not reported separately.
+- **Exam**: every player answers the same 495 fixed positions (`exam/items.jsonl`) once per input. The optimal rate is
+  averaged within each puzzle and then over puzzles, so intervals resample puzzles; an error counts as not optimal.
+  "In-game optimal share" is the share of optimal moves in the player's own compass games under the same input.
 - **Hypotheses**: H1–H7 were written on 23 September, before the main evaluation (docs/DECISIONS.md). Each criterion
   is checked as written.

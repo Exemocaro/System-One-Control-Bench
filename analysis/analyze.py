@@ -7,6 +7,7 @@ Read analysis/README.md before changing anything here.
 from __future__ import annotations
 
 import csv
+import json
 import statistics
 import textwrap
 import tomllib
@@ -19,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import metrics
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 from system_one_control.bench import load
@@ -59,6 +61,7 @@ COMPONENTS = {
     "subgoal": "explicit subgoal",
 }
 INPUTS = {"map": "map only", "everything": "full context"}
+KINDS = ["start", "on-route", "off-route", "after-blocked", "late"]  # exam items
 
 
 @dataclass(frozen=True)
@@ -163,32 +166,12 @@ def tables(games: dict) -> None:
             g = list(games.get((player, "compass", condition), {}).values())
             if g:
                 moves = sum(len(x.moves) for x in g)
-                rows.append(
-                    [
-                        name,
-                        INPUTS[condition],
-                        len(g),
-                        estimate([x.won for x in g]),
-                        estimate([x.progress for x in g]),
-                        statistics.mean(x.final_progress for x in g),
-                        statistics.mean(x.spl for x in g),
-                        sum(x.blocked for x in g) / moves,
-                    ]
-                )
-    write_table(
-        "main",
-        [
-            "Model",
-            "Input",
-            "Games",
-            "Won rate",
-            "Progress",
-            "Final-state progress",
-            "SPL",
-            "Blocked moves",
-        ],
-        rows,
-    )
+                rows.append([name, INPUTS[condition], len(g), estimate([x.won for x in g])])
+                rows[-1] += [estimate([x.progress for x in g])]
+                rows[-1] += [statistics.mean(x.final_progress for x in g)]
+                rows[-1] += [statistics.mean(x.spl for x in g), sum(x.blocked for x in g) / moves]
+    header = ["Model", "Input", "Games", "Won rate", "Progress", "Final-state progress", "SPL"]
+    write_table("main", [*header, "Blocked moves"], rows)
 
     rows = []
     for player, (name, _) in MODELS.items():
@@ -199,31 +182,12 @@ def tables(games: dict) -> None:
                 ("removed from full context", "everything", f"everything-{component}"),
             ]:
                 a, b = games[(player, "compass", a)], games[(player, "compass", b)]
-                found.append(
-                    [
-                        name,
-                        label,
-                        direction,
-                        change(a, b, "won"),
-                        change(a, b, "progress"),
-                        metrics.mcnemar_p(*paired(a, b, "won")),
-                    ]
-                )
+                found.append([name, label, direction, change(a, b, "won")])
+                found[-1] += [change(a, b, "progress"), metrics.mcnemar_p(*paired(a, b, "won"))]
         for row, adjusted in zip(found, metrics.holm([row[-1] for row in found]), strict=True):
             rows.append([*row, adjusted])
-    write_table(
-        "components",
-        [
-            "Model",
-            "Component",
-            "Direction",
-            "Won rate change",
-            "Progress change",
-            "McNemar p",
-            "Holm p",
-        ],
-        rows,
-    )
+    header = ["Model", "Component", "Direction", "Won rate change", "Progress change"]
+    write_table("components", [*header, "McNemar p", "Holm p"], rows)
 
     rows = []
     for player, (name, _) in PLAYERS.items():
@@ -231,21 +195,10 @@ def tables(games: dict) -> None:
             for condition in INPUTS:
                 g = list(games.get((player, rules, condition), {}).values())
                 if g:
-                    rows.append(
-                        [
-                            name,
-                            f"{rules} ({options})",
-                            INPUTS[condition],
-                            len(g),
-                            estimate([x.won for x in g]),
-                            estimate([x.progress for x in g]),
-                        ]
-                    )
-    write_table(
-        "action_spaces",
-        ["Model", "Action space (options)", "Input", "Games", "Won rate", "Progress"],
-        rows,
-    )
+                    rows.append([name, f"{rules} ({options})", INPUTS[condition], len(g)])
+                    rows[-1] += [estimate([x.won for x in g]), estimate([x.progress for x in g])]
+    header = ["Model", "Action space (options)", "Input", "Games", "Won rate", "Progress"]
+    write_table("action_spaces", header, rows)
 
     rows = []
     for player, (name, _) in PLAYERS.items():
@@ -260,30 +213,12 @@ def tables(games: dict) -> None:
     for player, (name, _) in MODELS.items():
         confidence, optimal, ties = calibration_moves(games, player)
         if confidence:
-            rows.append(
-                [
-                    name,
-                    len(confidence),
-                    statistics.mean(confidence),
-                    statistics.mean(optimal),
-                    metrics.expected_calibration_error(confidence, optimal),
-                    metrics.brier_score(confidence, optimal),
-                    ties,
-                ]
-            )
-    write_table(
-        "calibration",
-        [
-            "Model",
-            "Moves",
-            "Mean p(chosen)",
-            "Optimal share",
-            "ECE",
-            "Brier",
-            "Share of moves with tied best moves",
-        ],
-        rows,
-    )
+            rows.append([name, len(confidence), statistics.mean(confidence)])
+            rows[-1] += [statistics.mean(optimal)]
+            rows[-1] += [metrics.expected_calibration_error(confidence, optimal)]
+            rows[-1] += [metrics.brier_score(confidence, optimal), ties]
+    header = ["Model", "Moves", "Mean p(chosen)", "Optimal share", "ECE", "Brier"]
+    write_table("calibration", [*header, "Share of moves with tied best moves"], rows)
 
     rows = []
     for player, (name, _) in MODELS.items():
@@ -296,38 +231,89 @@ def tables(games: dict) -> None:
         moves = [m for x in g for m in x.moves]
         costs = [m.cost for m in moves if m.cost is not None]
         tokens = [m.input_tokens for m in moves if m.input_tokens]
-        rows.append(
-            [
-                name,
-                len(g),
-                len(moves),
-                statistics.median(m.seconds for m in moves if m.seconds is not None),
-                statistics.mean(tokens) if tokens else "",
-                100 * sum(costs) / len(g) if costs else "",
-            ]
-        )
-    write_table(
-        "cost",
-        [
-            "Model",
-            "Games",
-            "Moves",
-            "Median seconds per move",
-            "Mean input tokens",
-            "Cost per 100 games ($)",
-        ],
-        rows,
-    )
+        rows.append([name, len(g), len(moves)])
+        rows[-1] += [statistics.median(m.seconds for m in moves if m.seconds is not None)]
+        rows[-1] += [statistics.mean(tokens) if tokens else ""]
+        rows[-1] += [100 * sum(costs) / len(g) if costs else ""]
+    header = ["Model", "Games", "Moves", "Median seconds per move", "Mean input tokens"]
+    write_table("cost", [*header, "Cost per 100 games ($)"], rows)
 
     rows = []
     for (player, rules, condition), v in sorted(games.items()):
-        rows.append(
-            [PLAYERS[player][0], rules, condition, len(v), sum(x.error for x in v.values())]
-        )
-    write_table(
-        "coverage", ["Model", "Rules", "Condition", "Games", "Games ended by an error"], rows
-    )
+        rows.append([PLAYERS[player][0], rules, condition, len(v)])
+        rows[-1] += [sum(x.error for x in v.values())]
+    header = ["Model", "Rules", "Condition", "Games", "Games ended by an error"]
+    write_table("coverage", header, rows)
     write_table("hypotheses", ["Hypothesis", "Observed", "Criterion met"], hypotheses(games))
+
+
+def load_exam() -> dict[tuple, dict[str, list]]:
+    """(player, condition) -> {puzzle: [(kind, optimal, p(chosen) or None) per answer]}.
+    An answer that ended in an error counts as not optimal."""
+    exam: dict = defaultdict(lambda: defaultdict(list))
+    files = tomllib.loads((ROOT / "analysis" / "manifest.toml").read_text("utf-8"))["exam"]
+    for player, file in files.items():
+        for line in (ROOT / "exam" / file).read_text("utf-8").splitlines():
+            record = json.loads(line)
+            assert record["player"] == player, f"{file} holds {record['player']}"
+            answer, failed = record["answer"], record["error"] is not None
+            p = None if failed else (answer["probabilities"] or {}).get(answer["move"])
+            puzzle, kind = record["item"]["puzzle"], record["item"]["kind"]
+            exam[(player, record["condition"])][puzzle].append(
+                (kind, not failed and answer["optimal"], p)
+            )
+    items = len((ROOT / "exam" / "items.jsonl").read_text("utf-8").splitlines())
+    for key, by_puzzle in exam.items():
+        assert sum(map(len, by_puzzle.values())) == items, f"{key} does not answer every item once"
+    return exam
+
+
+def exam_rate(by_puzzle: dict[str, list]) -> tuple[float, float, float]:
+    """Optimal answers, averaged within each puzzle, then over puzzles (resampled)."""
+    return estimate([statistics.mean(a[1] for a in v) for v in by_puzzle.values()])
+
+
+def in_game_optimal(games: dict, player: str, condition: str) -> float:
+    g = games[(player, "compass", condition)].values()
+    return statistics.mean(m.optimal for x in g for m in x.moves if m.move)
+
+
+def exam_tables(games: dict, exam: dict) -> None:
+    rows, changes = [], []
+    for player, (name, _) in PLAYERS.items():
+        for condition in ["map"] if player in BASELINES else INPUTS:
+            if (player, condition) not in exam:
+                continue
+            answers = [a for v in exam[(player, condition)].values() for a in v]
+            rows.append(
+                [name, INPUTS[condition], len(answers), exam_rate(exam[(player, condition)])]
+            )
+            rows[-1] += [statistics.mean(a[1] for a in answers if a[0] == kind) for kind in KINDS]
+            rows[-1] += [in_game_optimal(games, player, condition), "", ""]
+            p = [a[2] for a in answers if a[2] is not None and player in MODELS]
+            if p:  # calibration, for the models that return probabilities
+                optimal = [a[1] for a in answers if a[2] is not None]
+                rows[-1][-2:] = [statistics.mean(p), metrics.expected_calibration_error(p, optimal)]
+        if player in MODELS and (player, "map") in exam:
+            full, alone = exam[(player, "everything")], exam[(player, "map")]
+            mean = {
+                k: statistics.mean(a[1] for a in full[k]) - statistics.mean(a[1] for a in alone[k])
+                for k in full
+            }
+            changes.append([name, estimate(list(mean.values()))])
+    header = ["Model", "Input", "Answers", "Optimal rate", *KINDS, "In-game optimal share"]
+    write_table("exam", [*header, "Mean p(chosen)", "ECE"], rows)
+    write_table("exam_inputs", ["Model", "Full context - map only, optimal rate"], changes)
+
+
+def fig_exam(games: dict, exam: dict) -> None:
+    fig, ax = plt.subplots(figsize=(5.4, 4.4))
+    players = [p for p in PLAYERS if (p, "map") in exam]
+    rate, own = (lambda p, c: exam_rate(exam[(p, c)])), (lambda p, c: in_game_optimal(games, p, c))
+    bar_panel(ax, players, rate, "Optimal answers, fixed-state exam (compass)", mark=own)
+    marker = {"ls": "", "marker": "D", "color": "white", "mec": "black"}
+    input_legend(fig, 0.0, (Line2D([], [], **marker, label="optimal share in own games"),))
+    save(fig, "fig_exam")
 
 
 def calibration_moves(games: dict, player: str) -> tuple[list[float], list[bool], float]:
@@ -464,53 +450,63 @@ def hypotheses(games: dict) -> list[list]:
 
 def save(fig, name: str) -> None:
     for suffix in ["png", "pdf"]:
-        fig.savefig(OUT / f"{name}.{suffix}", dpi=200, bbox_inches="tight")
+        metadata = {"CreationDate": None} if suffix == "pdf" else {}  # same bytes on every run
+        fig.savefig(OUT / f"{name}.{suffix}", dpi=200, bbox_inches="tight", metadata=metadata)
     plt.close(fig)
 
 
-def input_legend(fig, y: float) -> None:
+def input_legend(fig, y: float, extra: tuple = ()) -> None:
+    handles = [
+        Patch(color="0.5", alpha=0.35, label="map only"),
+        Patch(color="0.5", label="full context"),
+    ]
     fig.legend(
-        handles=[
-            Patch(color="0.5", alpha=0.35, label="map only"),
-            Patch(color="0.5", label="full context"),
-        ],
+        handles=[*handles, *extra],
         loc="upper center",
         bbox_to_anchor=(0.5, y),
-        ncol=2,
+        ncol=3,
         frameon=False,
     )
+
+
+def bar_panel(ax, players: list[str], value, xlabel: str, mark=None) -> None:
+    """One bar per player and input (map pale, full context dark) with its interval;
+    mark(player, condition), when given, adds a diamond to each bar."""
+    for y, player in enumerate(reversed(players)):
+        conditions = ["map"] if player in BASELINES else list(INPUTS)
+        for i, condition in enumerate(conditions):
+            v, low, high = value(player, condition)
+            y_bar = y + (0 if len(conditions) == 1 else (0.2 if i == 0 else -0.2))
+            pale = condition == "map" and player in MODELS
+            height = 0.38 if len(conditions) > 1 else 0.5
+            ax.barh(y_bar, v, height=height, color=PLAYERS[player][1], alpha=0.35 if pale else 1)
+            ax.errorbar(v, y_bar, xerr=[[v - low], [high - v]], color="black", lw=0.8, capsize=2)
+            if mark:
+                ax.plot(
+                    mark(player, condition),
+                    y_bar,
+                    "D",
+                    color="white",
+                    mec="black",
+                    ms=4,
+                    clip_on=False,
+                )
+    ax.set_xlim(0, 1)
+    ax.set_xlabel(xlabel)
+    ax.set_yticks(range(len(players)), [PLAYERS[p][0] for p in reversed(players)])
 
 
 def fig_main(games: dict) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(7.5, 4.2), sharey=True)
     players = [p for p in PLAYERS if (p, "compass", "map") in games]
     for ax, field, label in zip(axes, ["won", "progress"], ["Won rate", "Progress"], strict=True):
-        for y, player in enumerate(reversed(players)):
-            color = PLAYERS[player][1]
-            conditions = ["map"] if player in BASELINES else list(INPUTS)
-            for i, condition in enumerate(conditions):
-                value, low, high = estimate(
-                    [getattr(x, field) for x in games[(player, "compass", condition)].values()]
-                )
-                offset = 0 if len(conditions) == 1 else (0.2 if i == 0 else -0.2)
-                ax.barh(
-                    y + offset,
-                    value,
-                    height=0.38 if len(conditions) > 1 else 0.5,
-                    color=color,
-                    alpha=0.35 if condition == "map" and player in MODELS else 1,
-                )
-                ax.errorbar(
-                    value,
-                    y + offset,
-                    xerr=[[value - low], [high - value]],
-                    color="black",
-                    lw=0.8,
-                    capsize=2,
-                )
-        ax.set_xlim(0, 1)
-        ax.set_xlabel(f"{label}, compass rules")
-        ax.set_yticks(range(len(players)), [PLAYERS[p][0] for p in reversed(players)])
+
+        def value(player, condition, field=field):
+            return estimate(
+                [getattr(x, field) for x in games[(player, "compass", condition)].values()]
+            )
+
+        bar_panel(ax, players, value, f"{label}, compass rules")
     input_legend(fig, 0.0)
     save(fig, "fig_main")
 
@@ -650,6 +646,9 @@ def main() -> None:
         "Level (steps to the goal), compass",
     )
     fig_calibration(games)
+    exam = load_exam()
+    exam_tables(games, exam)
+    fig_exam(games, exam)
     print(f"{sum(len(v) for v in games.values())} games; outputs in {OUT}")
 
 

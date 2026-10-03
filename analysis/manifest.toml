@@ -140,3 +140,17 @@ file = "2026-10-02_23-29_deepseek-v4.1-flash-think_all.jsonl"
 rules = "compass"
 players = ["qwen3.5-4b"]
 file = "2026-10-03_00-25_qwen3.5-4b_all.jsonl"
+
+# The fixed-state exam: one file per player in exam/, each answering every item under map and everything.
+[exam]
+random = "2026-10-03_13-58_random.jsonl"
+greedy = "2026-10-03_13-58_greedy.jsonl"
+greedy-walls = "2026-10-03_13-58_greedy-walls.jsonl"
+solver = "2026-10-03_13-58_solver.jsonl"
+laya = "2026-10-03_13-58_laya.jsonl"
+gliclass = "2026-10-03_13-58_gliclass.jsonl"
+"qwen3.5-4b" = "2026-10-03_13-58_qwen3.5-4b.jsonl"
+jev = "2026-10-03_15-25_jev.jsonl"
+gemma-4-26b = "2026-10-03_15-25_gemma-4-26b.jsonl"
+"deepseek-v4.1-flash" = "2026-10-03_15-25_deepseek-v4.1-flash.jsonl"
+"deepseek-v4.1-flash-think" = "2026-10-03_15-25_deepseek-v4.1-flash-think.jsonl"
