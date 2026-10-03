@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it as below."
+type: software
+title: "System-One Control Bench"
+version: 0.1.0
+authors:
+  - family-names: "[Author Name]"
+    given-names: "[Given Name]"
+license: MIT
+preferred-citation:
+  type: report
+  title: "Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks"
+  authors:
+    - family-names: "[Author Name]"
+      given-names: "[Given Name]"
+  year: 2026
