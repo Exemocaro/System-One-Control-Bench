@@ -1,0 +1,22 @@
+name: Leaderboard
+
+on:
+  pull_request:
+    paths:
+      - leaderboard/**
+
+jobs:
+  leaderboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - run: |
+          for file in $(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} -- leaderboard/results/); do
+            uv run socb validate "$file"
+          done
+      - run: uv run socb leaderboard
+      - run: git diff --exit-code -- leaderboard/README.md docs/index.html

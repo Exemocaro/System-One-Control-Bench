@@ -20,7 +20,7 @@ class RandomPlayer(Player):
 class ScriptedPlayer(Player):
     """Plays a fixed list of moves, then gives up. For examples and tests."""
 
-    def __init__(self, moves: Sequence[str]) -> None:
+    def __init__(self, moves: Sequence[str | None]) -> None:
         self._moves = iter(moves)
 
     def choose(self, turn: Turn) -> Choice:

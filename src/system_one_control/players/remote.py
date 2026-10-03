@@ -255,6 +255,8 @@ class LLMPlayer(Player):
     With `reasoning` off it must answer at once, as Jev does; with it on, it may think first,
     which is slower and costs more. A chat answer carries no probabilities, so none are kept.
     Retries follow Jev's: a call the provider turned away is tried again after each wait.
+    Any OpenAI-compatible endpoint works through `base_url`, but only OpenRouter gets its
+    provider, usage and reasoning fields.
     """
 
     def __init__(
@@ -265,26 +267,36 @@ class LLMPlayer(Player):
         host: str | None = None,
         client: Any = None,
         retry_waits: Sequence[float] = LLM_RETRY_WAITS,
+        base_url: str = OPENROUTER_URL,
     ) -> None:
         self._owns_client = client is None
         if client is None:
             timeout = LLM_REASONING_TIMEOUT if reasoning else LLM_TIMEOUT
-            headers = {"Authorization": f"Bearer {api_key([OPENROUTER_KEY_NAME], 'OpenRouter')}"}
+            headers = (
+                {"Authorization": f"Bearer {api_key([OPENROUTER_KEY_NAME], 'OpenRouter')}"}
+                if base_url == OPENROUTER_URL
+                else {}
+            )
             client = httpx.Client(headers=headers, timeout=timeout)
         self.model = model
         self.host = host
         self.reasoning = reasoning
+        self.base_url = base_url
         self._client = client
         self._retry_waits = tuple(retry_waits)
 
     def body(self, request: Request) -> dict[str, Any]:
         body: dict[str, Any] = {"model": self.model, **chat_payload(request, self.reasoning)}
-        if self.host:
-            body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
+        if self.base_url == OPENROUTER_URL:
+            if self.host:
+                body["provider"] |= {"order": [self.host], "allow_fallbacks": False}
+        else:
+            for key in ("provider", "usage", "reasoning"):
+                del body[key]
         return body
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
-        response = self._client.post(OPENROUTER_URL, json=body)
+        response = self._client.post(self.base_url, json=body)
         response.raise_for_status()
         data: dict[str, Any] = response.json()
         if "error" in data:
@@ -319,6 +331,65 @@ class LLMPlayer(Player):
             how = "ran out of tokens after" if cut else "answered"
             return replace(choice, error=f"{self.model} {how} {text[:200]!r}")
         return choice
+
+    def close(self) -> None:
+        if self._owns_client:
+            self._client.close()
+
+
+class DecisionPlayer(Player):
+    """A bounded decision model behind an HTTP API. Sees only the request.
+
+    It is sent the state, the question and the options with their ids, and answers either
+    probabilities for each id, of which the likeliest is played, or one id outright.
+    Retries follow the chat players'. See SUBMITTING.md for the contract.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        *,
+        api_key: str | None = None,
+        client: Any = None,
+        retry_waits: Sequence[float] = LLM_RETRY_WAITS,
+    ) -> None:
+        self._owns_client = client is None
+        if client is None:
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            client = httpx.Client(headers=headers, timeout=LLM_TIMEOUT)
+        self.url = url
+        self._client = client
+        self._retry_waits = tuple(retry_waits)
+
+    def body(self, request: Request) -> dict[str, Any]:
+        """The JSON sent for a request: the state, the question and the options by id."""
+        return {
+            "state": request.state,
+            "question": request.question,
+            "options": [{"id": option.id, "text": option.text} for option in request.options],
+        }
+
+    def choose(self, turn: Turn) -> Choice:
+        body = self.body(turn.request)
+        data, seconds, retried = with_retries(
+            lambda: self._post(body), self._retry_waits, provider_turned_away
+        )
+        probabilities = data.get("probabilities") or {}
+        if probabilities:
+            option_id = max(sorted(probabilities), key=probabilities.__getitem__)
+        elif data.get("choice") is not None:
+            option_id, probabilities = data["choice"], {}
+        else:
+            return Choice(None, error=f"answered neither probabilities nor choice: {data!r}"[:210])
+        return answer_choice(
+            turn.request, option_id, probabilities, seconds=seconds, retried=retried
+        )
+
+    def _post(self, body: dict[str, Any]) -> dict[str, Any]:
+        response = self._client.post(self.url, json=body)
+        response.raise_for_status()
+        data: dict[str, Any] = response.json()
+        return data
 
     def close(self) -> None:
         if self._owns_client:

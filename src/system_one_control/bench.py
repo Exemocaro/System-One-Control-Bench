@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 import time
@@ -9,19 +10,37 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 
 import typer
 
 from system_one_control.players import PLAYERS, Choice, Player, Turn
-from system_one_control.prompts import Condition, Request
-from system_one_control.puzzles import Puzzle
+from system_one_control.players.baselines import ScriptedPlayer
+from system_one_control.prompts import CONDITIONS, Condition, Request
+from system_one_control.puzzles import Puzzle, load_puzzles
 from system_one_control.world import Board, Rules, Solver, make_rules
 
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "benchmarks"
 CEILING = "solver"  # plays perfectly, so it is never the best result worth pointing out
+BENCHMARK_VERSION = "1.0"
 
 GameKey = tuple[str, str, str]  # puzzle, condition, player
+
+
+@lru_cache(maxsize=1)
+def fingerprint() -> str:
+    """sha256 over the sorted puzzle files and golden examples: what the scores were earned on."""
+    root = Path(__file__).resolve().parents[2]
+    digest = hashlib.sha256()
+    for path in sorted((*root.glob("puzzles/**/*.yaml"), *root.glob("examples/**/*.json"))):
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def stamp() -> str:
+    """The version and fingerprint recorded on every new results line."""
+    return f"{BENCHMARK_VERSION}+{fingerprint()}"
 
 
 @dataclass(frozen=True)
@@ -164,6 +183,7 @@ class GameRecord:
     error: str | None
     moves: tuple[MoveRecord, ...]
     rules: str = "compass"  # added on 24 September, when other rules came in
+    benchmark: str | None = None  # version+fingerprint; games saved before it lack it
 
     @property
     def key(self) -> GameKey:
@@ -252,6 +272,7 @@ def play_game(
         closest=game.closest,
         error=errors[0] if errors else None,
         rules=puzzle.rules.name,
+        benchmark=stamp(),
         moves=tuple(record_of(each) for each in moves_played),
     )
 
@@ -364,6 +385,73 @@ def split_finished(records: Sequence[GameRecord]) -> tuple[list[GameRecord], lis
     """The records split two ways: the finished games to keep, the errored ones to play again."""
     kept = [record for record in records if record.error is None]
     return kept, [record for record in records if record.error is not None]
+
+
+def validate_file(
+    path: Path, scope: Collection[tuple[str, str, str, str]] | None = None
+) -> list[str]:
+    """Replay every game in a results file and list what does not check out (empty = valid).
+
+    Checks options, answers, best moves, won/closest and probabilities; `scope` defaults to
+    the file's own cross product. Games saved before `benchmark` stamps count as version 1.0.
+    """
+    records = load(path)
+    have = {(r.puzzle, r.condition, r.player, r.rules) for r in records}
+    if scope is None:
+        names, conditions, players, rules = (sorted({k[i] for k in have}) for i in range(4))
+        scope = [
+            (puzzle, condition, player, rule)
+            for puzzle in names
+            for condition in conditions
+            for player in players
+            for rule in rules
+        ]
+    failures = [f"missing game {key}" for key in sorted(set(scope) - have)]
+    puzzles = load_puzzles()
+    solved: dict[tuple[str, str], tuple[dict[Board, int], dict[Board, int]]] = {}
+    for record in records:
+        failures += check_game(record, puzzles, solved)
+    return failures
+
+
+def check_game(
+    record: GameRecord,
+    puzzles: Mapping[str, Puzzle],
+    solved: dict[tuple[str, str], tuple[dict[Board, int], dict[Board, int]]],
+) -> list[str]:
+    """What a replay of one recorded game disagrees with, if anything."""
+    where = f"{record.puzzle} {record.condition} {record.player}"
+    if record.puzzle not in puzzles:
+        return [f"{where}: unknown puzzle"]
+    if record.benchmark is not None and record.benchmark != stamp():
+        return [f"{where}: recorded under {record.benchmark}, now {stamp()}"]
+    puzzle = replace(puzzles[record.puzzle], rules=make_rules(record.rules))
+    moves = [move.move for move in record.moves]
+    game = Game(puzzle, ScriptedPlayer(moves), CONDITIONS[record.condition])
+    key = (record.puzzle, record.rules)
+    if key in solved:
+        game._distances, game._step_distances = solved[key]
+    else:
+        solved[key] = (game._distances, game._step_distances)
+    failures: list[str] = []
+    for number, move in enumerate(record.moves, start=1):
+        if game.is_over:
+            return [*failures, f"{where}: game over before move {number}"]
+        played = game.play_move()
+        if [o.move for o in played.request.options] != list(move.options):
+            failures.append(f"{where} move {number}: options differ")
+        if move.move is not None and move.move not in (o.move for o in played.request.options):
+            failures.append(f"{where} move {number}: answer outside the options")
+        if list(played.best_moves) != list(move.best_moves) or played.optimal != move.optimal:
+            failures.append(f"{where} move {number}: best moves or optimal differ")
+        if move.probabilities and (
+            set(move.probabilities) - {o.move for o in played.request.options}
+            or abs(sum(move.probabilities.values()) - 1) > 0.02
+        ):
+            failures.append(f"{where} move {number}: probabilities off the options or off 1")
+    if game.won != record.won or game.closest != record.closest:
+        failures.append(f"{where}: end differs (won {record.won}, closest {record.closest})")
+    return failures
 
 
 def check_same_run(

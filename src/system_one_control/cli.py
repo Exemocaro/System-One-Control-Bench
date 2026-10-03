@@ -7,6 +7,7 @@ from typing import TypeVar
 
 import typer
 
+from system_one_control import leaderboard
 from system_one_control.bench import (
     BENCHMARK_DIR,
     GameRecord,
@@ -19,6 +20,7 @@ from system_one_control.bench import (
     split_finished,
     summarize,
     usage,
+    validate_file,
 )
 from system_one_control.exam import (
     EXAM_DIR,
@@ -33,9 +35,9 @@ from system_one_control.exam import (
     split_unanswered,
 )
 from system_one_control.examples import write_examples
-from system_one_control.players import PLAYERS
+from system_one_control.players import PLAYERS, register_toml_players
 from system_one_control.prompts import CONDITIONS
-from system_one_control.puzzles import LEVELS, PUZZLE_DIR, load_puzzles, write_level
+from system_one_control.puzzles import LEVELS, PUZZLE_DIR, Puzzle, load_puzzles, write_level
 from system_one_control.world import RULES, Rules, make_rules
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -75,6 +77,15 @@ def _levels(spec: str) -> set[int] | None:
     return levels
 
 
+def expand_track(track: str) -> list[tuple[str, str | None]]:
+    """The (conditions, rules) each job of a track plays."""
+    if track == "core":
+        return [("map,everything", None)]
+    if track == "full":
+        return [("all", name) for name in RULES]
+    raise typer.BadParameter(f"unknown track {track!r}; known: core, full")
+
+
 @app.command()
 def benchmark(
     players: str = typer.Option(
@@ -82,11 +93,19 @@ def benchmark(
     ),
     levels: str = typer.Option("all", help="Levels to play, such as 3, 1,4 or 2-5, or all."),
     puzzles: str = typer.Option("all", help="Comma-separated puzzle names, or all."),
-    conditions: str = typer.Option("map", help="Comma-separated condition names, or all."),
+    conditions: str | None = typer.Option(
+        None, help="Comma-separated condition names, or all. Default: map."
+    ),
     rules: str | None = typer.Option(
         None,
         help=f"Play every puzzle under these rules: {', '.join(RULES)}. "
         "Default: each puzzle's own, which is compass.",
+    ),
+    track: str | None = typer.Option(
+        None, help="Shorthand for --conditions/--rules: core (compass map+everything) or full."
+    ),
+    players_file: Path | None = typer.Option(
+        None, help="A players.toml with extra players. Default: players.toml, if present."
     ),
     allow_paid: bool = typer.Option(False, help="Allow players that cost money per move."),
     workers: int = typer.Option(3, help="How many games to play at once."),
@@ -99,17 +118,59 @@ def benchmark(
     ),
 ) -> None:
     """Play every chosen player on every chosen puzzle under every chosen condition."""
+    if players_file is None and Path("players.toml").exists():
+        players_file = Path("players.toml")
+    if players_file is not None:
+        try:
+            register_toml_players(players_file)
+        except ValueError as error:
+            raise typer.BadParameter(str(error)) from None
+    if track is not None and (conditions is not None or rules is not None):
+        raise typer.BadParameter("--track cannot be combined with --conditions or --rules")
+    jobs = expand_track(track) if track is not None else [(conditions or "map", rules)]
+    if len(jobs) > 1 and out is not None:
+        raise typer.BadParameter("--track full writes one file per rules; drop --out")
     chosen_puzzles = _pick(load_puzzles(), puzzles, "puzzle")
     chosen_levels = _levels(levels)
     if chosen_levels is not None:
         chosen_puzzles = [p for p in chosen_puzzles if p.level in chosen_levels]
     if not chosen_puzzles:
         raise typer.BadParameter("no puzzle matches the chosen --levels and --puzzles")
-    if rules is not None:
-        chosen_rules = _rules(rules)
-        chosen_puzzles = [replace(p, rules=chosen_rules) for p in chosen_puzzles]
-    chosen_conditions = _pick(CONDITIONS, conditions, "condition")
     names = _pick({name: name for name in PLAYERS}, players, "player")
+    for conditions_spec, rules_spec in jobs:
+        _benchmark_once(
+            chosen_puzzles,
+            conditions_spec,
+            rules_spec,
+            names,
+            workers,
+            out,
+            resume,
+            levels,
+            puzzles,
+            allow_paid,
+        )
+
+
+def _benchmark_once(
+    puzzles_all: list[Puzzle],
+    conditions_spec: str,
+    rules_spec: str | None,
+    names: list[str],
+    workers: int,
+    out: Path | None,
+    resume: bool,
+    levels: str,
+    puzzles_spec: str,
+    allow_paid: bool,
+) -> None:
+    """One benchmark run: every player on every puzzle under every condition, once."""
+    if rules_spec is not None:
+        chosen_rules = _rules(rules_spec)
+        chosen_puzzles = [replace(p, rules=chosen_rules) for p in puzzles_all]
+    else:
+        chosen_puzzles = list(puzzles_all)
+    chosen_conditions = _pick(CONDITIONS, conditions_spec, "condition")
     compass_only = [n for n in names if PLAYERS[n].compass_only]
     if compass_only and any(p.rules.name != "compass" for p in chosen_puzzles):
         raise typer.BadParameter(f"{', '.join(compass_only)} can only play compass rules")
@@ -117,7 +178,7 @@ def benchmark(
     rules_of = {p.name: p.rules.name for p in chosen_puzzles}
 
     if out is None:
-        name = _run_name(names, conditions, levels, puzzles, rules=rules)
+        name = _run_name(names, conditions_spec, levels, puzzles_spec, rules=rules_spec)
         out = BENCHMARK_DIR / f"{name}.jsonl"
     kept: list[GameRecord] = []
     if out.exists():
@@ -257,6 +318,44 @@ def exam(
     if errors:
         typer.echo(f"\n{errors} answers ended in an error; --resume --out {out} asks them again")
     typer.echo(f"\nSaved {len(records)} answers to {out}")
+
+
+@app.command()
+def validate(file: Path) -> None:
+    """Replay every game in a results file and report what does not check out."""
+    failures = validate_file(file)
+    for failure in failures:
+        typer.echo(failure)
+    if failures:
+        raise typer.Exit(1)
+    typer.echo(f"{file} is valid")
+
+
+@app.command()
+def submit(
+    files: list[Path] = typer.Argument(..., help="Core-track results files, one player in total."),
+    name: str = typer.Option(..., help="The entry name shown on the leaderboard."),
+    org: str = typer.Option("", help="The entrant's organisation."),
+    url: str = typer.Option("", help="A link shown beside the entry name."),
+    notes: str = typer.Option("", help="Anything to say about the run."),
+    player: str | None = typer.Option(None, help="Whose games to take; needed with several."),
+    kind: str | None = typer.Option(None, help="bounded decision, chat, local or baseline."),
+) -> None:
+    """Validate core-track results and write the player's leaderboard entry."""
+    try:
+        path = leaderboard.submit(
+            files, name=name, org=org, url=url, notes=notes, player=player, kind=kind
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
+    typer.echo(f"wrote {path}")
+
+
+@app.command("leaderboard")
+def rebuild_leaderboard() -> None:
+    """Rebuild the leaderboard table and page from the entries."""
+    readme, page = leaderboard.rebuild()
+    typer.echo(f"wrote {readme} and {page}")
 
 
 def _run_name(

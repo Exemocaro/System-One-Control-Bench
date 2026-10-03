@@ -1,0 +1,237 @@
+import json
+
+import httpx
+import pytest
+from typer.testing import CliRunner
+
+from system_one_control.bench import (
+    BENCHMARK_VERSION,
+    fingerprint,
+    run_benchmark,
+    save,
+    validate_file,
+)
+from system_one_control.cli import app, expand_track
+from system_one_control.leaderboard import rebuild, submit
+from system_one_control.players import PlayerEntry, players_from_toml
+from system_one_control.players.baselines import SolverPlayer
+from system_one_control.players.remote import DecisionPlayer, LLMPlayer
+from system_one_control.prompts import CONDITIONS
+from system_one_control.puzzles import load_puzzles
+from tests.helpers import MAP, turn
+
+runner = CliRunner()
+EVERYTHING = CONDITIONS["everything"]
+
+
+def test_track_core_is_compass_map_and_everything():
+    assert expand_track("core") == [("map,everything", None)]
+
+
+def test_track_full_is_every_condition_under_each_rules():
+    assert [rules for (_, rules) in expand_track("full")] == [
+        "compass",
+        "two-moves",
+        "three-moves",
+        "up-to-two-moves",
+        "up-to-three-moves",
+    ]
+
+
+def test_a_track_cannot_be_combined_with_conditions_or_rules(tmp_path):
+    out = tmp_path / "r.jsonl"
+    result = runner.invoke(app, ["benchmark", "--track", "core", "--conditions", "map"])
+    assert result.exit_code != 0
+    assert "cannot be combined" in result.output
+    assert not out.exists()
+
+
+def test_an_unknown_track_is_refused():
+    result = runner.invoke(app, ["benchmark", "--track", "extended"])
+    assert result.exit_code != 0
+    assert "unknown track" in result.output
+
+
+TOML = """
+[players.chatty]
+kind = "chat"
+base_url = "https://api.example.com/v1"
+model = "my-model-1"
+api_key_env = "MY_API_KEY"
+reasoning = false
+
+[players.brain]
+kind = "decision"
+url = "https://api.example.com/decide"
+api_key_env = "MY_API_KEY"
+"""
+
+
+def test_players_from_toml_builds_chat_and_decision_players(tmp_path):
+    path = tmp_path / "players.toml"
+    path.write_text(TOML, encoding="utf-8")
+    entries = players_from_toml(path)
+    assert set(entries) == {"chatty", "brain"}
+    assert all(isinstance(entry, PlayerEntry) for entry in entries.values())
+    assert entries["chatty"].paid and entries["brain"].paid
+
+
+def test_chat_is_paid_unless_the_file_says_otherwise(tmp_path):
+    path = tmp_path / "players.toml"
+    free = '\n[players.free]\nkind = "chat"\nbase_url = "https://x/v"\nmodel = "m"\npaid = false\n'
+    path.write_text(TOML + free, encoding="utf-8")
+    assert not players_from_toml(path)["free"].paid
+
+
+@pytest.mark.parametrize(
+    ("section", "message"),
+    [
+        ('[players.random]\nkind = "chat"\nbase_url = "https://x/v"\nmodel = "m"', "clashes"),
+        ('[players.x]\nkind = "carrier-pigeon"', "kind must be chat or decision"),
+        ('[players.x]\nkind = "chat"\nmodel = "m"', "needs 'base_url'"),
+        ('[players.x]\nkind = "decision"', "needs 'url'"),
+    ],
+    ids=[
+        "a name clash with a built-in",
+        "an unknown kind",
+        "a chat player without a url",
+        "a decision player without a url",
+    ],
+)
+def test_bad_toml_entries_are_refused(tmp_path, section, message):
+    path = tmp_path / "players.toml"
+    path.write_text(section + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        players_from_toml(path)
+
+
+def test_fingerprint_is_stable_and_versioned():
+    assert fingerprint() == fingerprint()
+    assert len(fingerprint()) == 64
+    assert BENCHMARK_VERSION == "1.0"
+
+
+def tiny_run():
+    puzzles = list(load_puzzles().values())[:2]
+    return run_benchmark(puzzles, [MAP, EVERYTHING], {"solver": SolverPlayer})
+
+
+def tiny_names():
+    return {puzzle.name for puzzle in list(load_puzzles().values())[:2]}
+
+
+def tiny_file(tmp_path):
+    return save(tiny_run(), tmp_path / "tiny.jsonl")
+
+
+def test_validate_passes_a_real_small_run(tmp_path):
+    assert validate_file(tiny_file(tmp_path)) == []
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        pytest.param(
+            lambda game: game["moves"][0].__setitem__("move", "jump"),
+            id="an answer outside the options",
+        ),
+        pytest.param(
+            lambda game: game["moves"].__setitem__(
+                0, {**game["moves"][0], "options": ["west", "east", "north", "south"]}
+            ),
+            id="options in another order",
+        ),
+        pytest.param(lambda game: game.__setitem__("won", not game["won"]), id="a flipped outcome"),
+    ],
+)
+def test_validate_fails_a_tampered_game(tmp_path, tamper):
+    path = tiny_file(tmp_path)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    game = json.loads(lines[0])
+    tamper(game)
+    lines[0] = json.dumps(game)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert validate_file(path) != []
+
+
+def test_submit_writes_an_entry_and_rebuild_makes_the_table(tmp_path):
+    path = tiny_file(tmp_path)
+    board = tmp_path / "board"
+    entry = submit(
+        [path],
+        name="Tiny Solver",
+        org="",
+        url="",
+        notes="",
+        puzzles=tiny_names(),
+        leaderboard=board,
+    )
+    saved = json.loads(entry.read_text(encoding="utf-8"))
+    assert saved["player"] == "solver" and saved["track"] == "core"
+    assert set(saved["conditions"]) == {"map", "everything"}
+    assert saved["conditions"]["map"]["progress"][0] == 1.0
+    readme, page = rebuild(leaderboard=board, docs=tmp_path / "docs")
+    assert "Tiny Solver" in readme.read_text(encoding="utf-8")
+    assert "Tiny Solver" in page.read_text(encoding="utf-8")
+
+
+def test_submit_refuses_a_run_with_missing_or_mixed_players(tmp_path):
+    path = tiny_file(tmp_path)
+    names = tiny_names()
+    with pytest.raises(ValueError, match="missing game"):
+        submit([path], name="x", org="", url="", notes="", puzzles=names | {"nope"})
+    lines = path.read_text(encoding="utf-8").splitlines()
+    game = json.loads(lines[0])
+    game["player"] = "impostor"
+    lines[0] = json.dumps(game)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="one player"):
+        submit([path], name="x", org="", url="", notes="", puzzles=names)
+
+
+def watching(reply) -> tuple[httpx.Client, list[dict]]:
+    """A client that records what it is sent and answers one reply."""
+    sent: list[dict] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json=reply)
+
+    return httpx.Client(transport=httpx.MockTransport(handle)), sent
+
+
+def test_a_chat_model_elsewhere_gets_no_openrouter_fields():
+    request = turn("####\n#AG#\n####").request
+    client, sent = watching({"choices": [{"message": {"content": '{"option": "option_1"}'}}]})
+    player = LLMPlayer("m", reasoning=True, base_url="https://api.example.com/v1", client=client)
+    assert player.choose(turn("####\n#AG#\n####")).move == request.options[0].move
+    assert "provider" not in sent[0] and "usage" not in sent[0] and "reasoning" not in sent[0]
+    assert sent[0]["model"] == "m"
+
+
+@pytest.mark.parametrize(
+    ("reply", "move", "error"),
+    [
+        ({"probabilities": {"option_2": 0.7, "option_1": 0.2}}, "south", None),
+        ({"choice": "option_4"}, "west", None),
+        ({"choice": "option_9"}, None, "option_9"),
+        ({"something": "else"}, None, "neither"),
+    ],
+    ids=[
+        "the likeliest probability wins",
+        "a bare choice is played",
+        "an unknown id is an error",
+        "neither is an error",
+    ],
+)
+def test_a_decision_endpoint_answers_probabilities_or_a_choice(reply, move, error):
+    t = turn("####\n#AG#\n####")
+    client, sent = watching(reply)
+    player = DecisionPlayer("https://api.example.com/decide", client=client, retry_waits=(0, 0))
+    choice = player.choose(t)
+    expected = next((o.move for o in t.request.options if o.move == move), None)
+    assert choice.move == expected
+    assert (choice.error is None) == (error is None)
+    if error:
+        assert error in choice.error
+    assert sent[0]["options"] == [{"id": o.id, "text": o.text} for o in t.request.options]
