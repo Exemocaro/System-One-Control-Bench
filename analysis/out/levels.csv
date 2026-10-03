@@ -1,0 +1,197 @@
+Model,Input,Level,Games,Won rate,Won rate low,Won rate high
+Solver,map only,1,5,1,1.0,1.0
+Solver,map only,2,5,1,1.0,1.0
+Solver,map only,3,10,1,1.0,1.0
+Solver,map only,4,10,1,1.0,1.0
+Solver,map only,5,10,1,1.0,1.0
+Solver,map only,6,10,1,1.0,1.0
+Solver,map only,8,10,1,1.0,1.0
+Solver,map only,10,10,1,1.0,1.0
+Solver,map only,12,10,1,1.0,1.0
+Solver,map only,15,10,1,1.0,1.0
+Solver,map only,20,10,1,1.0,1.0
+Greedy (walls),map only,1,5,1,1.0,1.0
+Greedy (walls),map only,2,5,1,1.0,1.0
+Greedy (walls),map only,3,10,0.9,0.7,1.0
+Greedy (walls),map only,4,10,0.6,0.3,0.9
+Greedy (walls),map only,5,10,0.5,0.2,0.8
+Greedy (walls),map only,6,10,0.5,0.2,0.8
+Greedy (walls),map only,8,10,0.2,0.0,0.5
+Greedy (walls),map only,10,10,0,0.0,0.0
+Greedy (walls),map only,12,10,0,0.0,0.0
+Greedy (walls),map only,15,10,0,0.0,0.0
+Greedy (walls),map only,20,10,0,0.0,0.0
+Greedy,map only,1,5,1,1.0,1.0
+Greedy,map only,2,5,0.6,0.2,1.0
+Greedy,map only,3,10,0.8,0.5,1.0
+Greedy,map only,4,10,0.6,0.3,0.9
+Greedy,map only,5,10,0.4,0.1,0.7
+Greedy,map only,6,10,0.1,0.0,0.3
+Greedy,map only,8,10,0.1,0.0,0.3
+Greedy,map only,10,10,0,0.0,0.0
+Greedy,map only,12,10,0,0.0,0.0
+Greedy,map only,15,10,0,0.0,0.0
+Greedy,map only,20,10,0,0.0,0.0
+Random,map only,1,5,0.4,0.0,0.8
+Random,map only,2,5,0.2,0.0,0.6
+Random,map only,3,10,0.1,0.0,0.3
+Random,map only,4,10,0,0.0,0.0
+Random,map only,5,10,0,0.0,0.0
+Random,map only,6,10,0,0.0,0.0
+Random,map only,8,10,0,0.0,0.0
+Random,map only,10,10,0,0.0,0.0
+Random,map only,12,10,0,0.0,0.0
+Random,map only,15,10,0,0.0,0.0
+Random,map only,20,10,0,0.0,0.0
+Jev,map only,1,5,1,1.0,1.0
+Jev,map only,2,5,0.6,0.2,1.0
+Jev,map only,3,10,0.7,0.4,1.0
+Jev,map only,4,10,0.5,0.2,0.8
+Jev,map only,5,10,0.4,0.1,0.7
+Jev,map only,6,10,0.5,0.2,0.8
+Jev,map only,8,10,0.2,0.0,0.5
+Jev,map only,10,10,0.1,0.0,0.3
+Jev,map only,12,10,0,0.0,0.0
+Jev,map only,15,10,0,0.0,0.0
+Jev,map only,20,10,0,0.0,0.0
+Jev,full context,1,5,1,1.0,1.0
+Jev,full context,2,5,1,1.0,1.0
+Jev,full context,3,10,0.9,0.7,1.0
+Jev,full context,4,10,0.6,0.3,0.9
+Jev,full context,5,10,0.8,0.5,1.0
+Jev,full context,6,10,0.8,0.5,1.0
+Jev,full context,8,10,0.6,0.3,0.9
+Jev,full context,10,10,0.7,0.4,1.0
+Jev,full context,12,10,0.2,0.0,0.5
+Jev,full context,15,10,0.1,0.0,0.3
+Jev,full context,20,10,0,0.0,0.0
+Laya,map only,1,5,0.2,0.0,0.6
+Laya,map only,2,5,0,0.0,0.0
+Laya,map only,3,10,0.1,0.0,0.3
+Laya,map only,4,10,0,0.0,0.0
+Laya,map only,5,10,0,0.0,0.0
+Laya,map only,6,10,0,0.0,0.0
+Laya,map only,8,10,0,0.0,0.0
+Laya,map only,10,10,0,0.0,0.0
+Laya,map only,12,10,0,0.0,0.0
+Laya,map only,15,10,0,0.0,0.0
+Laya,map only,20,10,0,0.0,0.0
+Laya,full context,1,5,0.8,0.4,1.0
+Laya,full context,2,5,0.8,0.4,1.0
+Laya,full context,3,10,0.3,0.0,0.6
+Laya,full context,4,10,0.1,0.0,0.3
+Laya,full context,5,10,0,0.0,0.0
+Laya,full context,6,10,0,0.0,0.0
+Laya,full context,8,10,0,0.0,0.0
+Laya,full context,10,10,0,0.0,0.0
+Laya,full context,12,10,0,0.0,0.0
+Laya,full context,15,10,0,0.0,0.0
+Laya,full context,20,10,0,0.0,0.0
+GLiClass,map only,1,5,0.2,0.0,0.6
+GLiClass,map only,2,5,0.2,0.0,0.6
+GLiClass,map only,3,10,0.1,0.0,0.3
+GLiClass,map only,4,10,0,0.0,0.0
+GLiClass,map only,5,10,0,0.0,0.0
+GLiClass,map only,6,10,0,0.0,0.0
+GLiClass,map only,8,10,0,0.0,0.0
+GLiClass,map only,10,10,0,0.0,0.0
+GLiClass,map only,12,10,0,0.0,0.0
+GLiClass,map only,15,10,0,0.0,0.0
+GLiClass,map only,20,10,0,0.0,0.0
+GLiClass,full context,1,5,1,1.0,1.0
+GLiClass,full context,2,5,0.8,0.4,1.0
+GLiClass,full context,3,10,0.4,0.1,0.7
+GLiClass,full context,4,10,0,0.0,0.0
+GLiClass,full context,5,10,0,0.0,0.0
+GLiClass,full context,6,10,0,0.0,0.0
+GLiClass,full context,8,10,0,0.0,0.0
+GLiClass,full context,10,10,0,0.0,0.0
+GLiClass,full context,12,10,0,0.0,0.0
+GLiClass,full context,15,10,0,0.0,0.0
+GLiClass,full context,20,10,0,0.0,0.0
+Gemma 4 26B,map only,1,5,1,1.0,1.0
+Gemma 4 26B,map only,2,5,1,1.0,1.0
+Gemma 4 26B,map only,3,10,0.6,0.3,0.9
+Gemma 4 26B,map only,4,10,0.5,0.2,0.8
+Gemma 4 26B,map only,5,10,0.5,0.2,0.8
+Gemma 4 26B,map only,6,10,0.5,0.2,0.8
+Gemma 4 26B,map only,8,10,0.2,0.0,0.5
+Gemma 4 26B,map only,10,10,0.2,0.0,0.5
+Gemma 4 26B,map only,12,10,0,0.0,0.0
+Gemma 4 26B,map only,15,10,0,0.0,0.0
+Gemma 4 26B,map only,20,10,0,0.0,0.0
+Gemma 4 26B,full context,1,5,1,1.0,1.0
+Gemma 4 26B,full context,2,5,1,1.0,1.0
+Gemma 4 26B,full context,3,10,1,1.0,1.0
+Gemma 4 26B,full context,4,10,0.8,0.5,1.0
+Gemma 4 26B,full context,5,10,0.8,0.5,1.0
+Gemma 4 26B,full context,6,10,0.9,0.7,1.0
+Gemma 4 26B,full context,8,10,0.6,0.3,0.9
+Gemma 4 26B,full context,10,10,0.8,0.5,1.0
+Gemma 4 26B,full context,12,10,0.2,0.0,0.5
+Gemma 4 26B,full context,15,10,0,0.0,0.0
+Gemma 4 26B,full context,20,10,0,0.0,0.0
+Qwen3.5 4B,map only,1,5,0.6,0.2,1.0
+Qwen3.5 4B,map only,2,5,0.6,0.2,1.0
+Qwen3.5 4B,map only,3,10,0.4,0.1,0.7
+Qwen3.5 4B,map only,4,10,0.2,0.0,0.5
+Qwen3.5 4B,map only,5,10,0.2,0.0,0.5
+Qwen3.5 4B,map only,6,10,0,0.0,0.0
+Qwen3.5 4B,map only,8,10,0,0.0,0.0
+Qwen3.5 4B,map only,10,10,0,0.0,0.0
+Qwen3.5 4B,map only,12,10,0,0.0,0.0
+Qwen3.5 4B,map only,15,10,0,0.0,0.0
+Qwen3.5 4B,map only,20,10,0,0.0,0.0
+Qwen3.5 4B,full context,1,5,1,1.0,1.0
+Qwen3.5 4B,full context,2,5,0.8,0.4,1.0
+Qwen3.5 4B,full context,3,10,0.8,0.5,1.0
+Qwen3.5 4B,full context,4,10,0.5,0.2,0.8
+Qwen3.5 4B,full context,5,10,0.4,0.1,0.7
+Qwen3.5 4B,full context,6,10,0.5,0.2,0.8
+Qwen3.5 4B,full context,8,10,0.6,0.3,0.9
+Qwen3.5 4B,full context,10,10,0.6,0.3,0.9
+Qwen3.5 4B,full context,12,10,0.2,0.0,0.5
+Qwen3.5 4B,full context,15,10,0,0.0,0.0
+Qwen3.5 4B,full context,20,10,0,0.0,0.0
+DeepSeek V4.1 Flash,map only,1,5,1,1.0,1.0
+DeepSeek V4.1 Flash,map only,2,5,0.6,0.2,1.0
+DeepSeek V4.1 Flash,map only,3,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash,map only,4,10,0.6,0.3,0.9
+DeepSeek V4.1 Flash,map only,5,10,0.7,0.4,1.0
+DeepSeek V4.1 Flash,map only,6,10,0.5,0.2,0.8
+DeepSeek V4.1 Flash,map only,8,10,0.3,0.0,0.6
+DeepSeek V4.1 Flash,map only,10,10,0.1,0.0,0.3
+DeepSeek V4.1 Flash,map only,12,10,0,0.0,0.0
+DeepSeek V4.1 Flash,map only,15,10,0,0.0,0.0
+DeepSeek V4.1 Flash,map only,20,10,0,0.0,0.0
+DeepSeek V4.1 Flash,full context,1,5,1,1.0,1.0
+DeepSeek V4.1 Flash,full context,2,5,1,1.0,1.0
+DeepSeek V4.1 Flash,full context,3,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash,full context,4,10,1,1.0,1.0
+DeepSeek V4.1 Flash,full context,5,10,0.8,0.5,1.0
+DeepSeek V4.1 Flash,full context,6,10,0.7,0.4,1.0
+DeepSeek V4.1 Flash,full context,8,10,0.6,0.3,0.9
+DeepSeek V4.1 Flash,full context,10,10,0.5,0.2,0.8
+DeepSeek V4.1 Flash,full context,12,10,0.4,0.1,0.7
+DeepSeek V4.1 Flash,full context,15,10,0.1,0.0,0.3
+DeepSeek V4.1 Flash,full context,20,10,0,0.0,0.0
+DeepSeek V4.1 Flash (reasoning),map only,1,5,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),map only,2,5,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),map only,3,10,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),map only,4,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash (reasoning),map only,5,10,0.7,0.4,1.0
+DeepSeek V4.1 Flash (reasoning),map only,6,10,0.8,0.5,1.0
+DeepSeek V4.1 Flash (reasoning),map only,8,10,0.8,0.5,1.0
+DeepSeek V4.1 Flash (reasoning),map only,10,10,0.6,0.3,0.9
+DeepSeek V4.1 Flash (reasoning),map only,12,10,0.5,0.2,0.8
+DeepSeek V4.1 Flash (reasoning),map only,15,10,0.2,0.0,0.5
+DeepSeek V4.1 Flash (reasoning),full context,1,5,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),full context,2,5,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),full context,3,10,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),full context,4,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash (reasoning),full context,5,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash (reasoning),full context,6,10,1,1.0,1.0
+DeepSeek V4.1 Flash (reasoning),full context,8,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash (reasoning),full context,10,10,0.9,0.7,1.0
+DeepSeek V4.1 Flash (reasoning),full context,12,10,0.7,0.4,1.0
+DeepSeek V4.1 Flash (reasoning),full context,15,9,0.4444444444444444,0.1111111111111111,0.7777777777777778

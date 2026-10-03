@@ -1,0 +1,142 @@
+# Canonical benchmark source for each player and rules combination.
+# Baseline files contain random, greedy, greedy-walls, and solver together.
+
+[[results]]
+rules = "compass"
+players = ["random", "greedy", "greedy-walls", "solver"]
+file = "2026-09-23_21-49_random+greedy+greedy-walls+solver_map.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["jev"]
+file = "2026-09-23_jev_all.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["gemma-4-26b"]
+file = "2026-09-25_10-16_gemma-4-26b_all.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["laya"]
+file = "2026-09-25_10-16_laya_all.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["gliclass"]
+file = "2026-09-25_14-45_gliclass_all.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["deepseek-v4.1-flash"]
+file = "2026-09-25_15-19_deepseek-v4.1-flash_all.jsonl"
+
+[[results]]
+rules = "two-moves"
+players = ["random", "solver"]
+file = "2026-09-24_00-09_random+solver_map_two-moves.jsonl"
+
+[[results]]
+rules = "two-moves"
+players = ["jev"]
+file = "2026-09-24_13-41_jev_all_two-moves.jsonl"
+
+[[results]]
+rules = "two-moves"
+players = ["gemma-4-26b"]
+file = "2026-09-25_10-41_gemma-4-26b_all_two-moves.jsonl"
+
+[[results]]
+rules = "two-moves"
+players = ["laya"]
+file = "2026-09-26_10-02_laya_all_two-moves.jsonl"
+
+[[results]]
+rules = "two-moves"
+players = ["gliclass"]
+file = "2026-09-26_10-02_gliclass_all_two-moves.jsonl"
+
+[[results]]
+rules = "three-moves"
+players = ["random", "solver"]
+file = "2026-09-24_00-22_random+solver_map_three-moves.jsonl"
+
+[[results]]
+rules = "three-moves"
+players = ["jev"]
+file = "2026-09-24_13-48_jev_all_three-moves.jsonl"
+
+[[results]]
+rules = "three-moves"
+players = ["gemma-4-26b"]
+file = "2026-09-25_10-56_gemma-4-26b_all_three-moves.jsonl"
+
+[[results]]
+rules = "three-moves"
+players = ["laya"]
+file = "2026-09-26_10-24_laya_all_three-moves.jsonl"
+
+[[results]]
+rules = "three-moves"
+players = ["gliclass"]
+file = "2026-09-26_10-47_gliclass_all_three-moves.jsonl"
+
+[[results]]
+rules = "up-to-two-moves"
+players = ["random", "solver"]
+file = "2026-09-26_12-43_random+solver_map_up-to-two-moves.jsonl"
+
+[[results]]
+rules = "up-to-two-moves"
+players = ["jev"]
+file = "2026-09-26_10-39_jev_all_up-to-two-moves.jsonl"
+
+[[results]]
+rules = "up-to-two-moves"
+players = ["gemma-4-26b"]
+file = "2026-09-26_12-46_gemma-4-26b_all_up-to-two-moves.jsonl"
+
+[[results]]
+rules = "up-to-two-moves"
+players = ["laya"]
+file = "2026-09-26_10-47_laya_all_up-to-two-moves.jsonl"
+
+[[results]]
+rules = "up-to-two-moves"
+players = ["gliclass"]
+file = "2026-09-26_10-52_gliclass_all_up-to-two-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["random", "solver"]
+file = "2026-09-26_12-44_random+solver_map_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["jev"]
+file = "2026-09-26_10-39_jev_all_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["gemma-4-26b"]
+file = "2026-09-26_12-46_gemma-4-26b_all_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["laya"]
+file = "2026-09-26_10-51_laya_all_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["gliclass"]
+file = "2026-10-02_23-49_gliclass_all_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["deepseek-v4.1-flash-think"]
+file = "2026-10-02_23-29_deepseek-v4.1-flash-think_all.jsonl"
+
+[[results]]
+rules = "compass"
+players = ["qwen3.5-4b"]
+file = "2026-10-03_00-25_qwen3.5-4b_all.jsonl"
