@@ -1,0 +1,10 @@
+description: A generated 7x7 maze that walking straight at the target solves.
+level: 5
+map: |
+  #######
+  #.#...#
+  #.#.#.#
+  #...#.#
+  #######
+  #KA.DG#
+  #######

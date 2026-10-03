@@ -13,13 +13,13 @@ import typer
 from system_one_control.game import Game, Step
 from system_one_control.players import PLAYERS, Player
 from system_one_control.prompts import Condition
-from system_one_control.puzzles import Scenario
+from system_one_control.puzzles import Puzzle
 from system_one_control.world import make_rules
 
 BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "benchmarks"
 CEILING = "solver"  # plays perfectly, so it is never the best result worth pointing out
 
-GameKey = tuple[str, str, str]  # scenario, condition, player
+GameKey = tuple[str, str, str]  # puzzle, condition, player
 
 
 @dataclass(frozen=True)
@@ -43,12 +43,12 @@ class MoveRecord:
 
 @dataclass(frozen=True)
 class GameRecord:
-    """One game: a player on a scenario under a condition, and every move it made."""
+    """One game: a player on a puzzle under a condition, and every move it made."""
 
-    scenario: str
+    puzzle: str
     condition: str
     player: str
-    moves_to_goal: int
+    level: int
     won: bool
     closest: int | None  # the fewest moves to the goal from any board the player reached
     error: str | None
@@ -57,19 +57,19 @@ class GameRecord:
 
     @property
     def key(self) -> GameKey:
-        return (self.scenario, self.condition, self.player)
+        return (self.puzzle, self.condition, self.player)
 
     @property
     def fewest_moves(self) -> int:
-        """The fewest moves that win under the game's rules; moves_to_goal counts compass ones."""
-        return make_rules(self.rules).moves_for(self.moves_to_goal)
+        """The fewest moves that win under the game's rules; the level counts compass ones."""
+        return make_rules(self.rules).moves_for(self.level)
 
     @property
     def progress(self) -> float:
         """How much of the way to the goal the game covered at its closest: 1 for a win."""
         if self.closest is None:
             return 0.0
-        return 1 - self.closest / self.moves_to_goal
+        return 1 - self.closest / self.level
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -92,22 +92,22 @@ class GameRecord:
 
 
 def game_keys(
-    scenarios: Sequence[Scenario], conditions: Sequence[Condition], players: Iterable[str]
+    puzzles: Sequence[Puzzle], conditions: Sequence[Condition], players: Iterable[str]
 ) -> list[GameKey]:
     """Every game a benchmark plays, in the order its records are kept."""
     names = list(players)
-    return [(s.name, c.name, name) for s in scenarios for c in conditions for name in names]
+    return [(p.name, c.name, name) for p in puzzles for c in conditions for name in names]
 
 
 def play(
-    scenario: Scenario,
+    puzzle: Puzzle,
     condition: Condition,
     name: str,
     player: Player,
     stop: threading.Event | None = None,
 ) -> GameRecord | None:
     """One game, or None if `stop` was set before it finished."""
-    game = Game(scenario, player, condition)
+    game = Game(puzzle, player, condition)
     try:
         steps = game.play(stop)
     finally:
@@ -116,14 +116,14 @@ def play(
         return None
     errors = [step.choice.error for step in steps if step.choice.error]
     return GameRecord(
-        scenario=scenario.name,
+        puzzle=puzzle.name,
         condition=condition.name,
         player=name,
-        moves_to_goal=scenario.moves_to_goal,
+        level=puzzle.level,
         won=game.won,
         closest=game.closest,
         error=errors[0] if errors else None,
-        rules=scenario.rules.name,
+        rules=puzzle.rules.name,
         moves=tuple(
             MoveRecord(
                 options=tuple(option.move for option in step.request.options),
@@ -150,7 +150,7 @@ def answer_time(step: Step) -> float:
 
 
 def run_benchmark(
-    scenarios: Sequence[Scenario],
+    puzzles: Sequence[Puzzle],
     conditions: Sequence[Condition],
     players: Mapping[str, Callable[[], Player]],
     *,
@@ -158,7 +158,7 @@ def run_benchmark(
     done: Collection[GameKey] = (),
     on_record: Callable[[GameRecord], None] | None = None,
 ) -> list[GameRecord]:
-    """Every player on every scenario under every condition, `workers` games at a time.
+    """Every player on every puzzle under every condition, `workers` games at a time.
 
     Each game gets a fresh player, so games never share state and can run side by side.
     Games in `done` are skipped. `on_record` gets each game as it finishes, so a caller can
@@ -167,20 +167,20 @@ def run_benchmark(
     without recording them, hands over any that finished meanwhile, and is then raised.
     Ctrl+C does the same, without waiting for the games under way.
 
-    Returns the games played, in the order of scenarios, then conditions, then players.
+    Returns the games played, in the order of puzzles, then conditions, then players.
     """
-    by_name = {s.name: s for s in scenarios}
+    by_name = {p.name: p for p in puzzles}
     by_condition = {c.name: c for c in conditions}
-    keys = [key for key in game_keys(scenarios, conditions, players) if key not in done]
+    keys = [key for key in game_keys(puzzles, conditions, players) if key not in done]
     stop = threading.Event()
 
     def play_one(key: GameKey) -> GameRecord | None:
         if stop.is_set():
             return None
-        scenario, condition, name = key
+        puzzle, condition, name = key
         try:
             player = players[name]()
-            return play(by_name[scenario], by_condition[condition], name, player, stop)
+            return play(by_name[puzzle], by_condition[condition], name, player, stop)
         except BaseException:
             stop.set()
             raise
@@ -212,18 +212,18 @@ def run_benchmark(
 
 
 def estimate_paid_calls(
-    scenarios: Sequence[Scenario],
+    puzzles: Sequence[Puzzle],
     conditions: Sequence[Condition],
     player_names: Iterable[str],
     *,
     done: Collection[GameKey] = (),
 ) -> int:
     """The most calls paid players could make on the games not yet done: one per move."""
-    moves = {s.name: s.max_moves for s in scenarios}
+    moves = {p.name: p.max_moves for p in puzzles}
     return sum(
-        moves[scenario]
-        for scenario, condition, name in game_keys(scenarios, conditions, player_names)
-        if PLAYERS[name].paid and (scenario, condition, name) not in done
+        moves[puzzle]
+        for puzzle, condition, name in game_keys(puzzles, conditions, player_names)
+        if PLAYERS[name].paid and (puzzle, condition, name) not in done
     )
 
 
@@ -260,7 +260,7 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
     Rows run from the simple players to the solver, then any other player. With `bold_best`,
     the best score in each column, the solver aside, is in bold.
     """
-    levels = sorted({r.moves_to_goal for r in records})
+    levels = sorted({r.level for r in records})
     groups: dict[tuple[str, str], list[GameRecord]] = defaultdict(list)
     for record in records:
         groups[(record.player, record.condition)].append(record)
@@ -274,7 +274,7 @@ def summarize(records: Sequence[GameRecord], *, bold_best: bool = False) -> str:
         group = groups[(player, condition)]
         scores: list[tuple[str, float]] = []
         for level in levels:
-            at_level = [r for r in group if r.moves_to_goal == level]
+            at_level = [r for r in group if r.level == level]
             won = sum(r.won for r in at_level)
             scores.append((f"{won}/{len(at_level)}", won))
         won = sum(r.won for r in group)

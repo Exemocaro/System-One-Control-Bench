@@ -1,0 +1,16 @@
+description: A generated 11x13 maze without a key, whose every shortest route turns away from the goal at least twice to get round a wall.
+level: 6
+map: |
+  ###########
+  #....G..#.#
+  #######.#.#
+  #....A..#.#
+  #.#######.#
+  #.......#.#
+  #######.#.#
+  #.....#.#.#
+  #####.#.#.#
+  #.....#...#
+  #.#######.#
+  #.........#
+  ###########

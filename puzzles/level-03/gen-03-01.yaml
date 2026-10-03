@@ -1,0 +1,7 @@
+description: A generated 13x4 room without a key, that walking straight at the goal cannot solve.
+level: 3
+map: |
+  #############
+  #..#G.......#
+  #.A.........#
+  #############

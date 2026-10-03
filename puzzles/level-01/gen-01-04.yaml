@@ -1,0 +1,10 @@
+description: A generated 7x7 maze.
+level: 1
+map: |
+  #######
+  #.#...#
+  #.#.#.#
+  #.#.#G#
+  #.###A#
+  #.....#
+  #######

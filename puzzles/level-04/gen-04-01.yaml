@@ -1,0 +1,12 @@
+description: A generated 11x9 maze without a key, that walking straight at the goal cannot solve.
+level: 4
+map: |
+  ###########
+  #.#...#...#
+  #.#.#.###.#
+  #...#.....#
+  #########.#
+  #.#.....#.#
+  #G#A#.###.#
+  #...#.....#
+  ###########

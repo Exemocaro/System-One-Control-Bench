@@ -1,8 +1,0 @@
-description: A generated 10x5 room that walking straight at the target solves.
-moves_to_goal: 5
-map: |
-  ##########
-  #......#.#
-  #.A...#..#
-  #..K.DG#.#
-  ##########

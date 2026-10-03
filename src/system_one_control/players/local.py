@@ -87,12 +87,12 @@ class LayaPlayer(Player):
     gets only 48 tokens. Sees only the request.
     """
 
-    def __init__(self, agent: Any = None) -> None:
-        self._agent = agent  # for tests; otherwise the shared model
+    def __init__(self, laya: Any = None) -> None:
+        self._laya = laya  # for tests; otherwise the shared model
 
     def choose(self, turn: Turn) -> Choice:
         request = turn.request
-        agent = self._agent or shared("laya", load_laya)
+        agent = self._laya or shared("laya", load_laya)
         max_len, head_max_len = laya_budget(
             lambda text: len(agent.tok(text, add_special_tokens=False)["input_ids"]), request
         )
@@ -174,7 +174,7 @@ class GLiClassPlayer(Player):
 
 # Open-weight chat models run here, by short name: each is asked what the OpenRouter models are
 # asked, but writes nothing; the probability it gives each option's id is read off instead (plan
-# §15: "a local autoregressive LLM used only to score candidate IDs after prefill"). Another is a
+# §15: "a local autoregressive LLM used only to score option IDs after prefill"). Another is a
 # line here, for any model whose tokenizer writes each digit as a token of its own.
 LOCAL_LLM_MODELS = {
     "qwen3.5-4b": "Qwen/Qwen3.5-4B",

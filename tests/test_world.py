@@ -1,6 +1,6 @@
 import pytest
 
-from system_one_control.puzzles import load_scenarios
+from system_one_control.puzzles import load_puzzles
 from system_one_control.world import (
     Board,
     CompassRules,
@@ -331,7 +331,7 @@ def test_the_up_to_rules_say_a_move_may_be_shorter_and_are_found_by_name():
     ids=["a straight line", "fetching the key first", "a goal behind a wall"],
 )
 def test_the_distance_to_the_goal(text, expected):
-    assert Solver(CompassRules()).moves_to_goal(Board.parse(text)) == expected
+    assert Solver(CompassRules()).fewest_moves(Board.parse(text)) == expected
 
 
 @pytest.mark.parametrize(
@@ -369,10 +369,10 @@ def test_best_moves_can_reuse_the_distances_from_an_earlier_board():
 @pytest.mark.parametrize("rules", [CompassRules(), ThreeMoveRules()], ids=["compass", "three-step"])
 @pytest.mark.parametrize("name", ["gen-03-01", "gen-08-01", "maze", "gen-20-01"])
 def test_the_distances_from_a_board_agree_with_a_search_from_each_board(rules, name):
-    board = load_scenarios()[name].board
+    board = load_puzzles()[name].board
     solver = Solver(rules)
     distances = solver.distances(board)
-    assert distances[board] == solver.moves_to_goal(board)
+    assert distances[board] == solver.fewest_moves(board)
     for move in rules.moves(board):
         after = rules.apply(board, move)
-        assert distances.get(after) == solver.moves_to_goal(after)
+        assert distances.get(after) == solver.fewest_moves(after)

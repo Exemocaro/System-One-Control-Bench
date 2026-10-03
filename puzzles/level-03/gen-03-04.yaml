@@ -1,0 +1,8 @@
+description: A generated 21x5 maze without a key, with a wall in the way of walking straight at the goal.
+level: 3
+map: |
+  #####################
+  #...#.....#.....#..G#
+  ###.###.#.###.#.#A#.#
+  #.......#.....#...#.#
+  #####################

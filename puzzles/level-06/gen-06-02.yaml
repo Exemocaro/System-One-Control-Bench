@@ -1,0 +1,8 @@
+description: A generated 7x5 room that walking straight at the target cannot solve.
+level: 6
+map: |
+  #######
+  #A....#
+  #.#DK##
+  #.#G###
+  #######

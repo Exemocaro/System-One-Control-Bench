@@ -7,15 +7,15 @@ from system_one_control.puzzles import (
     LONGER_ROUTE,
     NEEDS_PLANNING,
     NEEDS_PLANNING_KEYLESS,
-    SCENARIO_DIR,
+    PUZZLE_DIR,
     WALL_IN_THE_WAY,
+    Puzzle,
     PuzzleGenerator,
-    Scenario,
     around,
     detours,
     greedy_wins,
     has_a_longer_route,
-    load_scenarios,
+    load_puzzles,
     thicken,
     wall_in_the_way,
     with_detours,
@@ -31,7 +31,7 @@ from system_one_control.world import (
     UpToTwoMoveRules,
 )
 
-SCENARIOS = load_scenarios()
+PUZZLES = load_puzzles()
 solver = Solver(CompassRules())
 
 # The goal sits just below A, but A must climb out of its pocket and walk round either side.
@@ -54,55 +54,55 @@ LOOP = """
 """
 
 
-@pytest.mark.parametrize("name", SCENARIOS)
-def test_the_solver_agrees_with_what_each_scenario_file_claims(name):
-    scenario = SCENARIOS[name]
-    solver = Solver(scenario.rules)
-    assert solver.moves_to_goal(scenario.board) == scenario.moves_to_goal
+@pytest.mark.parametrize("name", PUZZLES)
+def test_the_solver_agrees_with_what_each_puzzle_file_claims(name):
+    puzzle = PUZZLES[name]
+    solver = Solver(puzzle.rules)
+    assert solver.fewest_moves(puzzle.board) == puzzle.level
 
 
-def test_every_level_has_scenarios_and_there_are_no_others():
-    assert {s.moves_to_goal for s in SCENARIOS.values()} == set(LEVELS)
+def test_every_level_has_puzzles_and_there_are_no_others():
+    assert {s.level for s in PUZZLES.values()} == set(LEVELS)
 
 
-@pytest.mark.parametrize("path", sorted(SCENARIO_DIR.rglob("*.yaml")), ids=lambda p: p.stem)
-def test_each_scenario_sits_in_the_folder_for_its_level(path):
-    assert path.parent.name == f"level-{Scenario.load(path).moves_to_goal:02d}"
+@pytest.mark.parametrize("path", sorted(PUZZLE_DIR.rglob("*.yaml")), ids=lambda p: p.stem)
+def test_each_puzzle_sits_in_the_folder_for_its_level(path):
+    assert path.parent.name == f"level-{Puzzle.load(path).level:02d}"
 
 
-@pytest.mark.parametrize("name", [n for n, s in SCENARIOS.items() if s.board.find("K")])
+@pytest.mark.parametrize("name", [n for n, s in PUZZLES.items() if s.board.find("K")])
 def test_where_there_is_a_key_the_goal_cannot_be_reached_without_it(name):
-    scenario = SCENARIOS[name]
-    keyless = replace(scenario.board, rows=tuple(r.replace("K", ".") for r in scenario.board.rows))
-    assert Solver(scenario.rules).moves_to_goal(keyless) is None
+    puzzle = PUZZLES[name]
+    keyless = replace(puzzle.board, rows=tuple(r.replace("K", ".") for r in puzzle.board.rows))
+    assert Solver(puzzle.rules).fewest_moves(keyless) is None
 
 
-def test_scenarios_are_named_after_their_file_and_sorted_by_difficulty():
-    assert "maze" in SCENARIOS and "gen-03-01" in SCENARIOS
-    distances = [s.moves_to_goal for s in SCENARIOS.values()]
+def test_puzzles_are_named_after_their_file_and_sorted_by_difficulty():
+    assert "maze" in PUZZLES and "gen-03-01" in PUZZLES
+    distances = [s.level for s in PUZZLES.values()]
     assert distances == sorted(distances)
 
 
-def test_a_scenario_file_can_choose_its_rules(tmp_path):
+def test_a_puzzle_file_can_choose_its_rules(tmp_path):
     path = tmp_path / "tiny.yaml"
-    path.write_text("rules: compass\nmoves_to_goal: 1\nmap: |\n  ####\n  #AG#\n  ####\n")
-    scenario = Scenario.load(path)
-    assert scenario.name == "tiny"
-    assert scenario.rules.name == "compass"
+    path.write_text("rules: compass\nlevel: 1\nmap: |\n  ####\n  #AG#\n  ####\n")
+    puzzle = Puzzle.load(path)
+    assert puzzle.name == "tiny"
+    assert puzzle.rules.name == "compass"
 
 
-@pytest.mark.parametrize("name", SCENARIOS)
+@pytest.mark.parametrize("name", PUZZLES)
 def test_a_game_allows_twice_the_moves_the_solver_needs(name):
-    assert SCENARIOS[name].max_moves == 2 * SCENARIOS[name].moves_to_goal
+    assert PUZZLES[name].max_moves == 2 * PUZZLES[name].level
 
 
-def test_two_scenarios_may_not_share_a_name(tmp_path):
-    tiny = "moves_to_goal: 1\nmap: |\n  ####\n  #AG#\n  ####\n"
+def test_two_puzzles_may_not_share_a_name(tmp_path):
+    tiny = "level: 1\nmap: |\n  ####\n  #AG#\n  ####\n"
     for level in ("level-01", "level-02"):
         (tmp_path / level).mkdir()
         (tmp_path / level / "tiny.yaml").write_text(tiny)
     with pytest.raises(ValueError, match="tiny"):
-        load_scenarios(tmp_path)
+        load_puzzles(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -110,44 +110,44 @@ def test_two_scenarios_may_not_share_a_name(tmp_path):
     [TwoMoveRules(), ThreeMoveRules(), UpToTwoMoveRules(), UpToThreeMoveRules()],
     ids=lambda r: r.name,
 )
-def test_under_sequence_rules_every_scenario_is_won_in_its_fewest_moves(rules):
-    for scenario in SCENARIOS.values():
-        played = replace(scenario, rules=rules)
-        assert Solver(rules).moves_to_goal(played.board) == played.fewest_moves, scenario.name
+def test_under_sequence_rules_every_puzzle_is_won_in_its_fewest_moves(rules):
+    for puzzle in PUZZLES.values():
+        played = replace(puzzle, rules=rules)
+        assert Solver(rules).fewest_moves(played.board) == played.fewest_moves, puzzle.name
 
 
 def test_under_sequence_rules_a_game_allows_twice_the_fewest_sequences():
-    scenario = replace(SCENARIOS["gen-05-01"], rules=TwoMoveRules())
-    assert scenario.moves_to_goal == 5
-    assert scenario.fewest_moves == 3
-    assert scenario.max_moves == 6
+    puzzle = replace(PUZZLES["gen-05-01"], rules=TwoMoveRules())
+    assert puzzle.level == 5
+    assert puzzle.fewest_moves == 3
+    assert puzzle.max_moves == 6
 
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_a_generated_puzzle_is_exactly_its_level_away_from_the_goal(level):
-    board = PuzzleGenerator(seed=level).puzzles(level, 1)[0].board
-    assert solver.moves_to_goal(board) == level
+    board = PuzzleGenerator(seed=level).drafts(level, 1)[0].board
+    assert solver.fewest_moves(board) == level
 
 
 @pytest.mark.parametrize("level", [level for level in LEVELS if level >= 3])
 def test_from_level_three_every_puzzle_needs_the_key(level):
-    board = PuzzleGenerator(seed=level).puzzles(level, 1)[0].board
+    board = PuzzleGenerator(seed=level).drafts(level, 1)[0].board
     keyless = replace(board, rows=tuple(r.replace("K", ".") for r in board.rows))
     assert board.find("K") and board.find("D")
-    assert solver.moves_to_goal(keyless) is None
+    assert solver.fewest_moves(keyless) is None
 
 
 def test_the_same_seed_gives_the_same_puzzles():
-    assert PuzzleGenerator(seed=7).puzzles(4, 3) == PuzzleGenerator(seed=7).puzzles(4, 3)
+    assert PuzzleGenerator(seed=7).drafts(4, 3) == PuzzleGenerator(seed=7).drafts(4, 3)
 
 
 def test_the_puzzles_for_a_level_are_all_different():
-    puzzles = PuzzleGenerator(seed=0).puzzles(2, 8)
+    puzzles = PuzzleGenerator(seed=0).drafts(2, 8)
     assert len({puzzle.board.draw() for puzzle in puzzles}) == 8
 
 
 def test_both_open_rooms_and_mazes_are_generated():
-    puzzles = PuzzleGenerator(seed=1).puzzles(6, 10)
+    puzzles = PuzzleGenerator(seed=1).drafts(6, 10)
     assert {puzzle.style for puzzle in puzzles} == {"room", "maze"}
 
 
@@ -155,16 +155,16 @@ def test_a_level_is_topped_up_to_the_target_and_hand_made_puzzles_are_kept(tmp_p
     folder = tmp_path / "level-02"
     folder.mkdir()
     (folder / "straight.yaml").write_text(
-        "moves_to_goal: 2\nmap: |\n  ######\n  #A.G.#\n  ######\n"
+        "level: 2\nmap: |\n  ######\n  #A.G.#\n  ######\n"
     )
     write_level(tmp_path, level=2, target=4, seed=0)
     write_level(tmp_path, level=2, target=4, seed=0)
 
     names = sorted(path.stem for path in folder.glob("*.yaml"))
     assert names == ["gen-02-01", "gen-02-02", "gen-02-03", "straight"]
-    generated = Scenario.load(folder / "gen-02-01.yaml")
-    assert generated.moves_to_goal == 2
-    assert solver.moves_to_goal(generated.board) == 2
+    generated = Puzzle.load(folder / "gen-02-01.yaml")
+    assert generated.level == 2
+    assert solver.fewest_moves(generated.board) == 2
 
 
 def test_a_failed_generation_keeps_the_puzzles_already_there(tmp_path, monkeypatch):
@@ -174,7 +174,7 @@ def test_a_failed_generation_keeps_the_puzzles_already_there(tmp_path, monkeypat
     def fail(*args, **kwargs):
         raise RuntimeError("could not generate")
 
-    monkeypatch.setattr(PuzzleGenerator, "puzzles", fail)
+    monkeypatch.setattr(PuzzleGenerator, "drafts", fail)
     with pytest.raises(RuntimeError):
         write_level(tmp_path, level=2, target=3, seed=1)
     after = {path.name: path.read_text() for path in (tmp_path / "level-02").glob("*.yaml")}
@@ -183,8 +183,8 @@ def test_a_failed_generation_keeps_the_puzzles_already_there(tmp_path, monkeypat
 
 def test_the_repository_has_the_puzzles_levels_asks_for():
     counts = {}
-    for scenario in SCENARIOS.values():
-        counts[scenario.moves_to_goal] = counts.get(scenario.moves_to_goal, 0) + 1
+    for puzzle in PUZZLES.values():
+        counts[puzzle.level] = counts.get(puzzle.level, 0) + 1
     assert counts == LEVELS
 
 
@@ -200,8 +200,8 @@ def test_a_longer_route_must_exist_and_be_longer():
 
 
 def test_a_puzzle_of_a_harder_kind_is_generated_to_order():
-    board = PuzzleGenerator(seed=0).puzzles(10, 1, kind=LONGER_ROUTE)[0].board
-    assert solver.moves_to_goal(board) == 10
+    board = PuzzleGenerator(seed=0).drafts(10, 1, kind=LONGER_ROUTE)[0].board
+    assert solver.fewest_moves(board) == 10
     assert not greedy_wins(board) and has_a_longer_route(board)
 
 
@@ -209,17 +209,17 @@ def test_a_level_gets_its_harder_puzzles_and_a_hand_made_one_counts_toward_them(
     folder = tmp_path / "level-10"
     folder.mkdir()
     (folder / "pocket.yaml").write_text(
-        "moves_to_goal: 10\nmap: |\n" + "".join(f"  {row}\n" for row in POCKET.split())
+        "level: 10\nmap: |\n" + "".join(f"  {row}\n" for row in POCKET.split())
     )
     written = write_level(tmp_path, level=10, target=10, seed=0)
-    boards = [Scenario.load(path).board for path in written]
+    boards = [Puzzle.load(path).board for path in written]
     assert len(written) == 9
     assert sum(has_a_longer_route(board) for board in boards) >= 5
     assert not any(greedy_wins(board) for board in boards)
 
 
 def at_level(level):
-    return [s.board for s in SCENARIOS.values() if s.moves_to_goal == level]
+    return [s.board for s in PUZZLES.values() if s.level == level]
 
 
 @pytest.mark.parametrize(
@@ -231,7 +231,7 @@ def test_the_puzzles_that_need_planning_grow_with_the_level(level, least):
 
 
 def test_levels_one_to_eight_are_all_generated():
-    names = [s.name for s in SCENARIOS.values() if s.moves_to_goal <= 8]
+    names = [s.name for s in PUZZLES.values() if s.level <= 8]
     assert all(name.startswith("gen-") for name in names)
 
 
@@ -293,7 +293,7 @@ def test_a_thicker_outer_wall_changes_nothing_but_the_map():
     assert len(thick.rows) == len(board.rows) + 4
     assert thick.rows[0] == thick.rows[1] == "#" * 11
     assert thick.rows[3] == "###.....###"
-    assert solver.moves_to_goal(thick) == solver.moves_to_goal(board)
+    assert solver.fewest_moves(thick) == solver.fewest_moves(board)
     assert detours(thick) == detours(board)
     assert thicken(board, 1) == board
 

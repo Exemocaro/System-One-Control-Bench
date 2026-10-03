@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 
 from system_one_control.players import Choice, Player, Turn
 from system_one_control.prompts import Condition, Request
-from system_one_control.puzzles import Scenario
+from system_one_control.puzzles import Puzzle
 from system_one_control.world import Board, Rules, Solver
 
 
@@ -26,23 +26,23 @@ class Step:
 
 
 class Game:
-    """One player working through one scenario, a move at a time."""
+    """One player working through one puzzle, a move at a time."""
 
-    def __init__(self, scenario: Scenario, player: Player, condition: Condition) -> None:
-        self.scenario = scenario
+    def __init__(self, puzzle: Puzzle, player: Player, condition: Condition) -> None:
+        self.puzzle = puzzle
         self.player = player
         self.condition = condition
-        self.solver = Solver(scenario.rules)
-        self.board = scenario.board
+        self.solver = Solver(puzzle.rules)
+        self.board = puzzle.board
         # Worked out once: the distances from the start cover every board the game can reach.
         self._distances = self.solver.distances(self.board)
         # Counted in the moves a level is counted in, which may be shorter than these rules'.
-        self._step_distances = Solver(scenario.rules.step_rules()).distances(self.board)
+        self._step_distances = Solver(puzzle.rules.step_rules()).distances(self.board)
         self.steps: list[Step] = []
 
     @property
     def rules(self) -> Rules:
-        return self.scenario.rules
+        return self.puzzle.rules
 
     @property
     def won(self) -> bool:
@@ -55,7 +55,7 @@ class Game:
         Counted in the moves a level is counted in, so it compares across rules, and taking in
         every board a move passed through, not only the one it ended on.
         """
-        boards = {self.scenario.board}
+        boards = {self.puzzle.board}
         for step in self.steps:
             move = self.rules.find_move(step.before, step.choice.move)
             if move is not None:
@@ -70,15 +70,15 @@ class Game:
     @property
     def is_over(self) -> bool:
         failed = bool(self.steps) and self.steps[-1].choice.move is None
-        return self.won or failed or len(self.steps) >= self.scenario.max_moves
+        return self.won or failed or len(self.steps) >= self.puzzle.max_moves
 
     def next_request(self) -> Request:
-        history = [
+        memory = [
             f"{step.choice.move}: {self.rules.describe_outcome(step.before, step.after)}"
             for step in self.steps
         ]
-        seed = f"{self.scenario.name}:{len(self.steps) + 1}"
-        return self.condition.render(self.board, self.rules, shuffle_seed=seed, history=history)
+        seed = f"{self.puzzle.name}:{len(self.steps) + 1}"
+        return self.condition.render(self.board, self.rules, shuffle_seed=seed, memory=memory)
 
     def step(self) -> Step:
         if self.is_over:

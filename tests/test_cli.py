@@ -47,7 +47,7 @@ THREE = "gen-01-01,gen-01-02,gen-01-03"
 
 def test_resume_replays_the_missing_games_and_the_errors_and_keeps_the_rest(tmp_path):
     out = tmp_path / "results.jsonl"
-    command = ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+    command = ["benchmark", "--players", "solver", "--puzzles", THREE, "--out", str(out)]
     assert runner.invoke(app, command).exit_code == 0
     errored, kept, _missing = out.read_text().splitlines()
     broken = json.loads(errored) | {"error": "ConnectionError: the API is down", "won": False}
@@ -64,10 +64,10 @@ def test_resume_replays_the_missing_games_and_the_errors_and_keeps_the_rest(tmp_
 def test_resume_refuses_a_file_from_a_different_run(tmp_path):
     out = tmp_path / "results.jsonl"
     runner.invoke(
-        app, ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+        app, ["benchmark", "--players", "solver", "--puzzles", THREE, "--out", str(out)]
     )
     before = out.read_text()
-    other = ["benchmark", "--players", "random", "--scenarios", THREE, "--out", str(out)]
+    other = ["benchmark", "--players", "random", "--puzzles", THREE, "--out", str(out)]
     result = runner.invoke(app, [*other, "--resume"])
     assert result.exit_code != 0
     assert "would not play" in result.output
@@ -87,13 +87,13 @@ def test_different_runs_get_different_file_names_with_the_date_and_time():
     assert _run_name(["jev"], "map", "1-3", "all", when) == "2026-09-23_18-45_jev_map_levels-1-3"
 
 
-def test_levels_choose_the_scenarios_to_play(tmp_path):
+def test_levels_choose_the_puzzles_to_play(tmp_path):
     out = tmp_path / "results.jsonl"
     result = runner.invoke(
         app, ["benchmark", "--players", "solver", "--levels", "2,4-5", "--out", str(out)]
     )
     assert result.exit_code == 0, result.output
-    levels = {json.loads(line)["moves_to_goal"] for line in out.read_text().splitlines()}
+    levels = {json.loads(line)["level"] for line in out.read_text().splitlines()}
     assert levels == {2, 4, 5}
     assert "3 away" not in result.output
 
@@ -119,9 +119,9 @@ def test_examples_are_written_for_every_condition():
     assert "everything-memory.json" in result.output
 
 
-def test_unknown_scenarios_are_refused(tmp_path):
+def test_unknown_puzzles_are_refused(tmp_path):
     out = tmp_path / "results.jsonl"
-    result = runner.invoke(app, ["benchmark", "--scenarios", "nowhere", "--out", str(out)])
+    result = runner.invoke(app, ["benchmark", "--puzzles", "nowhere", "--out", str(out)])
     assert result.exit_code != 0
     assert "nowhere" in result.output
 
@@ -135,13 +135,13 @@ def test_a_run_on_a_few_levels_can_be_extended_to_all_of_them_in_the_same_file(t
     rest = runner.invoke(app, ["benchmark", "--players", "solver", "--out", str(out), "--resume"])
     assert rest.exit_code == 0, rest.output
     assert "Keeping 20 finished games, playing 80" in rest.output
-    levels = [json.loads(line)["moves_to_goal"] for line in out.read_text().splitlines()]
+    levels = [json.loads(line)["level"] for line in out.read_text().splitlines()]
     assert len(levels) == 100 and levels == sorted(levels)
 
 
-def test_a_benchmark_can_play_every_scenario_under_other_rules(tmp_path):
+def test_a_benchmark_can_play_every_puzzle_under_other_rules(tmp_path):
     out = tmp_path / "results.jsonl"
-    command = ["benchmark", "--players", "solver,random", "--scenarios", THREE]
+    command = ["benchmark", "--players", "solver,random", "--puzzles", THREE]
     result = runner.invoke(app, [*command, "--rules", "three-moves", "--out", str(out)])
     assert result.exit_code == 0, result.output
     records = [json.loads(line) for line in out.read_text().splitlines()]
@@ -168,7 +168,7 @@ def test_unknown_rules_are_refused(tmp_path):
 
 def test_resume_refuses_a_file_played_under_other_rules(tmp_path):
     out = tmp_path / "results.jsonl"
-    command = ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+    command = ["benchmark", "--players", "solver", "--puzzles", THREE, "--out", str(out)]
     runner.invoke(app, command)
     before = out.read_text()
     result = runner.invoke(app, [*command, "--rules", "two-moves", "--resume"])
@@ -191,7 +191,7 @@ def test_resume_refuses_a_file_played_under_other_rules_even_if_its_games_ended_
     tmp_path,
 ):
     out = tmp_path / "results.jsonl"
-    command = ["benchmark", "--players", "solver", "--scenarios", THREE, "--out", str(out)]
+    command = ["benchmark", "--players", "solver", "--puzzles", THREE, "--out", str(out)]
     runner.invoke(app, command)
     errored = [json.loads(line) | {"error": "down"} for line in out.read_text().splitlines()]
     out.write_text("".join(json.dumps(record) + "\n" for record in errored))

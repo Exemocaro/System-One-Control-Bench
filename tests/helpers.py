@@ -1,18 +1,18 @@
 from system_one_control.players import Choice, Player, Turn
 from system_one_control.prompts import CONDITIONS
-from system_one_control.puzzles import Scenario
+from system_one_control.puzzles import Puzzle
 from system_one_control.world import Board, CompassRules
 
 MAP = CONDITIONS["map"]
 
 
-def scenario(text: str, moves_to_goal: int) -> Scenario:
-    return Scenario(
+def puzzle(text: str, level: int) -> Puzzle:
+    return Puzzle(
         name="test",
         description="",
         board=Board.parse(text),
         rules=CompassRules(),
-        moves_to_goal=moves_to_goal,
+        level=level,
     )
 
 

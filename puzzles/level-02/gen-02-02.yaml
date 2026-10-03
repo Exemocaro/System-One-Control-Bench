@@ -1,0 +1,12 @@
+description: A generated 11x9 maze without a key, with a wall in the way of walking straight at the goal.
+level: 2
+map: |
+  ###########
+  #.#...G.#.#
+  #.###A#.#.#
+  #.#...#...#
+  #.#.#####.#
+  #...#.....#
+  #####.#####
+  #.........#
+  ###########

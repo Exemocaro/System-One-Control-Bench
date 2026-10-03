@@ -386,7 +386,7 @@ class Solver:
     def __init__(self, rules: Rules) -> None:
         self.rules = rules
 
-    def moves_to_goal(self, board: Board) -> int | None:
+    def fewest_moves(self, board: Board) -> int | None:
         """Fewest moves to win from this board, or None if the goal cannot be reached."""
         frontier = deque([(board, 0)])
         seen = {board}

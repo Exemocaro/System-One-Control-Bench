@@ -1,0 +1,9 @@
+description: A generated 11x6 room that walking straight at the target solves.
+level: 8
+map: |
+  ###########
+  #......K#.#
+  #...A..#..#
+  #...#.DG#.#
+  #......##.#
+  ###########

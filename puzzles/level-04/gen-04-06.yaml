@@ -1,0 +1,8 @@
+description: A generated 5x5 room that walking straight at the target solves.
+level: 4
+map: |
+  #####
+  #GD.#
+  ##AK#
+  #.#.#
+  #####

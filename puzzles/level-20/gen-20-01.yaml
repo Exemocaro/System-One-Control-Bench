@@ -1,0 +1,8 @@
+description: A generated 9x5 maze that walking straight at the target cannot solve, whose every shortest route turns away from its target at least six times.
+level: 20
+map: |
+  #########
+  ##GDA...#
+  #######.#
+  #..K....#
+  #########

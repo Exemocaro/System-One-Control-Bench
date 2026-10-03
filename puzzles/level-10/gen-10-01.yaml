@@ -1,0 +1,9 @@
+description: A generated 10x6 room that walking straight at the target cannot solve, with a second, longer route.
+level: 10
+map: |
+  ##########
+  #.....A..#
+  #..##..K.#
+  #D....#..#
+  #G#.#...##
+  ##########

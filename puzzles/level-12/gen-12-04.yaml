@@ -1,0 +1,10 @@
+description: A generated 17x7 maze that walking straight at the target cannot solve, whose every shortest route turns away from its target at least twice, inside an outer wall 2 thick.
+level: 12
+map: |
+  #################
+  #################
+  ##..#GD..#.....##
+  ########.#.###.##
+  ##KA.......#...##
+  #################
+  #################

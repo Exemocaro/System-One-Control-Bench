@@ -12,13 +12,14 @@ from pydantic import BaseModel
 from system_one_control.game import Game, Step
 from system_one_control.players import PLAYERS, make_player
 from system_one_control.prompts import CONDITIONS, Request
-from system_one_control.puzzles import load_scenarios
+from system_one_control.puzzles import load_puzzles
 from system_one_control.world import RULES, Board, make_rules
 
 PAGE = Path(__file__).with_name("index.html")
 
 
 class NewGame(BaseModel):
+    # Field names are the page's wire format, so they stay while the code says puzzle.
     scenario: str
     player: str
     condition: str
@@ -26,7 +27,7 @@ class NewGame(BaseModel):
 
 
 def create_app() -> FastAPI:
-    scenarios = load_scenarios()
+    puzzles = load_puzzles()
     games: dict[str, Game] = {}
     player_names: dict[str, str] = {}  # by game: the name it was chosen by, as the page lists it
     app = FastAPI(title="System-One Control Bench")
@@ -44,8 +45,8 @@ def create_app() -> FastAPI:
     def catalog() -> dict[str, Any]:
         return {
             "scenarios": [
-                {"name": s.name, "description": s.description, "moves_to_goal": s.moves_to_goal}
-                for s in scenarios.values()
+                {"name": p.name, "description": p.description, "moves_to_goal": p.level}
+                for p in puzzles.values()
             ],
             "players": [
                 {"name": name, "paid": entry.paid, "compass_only": entry.compass_only}
@@ -60,7 +61,7 @@ def create_app() -> FastAPI:
     @app.post("/api/games")
     def new_game(body: NewGame) -> dict[str, Any]:
         for kind, name, known in (
-            ("scenario", body.scenario, scenarios),
+            ("puzzle", body.scenario, puzzles),
             ("condition", body.condition, CONDITIONS),
             ("player", body.player, PLAYERS),
             ("rules", body.rules, RULES),
@@ -74,8 +75,8 @@ def create_app() -> FastAPI:
         except (ImportError, RuntimeError) as error:
             raise HTTPException(400, str(error)) from error
         game_id = uuid4().hex[:8]
-        scenario = replace(scenarios[body.scenario], rules=make_rules(body.rules))
-        games[game_id] = Game(scenario, player, CONDITIONS[body.condition])
+        puzzle = replace(puzzles[body.scenario], rules=make_rules(body.rules))
+        games[game_id] = Game(puzzle, player, CONDITIONS[body.condition])
         player_names[game_id] = body.player
         return game_json(game_id, games[game_id], body.player)
 
@@ -138,13 +139,13 @@ def game_json(game_id: str, game: Game, player: str) -> dict[str, Any]:
         }
     return {
         "id": game_id,
-        "scenario": game.scenario.name,
+        "scenario": game.puzzle.name,
         "player": player,
         "condition": game.condition.name,
         "rules": game.rules.name,
-        "moves_to_goal": game.scenario.moves_to_goal,
-        "fewest_moves": game.scenario.fewest_moves,
-        "max_moves": game.scenario.max_moves,
+        "moves_to_goal": game.puzzle.level,
+        "fewest_moves": game.puzzle.fewest_moves,
+        "max_moves": game.puzzle.max_moves,
         "board": board_json(game.board),
         "won": game.won,
         "over": game.is_over,

@@ -1,8 +1,0 @@
-description: A generated 11x5 maze.
-moves_to_goal: 3
-map: |
-  ###########
-  #.....#...#
-  #####.#.#.#
-  #..#GDKA#.#
-  ###########

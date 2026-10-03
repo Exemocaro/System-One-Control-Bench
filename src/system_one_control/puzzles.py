@@ -1,4 +1,4 @@
-"""Scenarios: one board and its level each, and the generator that fills the levels."""
+"""Puzzles: one board and its level each, and the generator that fills the levels."""
 
 from __future__ import annotations
 
@@ -23,57 +23,60 @@ from system_one_control.world import (
     next_target,
 )
 
-SCENARIO_DIR = Path(__file__).resolve().parents[2] / "scenarios"
+PUZZLE_DIR = Path(__file__).resolve().parents[2] / "puzzles"
 MOVE_ALLOWANCE = 2  # a game ends once it has used this many times the fewest moves
 
 
 @dataclass(frozen=True)
-class Scenario:
+class Puzzle:
     """One starting board, the rules it is played under, and how far the goal is."""
 
-    # The distance, which is also the level, counts the moves of the rules' step_rules: compass
-    # moves, even when a move under these rules is several of them.
+    # The level counts the moves of the rules' step_rules: compass moves, even when a move
+    # under these rules is several of them.
     name: str
     description: str
     board: Board
     rules: Rules
-    moves_to_goal: int
+    level: int
 
     @property
     def fewest_moves(self) -> int:
-        """The fewest moves that win under the scenario's own rules."""
-        return self.rules.moves_for(self.moves_to_goal)
+        """The fewest moves that win under the puzzle's own rules."""
+        return self.rules.moves_for(self.level)
 
     @property
     def max_moves(self) -> int:
         return MOVE_ALLOWANCE * self.fewest_moves
 
     @classmethod
-    def load(cls, path: Path) -> Scenario:
+    def load(cls, path: Path) -> Puzzle:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         return cls(
             name=path.stem,
             description=data.get("description", ""),
             board=Board.parse(data["map"]),
             rules=make_rules(data.get("rules", "compass")),
-            moves_to_goal=int(data["moves_to_goal"]),
+            level=int(data["level"]),
         )
 
 
-def load_scenarios(folder: Path = SCENARIO_DIR) -> dict[str, Scenario]:
-    """Every scenario under a folder (one subfolder per level), easiest first.
-
-    Scenarios are known by their file name, so two files may not share one.
-    """
-    paths = sorted(folder.rglob("*.yaml"))
+def check_names(paths: list[Path]) -> None:
+    """Every puzzle file must have a name of its own, since puzzles are known by file name."""
     names = [path.stem for path in paths]
     repeated = sorted({name for name in names if names.count(name) > 1})
     if repeated:
-        raise ValueError(f"scenario names used more than once: {', '.join(repeated)}")
-    scenarios = sorted(
-        (Scenario.load(path) for path in paths), key=lambda s: (s.moves_to_goal, s.name)
-    )
-    return {scenario.name: scenario for scenario in scenarios}
+        raise ValueError(f"puzzle names used more than once: {', '.join(repeated)}")
+
+
+def load_puzzles(folder: Path = PUZZLE_DIR) -> dict[str, Puzzle]:
+    """Every puzzle under a folder (one subfolder per level), easiest first.
+
+    Puzzles are known by their file name, so two files may not share one.
+    """
+    paths = sorted(folder.rglob("*.yaml"))
+    check_names(paths)
+    puzzles = sorted((Puzzle.load(path) for path in paths), key=lambda p: (p.level, p.name))
+    return {puzzle.name: puzzle for puzzle in puzzles}
 
 
 SOLVER = Solver(COMPASS)
@@ -87,10 +90,10 @@ def greedy_wins(board: Board) -> bool:
     from system_one_control.players.baselines import WallAwareGreedyPlayer
 
     player = WallAwareGreedyPlayer()
-    distance = SOLVER.moves_to_goal(board)
-    if distance is None:
+    moves = SOLVER.fewest_moves(board)
+    if moves is None:
         return False
-    for _ in range(MOVE_ALLOWANCE * distance):
+    for _ in range(MOVE_ALLOWANCE * moves):
         if COMPASS.is_won(board):
             return True
         move = COMPASS.find_move(board, player.pick(board, COMPASS))
@@ -101,18 +104,18 @@ def greedy_wins(board: Board) -> bool:
 
 def has_a_longer_route(board: Board) -> bool:
     """Whether walling off the floor of one shortest route leaves another, longer one."""
-    distance = SOLVER.moves_to_goal(board)
-    if distance is None:
+    moves = SOLVER.fewest_moves(board)
+    if moves is None:
         return False
     walled, current = board, board
-    for _ in range(distance):
+    for _ in range(moves):
         move = COMPASS.find_move(current, SOLVER.best_moves(current)[0])
         assert move is not None
         current = COMPASS.apply(current, move)
         if board.at(current.agent) == FLOOR:
             walled = walled.with_cell(current.agent, WALL)
-    detour = SOLVER.moves_to_goal(walled)
-    return detour is not None and detour > distance
+    detour = SOLVER.fewest_moves(walled)
+    return detour is not None and detour > moves
 
 
 def detours(board: Board) -> int | None:
@@ -266,7 +269,9 @@ def thicken(board: Board, walls: int) -> Board:
 
 
 @dataclass(frozen=True)
-class Puzzle:
+class Draft:
+    """A generated puzzle, not yet written to its file."""
+
     style: str
     board: Board
     kind: PuzzleKind = ANY
@@ -279,52 +284,52 @@ class PuzzleGenerator:
     def __init__(self, seed: int) -> None:
         self._rng = random.Random(seed)
 
-    def puzzles(
+    def drafts(
         self, level: int, count: int, avoid: set[str] | None = None, kind: PuzzleKind = ANY
-    ) -> list[Puzzle]:
+    ) -> list[Draft]:
         seen = set(avoid or ())
-        found: list[Puzzle] = []
+        found: list[Draft] = []
         if count == 0:
             return found
         for _ in range(MAX_ATTEMPTS):
-            puzzle = self._attempt(level, with_key=level >= KEY_FROM_LEVEL and not kind.keyless)
-            if puzzle and puzzle.board.draw() not in seen and kind.accepts(puzzle.board):
-                seen.add(puzzle.board.draw())
-                found.append(Puzzle(puzzle.style, puzzle.board, kind))
+            draft = self._attempt(level, with_key=level >= KEY_FROM_LEVEL and not kind.keyless)
+            if draft and draft.board.draw() not in seen and kind.accepts(draft.board):
+                seen.add(draft.board.draw())
+                found.append(Draft(draft.style, draft.board, kind))
                 if len(found) == count:
                     return found
         raise RuntimeError(f"could not generate {count} puzzles at level {level}")
 
-    def _attempt(self, level: int, with_key: bool) -> Puzzle | None:
+    def _attempt(self, level: int, with_key: bool) -> Draft | None:
         style = "maze" if self._rng.random() < 0.4 else "room"
-        grid = self._maze() if style == "maze" else self._room()
-        floor = _cells(grid, FLOOR)
+        rows = self._maze() if style == "maze" else self._room()
+        floor = _cells(rows, FLOOR)
         if len(floor) < 3:
             return None
 
         goal = self._rng.choice(floor)
-        _set(grid, goal, GOAL)
+        _set(rows, goal, GOAL)
         if with_key:
-            openings = [p for p in _neighbours(goal) if _get(grid, p) == FLOOR]
+            openings = [p for p in _neighbours(goal) if _get(rows, p) == FLOOR]
             if not openings:
                 return None
             door = self._rng.choice(openings)
             for position in _neighbours(goal):
                 if position != door:
-                    _set(grid, position, WALL)
-            _set(grid, door, DOOR)
-            floor = _cells(grid, FLOOR)
+                    _set(rows, position, WALL)
+            _set(rows, door, DOOR)
+            floor = _cells(rows, FLOOR)
             if len(floor) < 2:
                 return None
-            _set(grid, self._rng.choice(floor), KEY)
+            _set(rows, self._rng.choice(floor), KEY)
 
-        rows = tuple("".join(row) for row in grid)
+        drawn = tuple("".join(row) for row in rows)
         starts = [
             board
-            for position in _cells(grid, FLOOR)
-            if SOLVER.moves_to_goal(board := Board(rows, position)) == level
+            for position in _cells(rows, FLOOR)
+            if SOLVER.fewest_moves(board := Board(drawn, position)) == level
         ]
-        return Puzzle(style, self._rng.choice(starts)) if starts else None
+        return Draft(style, self._rng.choice(starts)) if starts else None
 
     def _room(self) -> list[list[str]]:
         width, height = self._rng.randint(5, 13), self._rng.randint(4, 9)
@@ -341,9 +346,9 @@ class PuzzleGenerator:
 
     def _maze(self) -> list[list[str]]:
         width, height = self._rng.choice((7, 9, 11, 15, 21)), self._rng.choice((5, 7, 9, 13))
-        grid = [[WALL] * width for _ in range(height)]
+        rows = [[WALL] * width for _ in range(height)]
         stack = [Position(1, 1)]
-        _set(grid, stack[0], FLOOR)
+        _set(rows, stack[0], FLOOR)
         while stack:
             here = stack[-1]
             ahead = [
@@ -351,21 +356,21 @@ class PuzzleGenerator:
                 for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2))
                 if 0 < here.x + dx < width - 1
                 and 0 < here.y + dy < height - 1
-                and _get(grid, here.moved(dx, dy)) == WALL
+                and _get(rows, here.moved(dx, dy)) == WALL
             ]
             if not ahead:
                 stack.pop()
                 continue
             dx, dy = self._rng.choice(ahead)
-            _set(grid, here.moved(dx // 2, dy // 2), FLOOR)
-            _set(grid, here.moved(dx, dy), FLOOR)
+            _set(rows, here.moved(dx // 2, dy // 2), FLOOR)
+            _set(rows, here.moved(dx, dy), FLOOR)
             stack.append(here.moved(dx, dy))
-        return grid
+        return rows
 
 
-def _cells(grid: list[list[str]], symbol: str) -> list[Position]:
+def _cells(rows: list[list[str]], symbol: str) -> list[Position]:
     return [
-        Position(x, y) for y, row in enumerate(grid) for x, cell in enumerate(row) if cell == symbol
+        Position(x, y) for y, row in enumerate(rows) for x, cell in enumerate(row) if cell == symbol
     ]
 
 
@@ -373,12 +378,12 @@ def _neighbours(position: Position) -> list[Position]:
     return [position.moved(dx, dy) for dx, dy in COMPASS.STEPS.values()]
 
 
-def _get(grid: list[list[str]], position: Position) -> str:
-    return grid[position.y][position.x]
+def _get(rows: list[list[str]], position: Position) -> str:
+    return rows[position.y][position.x]
 
 
-def _set(grid: list[list[str]], position: Position, symbol: str) -> None:
-    grid[position.y][position.x] = symbol
+def _set(rows: list[list[str]], position: Position, symbol: str) -> None:
+    rows[position.y][position.x] = symbol
 
 
 def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]:
@@ -391,7 +396,7 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
     folder = root / f"level-{level:02d}"
     folder.mkdir(parents=True, exist_ok=True)
     hand_made = [
-        Scenario.load(path).board
+        Puzzle.load(path).board
         for path in folder.glob("*.yaml")
         if not path.name.startswith("gen-")
     ]
@@ -411,27 +416,27 @@ def write_level(root: Path, *, level: int, target: int, seed: int) -> list[Path]
 
     generator = PuzzleGenerator(seed=seed * 1000 + level)
     seen = {board.draw() for board in hand_made}
-    puzzles: list[Puzzle] = []
+    drafts: list[Draft] = []
     for kind, count in wanted.items():
-        puzzles += generator.puzzles(level, count, seen, kind)
-        seen |= {puzzle.board.draw() for puzzle in puzzles}
-    for index, walls in zip(range(1, len(puzzles), 2), LEVEL_WALLS.get(level, ()), strict=False):
-        puzzles[index] = replace(
-            puzzles[index], board=thicken(puzzles[index].board, walls), walls=walls
+        drafts += generator.drafts(level, count, seen, kind)
+        seen |= {draft.board.draw() for draft in drafts}
+    for index, walls in zip(range(1, len(drafts), 2), LEVEL_WALLS.get(level, ()), strict=False):
+        drafts[index] = replace(
+            drafts[index], board=thicken(drafts[index].board, walls), walls=walls
         )
 
     for old in folder.glob("gen-*.yaml"):
         old.unlink()
     written = []
-    for number, puzzle in enumerate(puzzles, start=1):
-        board = puzzle.board
+    for number, draft in enumerate(drafts, start=1):
+        board = draft.board
         size = f"{len(board.rows[0])}x{len(board.rows)}"
-        label = f" {puzzle.kind.description}" if puzzle.kind.description else ""
-        if puzzle.walls > 1:
-            label += f", inside an outer wall {puzzle.walls} thick"
+        label = f" {draft.kind.description}" if draft.kind.description else ""
+        if draft.walls > 1:
+            label += f", inside an outer wall {draft.walls} thick"
         lines = [
-            f"description: A generated {size} {puzzle.style}{label}.",
-            f"moves_to_goal: {level}",
+            f"description: A generated {size} {draft.style}{label}.",
+            f"level: {level}",
             "map: |",
             *(f"  {row}" for row in board.draw().splitlines()),
         ]

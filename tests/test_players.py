@@ -376,7 +376,7 @@ class FakeLaya:
 def test_laya_is_asked_the_question_with_the_option_texts_and_answers_with_one():
     t = turn("####\n#AG#\n####")
     laya = FakeLaya(pick=2)
-    choice = LayaPlayer(agent=laya).choose(t)
+    choice = LayaPlayer(laya=laya).choose(t)
     question = laya.sent["questions"]["move"]
     assert laya.sent["state"] == t.request.state
     assert question["instructions"] == t.request.question
