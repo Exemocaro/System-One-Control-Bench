@@ -632,7 +632,9 @@ def fig_calibration(games: dict) -> None:
 
 
 def main() -> None:
-    plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
+    plt.rcParams.update(
+        {"font.size": 10, "axes.spines.top": False, "axes.spines.right": False, "pdf.fonttype": 42}
+    )
     OUT.mkdir(exist_ok=True)
     for old in OUT.iterdir():
         old.unlink()
