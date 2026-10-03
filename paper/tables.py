@@ -56,10 +56,11 @@ def components():
         output.append(f'table.cell(colspan: 7, text(weight: "bold", {json.dumps(model)})),')
         for name in dict.fromkeys(row["Component"] for row in records):
             values = [name]
-            for direction in ("added to map only", "removed from full context"):
+            for direction in ("added to map only", "full vs full minus it"):
                 row = rows[(model, name, direction)]
                 values += [interval(row, field) for field in ("Won rate change", "Progress change")]
-                values.append(f"{float(row['Holm p']):.3f}")
+                p_value = float(row["Holm p"])
+                values.append("<0.001" if p_value < 0.001 else f"{p_value:.3f}")
             output.append(cells(values))
     table("component_table", output)
 

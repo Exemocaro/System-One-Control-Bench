@@ -1,9 +1,9 @@
 #import "lib.typ": todo
 
-#set document(title: "Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks", author: "Author Name")
+#set document(title: "Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks", author: "Mateus Pereira")
 #set page(paper: "a4", margin: 2.2cm, numbering: "1")
 #set text(font: "New Computer Modern", size: 11pt, lang: "en")
-#set par(justify: true, leading: 0.6em, spacing: 0.9em)
+#set par(justify: true, leading: 0.5em, spacing: 0.8em)
 #set heading(numbering: "1.1", supplement: [Section])
 #show heading: set block(above: 1.4em, below: 0.8em)
 #show heading.where(level: 1): set text(size: 13pt)
@@ -20,9 +20,11 @@
 #set list(indent: 0.6em, spacing: 0.6em)
 
 #align(center)[
-  #text(size: 17pt, weight: "bold")[Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks]
+  #set par(justify: false)
+  #text(size: 17pt, weight: "bold", hyphenate: false)[Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks]
   #v(0.8em)
-  #todo[author name]
+  Mateus Pereira \
+  Independent researcher
 ]
 #v(1em)
 

@@ -9,7 +9,7 @@ text("Jev"), text("32% [23, 41]"), text("57% [47, 66]"), text("0.425 / 0.319"), 
 text("Laya"), text("2% [0, 5]"), text("12% [6, 19]"), text("0.105 / 0.020"), text("0.264 / 0.105"),
 text("GLiClass"), text("3% [0, 7]"), text("13% [7, 20]"), text("0.104 / 0.030"), text("0.216 / 0.130"),
 text("Gemma 4 26B"), text("35% [26, 44]"), text("61% [51, 70]"), text("0.452 / 0.322"), text("0.714 / 0.568"),
-text("Qwen3.5 4B"), text("14% [8, 21]"), text("45% [35, 55]"), text("0.335 / 0.124"), text("0.661 / 0.387"),
+text("Qwen3.5-4B"), text("14% [8, 21]"), text("45% [35, 55]"), text("0.335 / 0.124"), text("0.661 / 0.387"),
 text("DeepSeek V4.1 Flash"), text("39% [30, 49]"), text("60% [50, 69]"), text("0.545 / 0.347"), text("0.715 / 0.542"),
 text("DeepSeek V4.1 Flash (reasoning)"), text("67% [57, 76]"), text("80% [72, 87]"), text("0.787 / 0.618"), text("0.864 / 0.741"),
-), caption: [Compass completion and efficiency. Each model/input has 100 games; intervals resample puzzles; baselines use the map alone. Full means full context.], placement: top) <tab:main>
+), caption: [Compass won rate and efficiency. Each model/input has 100 games; intervals resample puzzles; baselines use the map alone. Full means full context.], placement: top) <tab:main>
