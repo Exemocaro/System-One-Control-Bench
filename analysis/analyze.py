@@ -583,11 +583,14 @@ def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
                 ax.plot(*zip(*points, strict=True), style, ms=3, color=color, label=label)
         ax.set_xticks(
             range(len(xs)),
-            [f"{x}".replace("-moves", "") + (f"\n({RULES[x]})" if x in RULES else "") for x in xs],
+            [
+                f"{x}".replace("up-to-", "up-to-\n") + (f"\n({RULES[x]})" if x in RULES else "")
+                for x in xs
+            ],
         )
         ax.set_title(INPUTS[condition], fontsize=10)
         ax.set_ylim(0, 1)
-        ax.tick_params(axis="x", labelsize=9)
+        ax.tick_params(axis="x", labelsize=8)
         ax.set_xlabel(xlabel)
     axes[0].set_ylabel("Won rate")
     handles, labels = axes[1].get_legend_handles_labels()
@@ -644,7 +647,7 @@ def main() -> None:
     fig_components(games)
     fig_lines(games, "fig_action_spaces", list(RULES), rules_won, "Action space (options per move)")
     levels = sorted({x.level for x in games[("solver", "compass", "map")].values()})
-    xlabel = "Level (steps to the goal; evenly spaced, not to scale), compass"
+    xlabel = "Level (steps to the goal; not to scale)"
     fig_lines(games, "fig_levels", levels, level_won, xlabel)
     fig_calibration(games)
     exam = load_exam()
