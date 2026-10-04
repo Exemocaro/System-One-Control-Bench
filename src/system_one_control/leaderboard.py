@@ -150,7 +150,8 @@ LEGEND = """- **everything / map**: the core track conditions (compass rules, 10
 - **won**: share of the 100 puzzles where the goal was reached before the move limit.
 - **progress**: how close a game got to the goal at its closest point (1 for a win).
 - **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
-- **[lo-hi]**: 95% bootstrap interval over puzzles.
+- **[lo-hi]**: 95% bootstrap interval over puzzles (1,000 draws; the report uses 10,000, so
+  the ends can differ by 0.01).
 - **cost**: USD for one core run (200 games), as reported by the player; n/a means not reported.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.

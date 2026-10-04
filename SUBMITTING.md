@@ -35,9 +35,10 @@ The keys of a `players.toml` entry:
 | `paid` | optional, default `true` | `false` for a free player, so `--allow-paid` is not required |
 | `reasoning` | optional, `chat` only, default `false` | let the model reason first, capped at 1,024 tokens |
 
-A `chat` endpoint must support JSON-schema structured output: every request sends a strict
-`response_format` that allows only one option id as the answer, and an endpoint that ignores
-or rejects it fails every game as an error.
+A `chat` endpoint should support JSON-schema structured output: every request sends a strict
+`response_format` that allows only one option id as the answer. An endpoint that rejects it
+fails every game as an error; one that ignores it is read for the last valid option id in the
+reply, and a reply with none is an error.
 
 A decision model serves `POST /decide` with
 `{"state": ..., "question": ..., "options": [{"id": ..., "text": ...}]}` and answers

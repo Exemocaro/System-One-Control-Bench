@@ -73,7 +73,7 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 | `jev` | ✓ | asks Jev (`jev-1.13.0`) |
 | `laya` | | [Laya](https://huggingface.co/convaiinnovations/laya), `typed-decisions`, on this machine |
 | `gliclass` | | [GLiClass](https://huggingface.co/knowledgator/gliclass-modern-large-v3.0), on this machine |
-| `qwen3.5-4b` | | [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), on this machine, scored on option-id probabilities |
+| `qwen3.5-4b` | | [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), on this machine, scored on option-number probabilities |
 | `gemma-4-26b` | ✓ | Gemma 4 26B on OpenRouter, reasoning off |
 | `deepseek-v4.1-flash` | ✓ | DeepSeek V4.1 Flash on OpenRouter, reasoning off |
 | `gemma-4-26b-think`, `deepseek-v4.1-flash-think` | ✓ | the same with reasoning, capped at 1,024 reasoning tokens |
