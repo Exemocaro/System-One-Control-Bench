@@ -56,11 +56,11 @@ Each run writes two files to `benchmarks/`, named after the date, time and what 
 
 ## Stopping and resuming
 
-Each game is written the moment it finishes, so a crash or Ctrl+C keeps every game already paid for. A run never overwrites a file. Repeat the command with `--resume --out <file>` to keep finished games and play the missing and errored ones (errored games restart from the first move, so their earlier calls are paid twice). A run on a few levels can be extended to all levels the same way. Resuming refuses a file made with other players, puzzles, conditions or rules.
+Each game is written the moment it finishes, so a crash or Ctrl+C keeps every finished game; calls made in a game still under way are lost. A run never overwrites a file. Repeat the command with `--resume --out <file>` to keep finished games and play the missing and errored ones (errored games restart from the first move, so their earlier calls are paid twice). A run may resume a file whose games are a subset of what it would play, so more levels, puzzles, conditions or players are fine. It refuses a file holding games this run would not play, or games played under other rules.
 
 A Jev call the server turns away is tried twice more, after one and two seconds. A timeout (120 s) is not retried, since the server may have billed it. OpenRouter calls are retried after 5, 15, 30 and 60 seconds. A call that still fails ends that game as an error.
 
-**Repeatability.** Options are shuffled at every move with a seed from the puzzle name and the move number, so every player and condition sees the same order.
+**Repeatability.** Options are shuffled at every move with a seed from the puzzle name and the move number, so every player and condition sees the same option order at the same move of the same puzzle (different routes still reach different positions).
 
 ## Players
 
@@ -81,7 +81,7 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 - **Laya** gets the question and option texts without ids (it allows 48 tokens per option; a longer option ends the game as an error). Its token budget is stretched to the whole request.
 - **GLiClass** reads the state as text, the question as task prompt and the option texts as labels. Scores are scaled to sum to 1.
 - **Qwen3.5-4B** is sent the chat the OpenRouter models get, with thinking off, plus the start of the answer. It writes nothing: each option's probability is read from its odds for the digits of the option number.
-- **Chat models** are pinned to DeepInfra on OpenRouter so a run is repeatable. A JSON schema holds the answer to one option id. Without reasoning the answer may use 64 tokens; a model that thinks anyway ends the game as an error. An answer cut off by a cap is an error. Chat answers carry no probabilities.
+- **Chat models** are pinned to DeepInfra on OpenRouter, which fixes the provider; it does not guarantee identical answers or an unchanged deployment. A JSON schema holds the answer to one option id. Without reasoning the answer may use 64 tokens; a model that thinks anyway ends the game as an error. An answer cut off by a cap is an error. Chat answers carry no probabilities.
 
 ## Local models
 

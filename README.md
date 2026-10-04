@@ -8,6 +8,8 @@
 
 The player sees a grid as text and chooses the next move from a list of options. A breadth-first solver knows every best move, so each move is scored exactly. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
 
+The main finding: with full context Jev picks a best move on 90% of the shared exam positions, yet wins 57 of 100 games. Good single decisions do not add up to finished games. See the report, [paper/main.pdf](paper/main.pdf).
+
 What a player sees (shortened):
 
 ```
@@ -38,10 +40,11 @@ uv run socb exam             # the fixed-state exam: the 4 free baselines answer
 uv run socb web              # board viewer at http://127.0.0.1:8000
 ```
 
-To use Jev or the chat models, copy `.env.example` to `.env` and fill in `TYPESAFE_API_KEY` (Jev) and/or `OPENROUTER_API_KEY` (chat models). Those players cost money and are refused unless you add `--allow-paid`; the refusal says how many calls the run can make at most. Local models (Laya, GLiClass, Qwen3.5-4B) need `uv sync --extra local`, which installs PyTorch (several GB).
+To use Jev or the chat models, copy `.env.example` to `.env` and fill in `TYPESAFE_API_KEY` (Jev) and/or `OPENROUTER_API_KEY` (chat models). Those players cost money and are refused unless you add `--allow-paid`; the refusal says how many calls the run can make at most. Local models (Laya, GLiClass, Qwen3.5-4B) need `uv sync --extra local`, which installs PyTorch (several GB); a plain `uv sync` removes it again, so run them with `uv run --extra local`.
 
 ```bash
-uv run socb benchmark --players jev --allow-paid                 # Jev, map only: up to 1,690 calls
+uv run --extra local socb benchmark --players laya               # a local model
+uv run socb benchmark --players jev --allow-paid                 # Jev, map only: up to 1,690 calls, not counting retries
 uv run socb benchmark --players jev --conditions all --allow-paid
 uv run socb benchmark --levels 1-3 --rules two-moves --players random,solver   # sequence rules: the greedy players do compass only
 uv run socb benchmark --track core --players jev --allow-paid     # the leaderboard track: compass, map and everything
@@ -60,9 +63,9 @@ Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of eve
 
 ## Results
 
-Compass rules, 100 puzzles, `won / progress`. The baselines ignore the prompt, so every condition gives them the same games. Results files are in `benchmarks/`.
+Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines ignore the prompt, so every condition gives them the same games. Results files are in `benchmarks/`.
 
-| Player | `map` | `everything` |
+| Player | `map` (map alone) | `everything` (full context) |
 | --- | --- | --- |
 | random | 4 / 0.25 | same |
 | greedy | 28 / 0.36 | same |
@@ -83,9 +86,15 @@ Every condition includes the **map**: the rules, the numbered map, your position
 | Condition | surroundings | memory | lookahead | subgoal |
 | --- | :---: | :---: | :---: | :---: |
 | `map` | | | | |
-| `map+surroundings`, `map+memory`, `map+lookahead`, `map+subgoal` | one of the four | | | |
+| `map+surroundings` | ✓ | | | |
+| `map+memory` | | ✓ | | |
+| `map+lookahead` | | | ✓ | |
+| `map+subgoal` | | | | ✓ |
 | `everything` (the full context) | ✓ | ✓ | ✓ | ✓ |
-| `everything-surroundings`, `-memory`, `-lookahead`, `-subgoal` | all but one | | | |
+| `everything-surroundings` | | ✓ | ✓ | ✓ |
+| `everything-memory` | ✓ | | ✓ | ✓ |
+| `everything-lookahead` | ✓ | ✓ | | ✓ |
+| `everything-subgoal` | ✓ | ✓ | ✓ | |
 
 `surroundings`: what is next to you, and where the key, door and goal are. `memory`: the moves so far. `lookahead`: what each option would do. `subgoal`: the question names the next target.
 
@@ -105,7 +114,7 @@ Choose with `--rules`. Every sequence is offered, blocked or not. A blocked step
 
 `random`, `greedy`, `greedy-walls` and `solver` are free baselines. `jev` (`jev-1.13.0`) is paid. `laya`, `gliclass` and `qwen3.5-4b` run on your machine. `gemma-4-26b` and `deepseek-v4.1-flash` (and the same with `-think`, which lets the model reason first, capped at 1,024 tokens) are paid, through OpenRouter.
 
-To add one, subclass `Player` and register it:
+A chat model on any OpenAI-compatible endpoint, or a decision endpoint, is added with an entry in `players.toml`, no code needed: see [SUBMITTING.md](SUBMITTING.md). To add a player written in Python, subclass `Player` and register it:
 
 ```python
 from system_one_control.players import PLAYERS, Choice, Player, PlayerEntry, Turn
