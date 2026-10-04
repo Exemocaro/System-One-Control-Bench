@@ -57,7 +57,8 @@ then `uv run socb benchmark --track core --players my-decision-model` (no `--all
 since `paid = false`).
 
 Probabilities are keyed by option id and are not renormalised; ids that are not options are
-dropped from the record. The likeliest id is played (a tie goes to the first id in sorted
+dropped from the record. For `socb submit` to accept the file, the probabilities over the
+options must sum to 1 (within 0.02). The likeliest id is played (a tie goes to the first id in sorted
 order). An answer whose id is not an option, or with neither field, ends the game as an
 error, which counts as lost.
 
