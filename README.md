@@ -8,7 +8,7 @@
 
 The player sees a grid as text and chooses the next move from a list of options. A breadth-first solver knows every best move, so each move is scored exactly. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
 
-The main finding: with full context Jev picks a best move on 90% of the shared exam positions, yet wins 57 of 100 games. Good single decisions do not add up to finished games. See the report, [paper/main.pdf](paper/main.pdf).
+The main finding: with full context Jev picks a best move on 90% of the shared exam positions, yet wins 57 of 100 games. Good single decisions do not reliably add up to finished games. See the report, [paper/main.pdf](paper/main.pdf).
 
 What a player sees (shortened):
 

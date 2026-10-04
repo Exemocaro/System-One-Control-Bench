@@ -51,7 +51,7 @@ Jev's exam optimality is 74% with the map and 90% with full context. Own-game sh
 
 == Blocked moves and progress
 
-With the map alone, 82% of Jev's moves leave the board unchanged. Without history, a blocked move leaves the request unchanged, so Jev can repeat the same answer into the same wall. With full context, the unchanged-board share is 0.4%, yet 43% of games still fail. Final-state progress is 0.65, below progress of 0.68. The distinction matters more for Qwen3.5-4B: its full-context scores are 0.56 and 0.66. A game can approach the goal and then finish farther away.
+With the map alone, 82% of Jev's moves leave the board unchanged. Without history, a blocked move leaves the board and its description unchanged, and only the option order changes, so Jev can choose the same move into the same wall again. With full context, the unchanged-board share is 0.4%, yet 43% of games still fail. Final-state progress is 0.65, below progress of 0.68. The distinction matters more for Qwen3.5-4B: its full-context scores are 0.56 and 0.66. A game can approach the goal and then finish farther away.
 // src: analysis/out/main.md
 
 == Won rate by level

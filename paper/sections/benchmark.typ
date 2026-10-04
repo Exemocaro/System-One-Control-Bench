@@ -28,5 +28,5 @@ Every request includes rules, the numbered map, position, inventory and object c
   text(font: "DejaVu Sans Mono", size: 9pt)[everything-memory], [Full context without interaction history],
   text(font: "DejaVu Sans Mono", size: 9pt)[everything-lookahead], [Full context without simulated action outcomes],
   text(font: "DejaVu Sans Mono", size: 9pt)[everything-subgoal], [Full context without explicit subgoal]),
-  placement: top, caption: [Condition-ID mapping. Full context includes all four components.]) <tab:conditions>
+  placement: none, caption: [Condition-ID mapping. Full context includes all four components.]) <tab:conditions>
 // src: examples/everything.json; README.md

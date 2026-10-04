@@ -39,6 +39,10 @@
 #include "sections/discussion.typ"
 #include "sections/conclusion.typ"
 
+#heading(numbering: none)[AI use]
+
+This project was carried out with substantial help from AI assistants, chiefly Anthropic's Claude models (through Claude Code) and OpenAI's GPT models (through Codex). Under the author's direction they wrote most of the code and the analysis scripts, drafted and revised the text of this report, and reviewed one another's work. The author set the research question, made the design decisions, checked the results and reviewed the manuscript, and takes full responsibility for its contents.
+
 #context metadata(here().page()) <report:main-end>
 #pagebreak()
 #bibliography("references.bib", title: "References", style: "ieee")
