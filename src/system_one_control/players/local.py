@@ -8,6 +8,7 @@ GPU, so games side by side would only wait for each other.
 from __future__ import annotations
 
 import copy
+import gc
 import threading
 import time
 from collections.abc import Callable, Collection, Sequence
@@ -279,6 +280,12 @@ class LocalLLM:
 
             numbers = {option.id.removeprefix("option_") for option in request.options}
             found = number_probabilities(numbers, next_digits)
+        if self.where == "cuda":
+            # The model's caches hold reference cycles, so their GPU memory waits for Python's
+            # cycle collector; on a 12 GB GPU it piles up until the driver spills into system
+            # memory and every call slows ~20x. Freeing it each call changes no result.
+            gc.collect()
+            torch.cuda.empty_cache()
         return {f"option_{number}": p for number, p in found.items()}
 
 
