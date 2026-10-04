@@ -2,18 +2,21 @@
 
 = Introduction
 
-A non-generative decision model returns probabilities over supplied options. For sequential control, those selections must compose into a route, rather than merely look plausible individually. Jev's use in chess and software control motivates testing this distinction in an inspectable environment @saplin2026jev @mobilejev @jevultrafast. We study a fully observed symbolic world: the map already contains the information needed to navigate, while the controller varies its representation and the execution between observations.
+A model may choose a sensible action when shown a single situation, yet struggle when its own decisions determine what happens next. We test this in a small gridworld where every optimal move can be computed exactly.
+
+A non-generative decision model returns probabilities over supplied options. In sequential control, those choices must guide the agent all the way to the goal. Jev's use in chess and software control motivates this test @saplin2026jev @mobilejev @jevultrafast. The map contains all information needed to navigate. We vary the input descriptions and the actions available between observations.
 // src: paper/references.bib; README.md; src/system_one_control/prompts.py; src/system_one_control/world.py
 
-"System-One" refers to fast decisions without deliberate reasoning, after the System 1 / System 2 distinction; Laya calls its decision interface `system_one`.
-// src: README.md; src/system_one_control/players/local.py
+"System-One" refers to fast decisions without deliberate reasoning, after the System 1 / System 2 distinction. We evaluate Laya's Typed-Decisions checkpoint, called Laya below; its decision interface is `system_one`.
+// src: src/system_one_control/players/local.py
 
-Four research questions guide the report:
+Five research questions guide the report:
 
-+ *RQ1:* How well do non-generative models complete navigation from a complete symbolic state?
-+ *RQ2:* How do local descriptions, interaction history, simulated action outcomes and explicit subgoals affect performance?
-+ *RQ3:* How does performance vary across action formulations with different sequence lengths, option counts and observation intervals?
-+ *RQ4:* How informative are returned probabilities, and what performance is obtained at the measured inference cost and latency?
++ *RQ1:* How often do models complete games?
++ *RQ2:* Which added input descriptions help?
++ *RQ3:* Do good decisions on an exam of fixed positions, shared by all models, translate into completed games?
++ *RQ4:* What changes when actions contain sequences of steps?
++ *RQ5:* How informative are the returned probabilities, and at what cost and latency?
 
-We contribute a controlled environment with exact, tie-preserving move labels; a diagnostic evaluation of representations and action formulations; and empirical results with raw trajectories, replay validation and reproducible analysis. Solver verification is established in prior planning evaluation @valmeekam2022planbench; our focus is its diagnostic use for non-generative decision models.
+We provide exact labels that accept every equally optimal move, and tests of how input descriptions and available actions affect performance. Raw trajectories, replay validation and reproducible analysis accompany the results. Solver verification is established in prior planning evaluation @valmeekam2022planbench. Here it lets us inspect decisions by non-generative models.
 // src: README.md; analysis/README.md; paper/references.bib

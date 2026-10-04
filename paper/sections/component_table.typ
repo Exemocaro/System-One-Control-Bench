@@ -3,7 +3,7 @@
 #set text(size: 8.5pt)
 #set par(leading: 0.25em)
 #table(columns: (1.2fr, 1fr, 1fr, 0.55fr, 1fr, 1fr, 0.55fr), stroke: none, inset: 2pt,
-table.header([Component], [Add: won change], [Add: progress], [Add: Holm p], [Full: won change], [Full: progress], [Full: Holm p]),
+table.header([Component], [Add: success change], [Add: progress], [Add: Holm p], [Full: success change], [Full: progress], [Full: Holm p]),
 table.cell(colspan: 7, text(weight: "bold", "Jev")),
 text("local state description"), text("0.13 [0.07, 0.20]"), text("0.14 [0.09, 0.20]"), text("0.001"), text("-0.05 [-0.11, 0.01]"), text("-0.02 [-0.06, 0.02]"), text("0.719"),
 text("interaction history"), text("0.14 [0.07, 0.21]"), text("0.15 [0.11, 0.21]"), text("<0.001"), text("0.04 [-0.02, 0.10]"), text("0.06 [0.01, 0.10]"), text("1.000"),

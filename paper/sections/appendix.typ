@@ -17,6 +17,7 @@ Prompts were developed by inspecting a few games on one or two puzzles at a few 
 
 #include "hypothesis_table.typ"
 
+#pagebreak()
 = Reproducibility <app:reproducibility>
 
 #include "reproducibility.typ"
@@ -24,7 +25,7 @@ Prompts were developed by inspecting a few games on one or two puzzles at a few 
 #pagebreak()
 = Full component effects <app:components>
 
-Each row reports both paired contrasts for one component. “Add” compares map plus the component with map alone. “Full” compares full context with full context minus that component. Positive values mean including the component helps. Intervals resample puzzles; Holm correction covers eight won-rate tests per model. Won-rate changes are proportions.
+Each row reports both paired contrasts for one component. “Add” compares map plus the component with map alone. “Full” compares full context with full context minus that component. Positive values mean including the component helps. Intervals resample puzzles; Holm correction covers eight success-rate tests per model. Success-rate changes are proportions.
 // src: analysis/out/components.md
 
 #include "component_table.typ"

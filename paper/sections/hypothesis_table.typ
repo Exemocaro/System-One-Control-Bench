@@ -8,4 +8,4 @@ text("H4: explicit subgoal is second among additions, and helps mostly from leve
 text("H5: interaction history alone adds almost nothing (within 0.05 progress of map)"), text("progress change +0.15 [+0.11, +0.21]"), text("no"),
 text("H6: full context has the best progress of the ten conditions and wins at least 28/100"), text("best progress: everything-subgoal (0.73); full context wins 57/100"), text("partly"),
 text("H7: Jev is overconfident, but its p(chosen) still ranks its moves"), text("mean p(chosen) 0.72 vs optimal share 0.51; optimal at p >= 0.9: 0.74 (3895 moves), below: 0.42; the split ranks, but the reliability curve is not monotone"), text("partly"),
-), caption: [Hypotheses specified before the main evaluation, retained verbatim. H1's greedy comparison means no advantage demonstrated; H7's ranking criterion is checked only by the $p >= 0.9$ split. H2 defines its planning subset.]) <tab:hyp>
+), caption: [Hypothesis texts specified before the main evaluation are retained verbatim, including "won rate." H1 and H7 are partly supported. H2 defines its planning subset.]) <tab:hyp>

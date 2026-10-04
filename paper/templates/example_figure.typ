@@ -1,6 +1,7 @@
 // src: examples/everything.json; frozen illustrative route, data from paper/tables.py
 #figure(block(breakable: false, grid(columns: (auto, 1fr), gutter: 12pt,
-raw(@MAP@, block: true),
+block[#show raw: set text(size: 11pt)
+#raw(@MAP@, block: true)],
 [*Map alone:* position (7, 1), empty inventory, map and object coordinates; "What is the best next move?"\
 *Simulated outcomes:* "move south (down): you move to (7, 2) and pick up the key".\
 Shortest route: south, west, west, south, west, west, west, west, south.])),
