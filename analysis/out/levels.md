@@ -1,4 +1,4 @@
-| Model | Input | Level | Games | Won rate |
+| Model | Input | Level | Games | Success rate |
 | --- | --- | --- | --- | --- |
 | Solver | map only | 1 | 5 | 1.00 [1.00, 1.00] |
 | Solver | map only | 2 | 5 | 1.00 [1.00, 1.00] |

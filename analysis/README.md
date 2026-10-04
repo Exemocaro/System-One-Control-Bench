@@ -25,7 +25,7 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
 
 ## Definitions
 
-- **Won rate**: the share of games that reach the goal.
+- **Success rate**: the share of games that reach the goal (the `won` field).
 - **Progress**: 1 − d/level, where d is the closest the game ever came to the goal, counted in single compass steps. The
   start counts, so progress is never below 0. A game can earn progress and then wander off.
 - **Final-state progress**: the same, measured where the game ended. It is negative when the game ended farther from
@@ -47,7 +47,7 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
   averaged within each puzzle and then over puzzles, so intervals resample puzzles; an error counts as not optimal.
   "In-game optimal share" is the share of optimal moves in the player's own compass games under the same input,
   averaged within each game and then over puzzles, as the exam is; "pooled over moves" weighs long games more.
-  `pairs` gives paired differences (puzzle bootstrap) between Jev, Gemma and DeepSeek on won rate and on the exam.
+  `pairs` gives paired differences (puzzle bootstrap) between Jev, Gemma and DeepSeek on success rate and on the exam.
 - **Brier of a constant**: p(1 − p) at the model's optimal share, the score of always predicting that share.
 - **Hypotheses**: H1–H7 were written on 23 September, before the main evaluation (paper, Appendix B). Each criterion
   is checked as written; the observed column says where a criterion proves less than its wording.

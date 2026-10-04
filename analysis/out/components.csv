@@ -1,4 +1,4 @@
-Model,Component,Direction,Won rate change,Won rate change low,Won rate change high,Progress change,Progress change low,Progress change high,McNemar p,Holm p
+Model,Component,Direction,Success rate change,Success rate change low,Success rate change high,Progress change,Progress change low,Progress change high,McNemar p,Holm p
 Jev,local state description,added to map only,0.13,0.07,0.2,0.14358333333333334,0.09225000000000001,0.19983541666666663,0.000244140625,0.00146484375
 Jev,local state description,full vs full minus it,-0.05,-0.11,0.01,-0.018083333333333333,-0.05583333333333333,0.021166666666666667,0.1796875,0.71875
 Jev,interaction history,added to map only,0.14,0.07,0.21,0.15483333333333332,0.10516458333333333,0.20758333333333334,0.0001220703125,0.0008544921875

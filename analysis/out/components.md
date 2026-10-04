@@ -1,4 +1,4 @@
-| Model | Component | Direction | Won rate change | Progress change | McNemar p | Holm p |
+| Model | Component | Direction | Success rate change | Progress change | McNemar p | Holm p |
 | --- | --- | --- | --- | --- | --- | --- |
 | Jev | local state description | added to map only | 0.13 [0.07, 0.20] | 0.14 [0.09, 0.20] | 0.000 | 0.001 |
 | Jev | local state description | full vs full minus it | -0.05 [-0.11, 0.01] | -0.02 [-0.06, 0.02] | 0.180 | 0.719 |

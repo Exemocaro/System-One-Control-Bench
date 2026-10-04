@@ -1,4 +1,4 @@
-Model,Action space (options),Input,Games,Won rate,Won rate low,Won rate high,Progress,Progress low,Progress high
+Model,Action space (options),Input,Games,Success rate,Success rate low,Success rate high,Progress,Progress low,Progress high
 Solver,compass (4),map only,100,1,1.0,1.0,1.0,1.0,1.0
 Solver,two-moves (16),map only,100,1,1.0,1.0,1.0,1.0,1.0
 Solver,up-to-two-moves (20),map only,100,1,1.0,1.0,1.0,1.0,1.0

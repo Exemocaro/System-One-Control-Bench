@@ -1,4 +1,4 @@
-| Model | Input | Games | Won rate | Progress | Final-state progress | SPL | Blocked moves |
+| Model | Input | Games | Success rate | Progress | Final-state progress | SPL | Blocked moves |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Solver | map only | 100 | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.000 | 1.000 | 0.000 |
 | Greedy (walls) | map only | 100 | 0.37 [0.28, 0.46] | 0.47 [0.39, 0.56] | 0.427 | 0.370 | 0.000 |

@@ -171,7 +171,7 @@ def tables(games: dict) -> None:
                 rows[-1] += [estimate([x.progress for x in g])]
                 rows[-1] += [statistics.mean(x.final_progress for x in g)]
                 rows[-1] += [statistics.mean(x.spl for x in g), sum(x.blocked for x in g) / moves]
-    header = ["Model", "Input", "Games", "Won rate", "Progress", "Final-state progress", "SPL"]
+    header = ["Model", "Input", "Games", "Success rate", "Progress", "Final-state progress", "SPL"]
     write_table("main", [*header, "Blocked moves"], rows)
 
     rows = []
@@ -187,7 +187,7 @@ def tables(games: dict) -> None:
                 found[-1] += [change(a, b, "progress"), metrics.mcnemar_p(*paired(a, b, "won"))]
         for row, adjusted in zip(found, metrics.holm([row[-1] for row in found]), strict=True):
             rows.append([*row, adjusted])
-    header = ["Model", "Component", "Direction", "Won rate change", "Progress change"]
+    header = ["Model", "Component", "Direction", "Success rate change", "Progress change"]
     write_table("components", [*header, "McNemar p", "Holm p"], rows)
 
     rows = []
@@ -198,7 +198,7 @@ def tables(games: dict) -> None:
                 if g:
                     rows.append([name, f"{rules} ({options})", INPUTS[condition], len(g)])
                     rows[-1] += [estimate([x.won for x in g]), estimate([x.progress for x in g])]
-    header = ["Model", "Action space (options)", "Input", "Games", "Won rate", "Progress"]
+    header = ["Model", "Action space (options)", "Input", "Games", "Success rate", "Progress"]
     write_table("action_spaces", header, rows)
 
     rows = []
@@ -208,7 +208,7 @@ def tables(games: dict) -> None:
             for level in sorted({x.level for x in g}):
                 won = [x.won for x in g if x.level == level]
                 rows.append([name, INPUTS[condition], level, len(won), estimate(won)])
-    write_table("levels", ["Model", "Input", "Level", "Games", "Won rate"], rows)
+    write_table("levels", ["Model", "Input", "Level", "Games", "Success rate"], rows)
 
     rows = []
     for player, (name, _) in MODELS.items():
@@ -337,7 +337,7 @@ def exam_tables(games: dict, exam: dict) -> None:
             won = change(games[(a, "compass", c)], games[(b, "compass", c)], "won")
             rows.append([f"{MODELS[a][0]} - {MODELS[b][0]}", INPUTS[c], won, estimate(optimal)])
     write_table(
-        "pairs", ["Pair", "Input", "Won rate difference", "Exam optimal-rate difference"], rows
+        "pairs", ["Pair", "Input", "Success rate difference", "Exam optimal-rate difference"], rows
     )
 
 
@@ -387,18 +387,13 @@ def hypotheses(games: dict) -> list[list]:
         return statistics.mean(getattr(x, field) for x in jev[condition].values())
 
     vs = {(p, f): change(jev["map"], base[p], f) for p in base for f in ["won", "progress"]}
-    pairs = [
-        ("random", "won"),
-        ("random", "progress"),
-        ("greedy-walls", "won"),
-        ("greedy-walls", "progress"),
-    ]
+    pairs = [(p, f) for p in ["random", "greedy-walls"] for f in ["won", "progress"]]
     observed = "; ".join(f"{f} vs {p}: {fmt(vs[(p, f)])}" for p, f in pairs)
     add(
         "H1: under map only, Jev beats random but not greedy (walls), on won rate and progress",
-        observed + "; 'not greedy (walls)' = no advantage shown, not shown to be worse",
+        observed + "; 'not greedy (walls)': no advantage shown, but one is not excluded",
         all(vs[("random", f)][1] > 0 for f in ["won", "progress"]),
-        all(vs[("greedy-walls", f)][1] <= 0 for f in ["won", "progress"]),
+        all(vs[("greedy-walls", f)][2] <= 0 for f in ["won", "progress"]),
     )
 
     planning = {p for p, x in base["greedy-walls"].items() if not x.won}
@@ -410,7 +405,7 @@ def hypotheses(games: dict) -> list[list]:
     best_rate = statistics.mean(jev[best][p].won for p in planning)
     add(
         "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
-        f"won-vs-level slope {min(slopes):+.3f} to {max(slopes):+.3f} per level; "
+        f"success-vs-level slope {min(slopes):+.3f} to {max(slopes):+.3f} per level; "
         f"best on the {len(planning)} planning puzzles: {best_rate:.2f} ({best})",
         max(slopes) < 0,
         best_rate < 0.5,
@@ -462,14 +457,15 @@ def hypotheses(games: dict) -> list[list]:
     )
     sure = [o for c, o in zip(confidence, optimal, strict=True) if c >= 0.9]
     rest = [o for c, o in zip(confidence, optimal, strict=True) if c < 0.9]
+    rates = [b[1] for b in metrics.calibration_bins(confidence, optimal) if b[2] >= 30]
     add(
         "H7: Jev is overconfident, but its p(chosen) still ranks its moves",
         f"mean p(chosen) {statistics.mean(confidence):.2f} vs optimal share "
         f"{statistics.mean(optimal):.2f}; optimal at p >= 0.9: {statistics.mean(sure):.2f} "
-        f"({len(sure)} moves), below: {statistics.mean(rest):.2f}; ranking checked only by "
-        "this split, and the reliability curve is not monotone",
+        f"({len(sure)} moves), below: {statistics.mean(rest):.2f}; the split ranks, but the "
+        "reliability curve is not monotone",
         statistics.mean(confidence) > statistics.mean(optimal),
-        statistics.mean(sure) > statistics.mean(rest),
+        statistics.mean(sure) > statistics.mean(rest) and rates == sorted(rates),
     )
     return rows
 
@@ -517,7 +513,9 @@ def bar_panel(ax, players: list[str], value, xlabel: str, mark=None) -> None:
 def fig_main(games: dict) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(7.5, 4.2), sharey=True)
     players = [p for p in PLAYERS if (p, "compass", "map") in games]
-    for ax, field, label in zip(axes, ["won", "progress"], ["Won rate", "Progress"], strict=True):
+    for ax, field, label in zip(
+        axes, ["won", "progress"], ["Success rate", "Progress"], strict=True
+    ):
 
         def value(player, condition, field=field):
             return estimate(
@@ -540,7 +538,9 @@ def fig_components(games: dict) -> None:
                 continue
             added = row["Direction"].startswith("added")
             y = len(labels) - 1 - labels.index(row["Component"]) + (0.15 if added else -0.15)
-            value, low, high = (float(row[f"Won rate change{s}"]) for s in ["", " low", " high"])
+            value, low, high = (
+                float(row[f"Success rate change{s}"]) for s in ["", " low", " high"]
+            )
             ax.errorbar(
                 value,
                 y,
@@ -567,12 +567,12 @@ def fig_components(games: dict) -> None:
         title="filled: significant\n(McNemar, Holm)\nhollow: not",
     )
     fig.subplots_adjust(hspace=0.6)
-    fig.supxlabel("Change in won rate when the component is included (compass)", fontsize=10)
+    fig.supxlabel("Change in success rate when the component is included (compass)", fontsize=10)
     save(fig, "fig_components")
 
 
 def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
-    """Won rate per model along xs; one panel per input."""
+    """Success rate per model along xs; one panel per input."""
     fig, axes = plt.subplots(1, 2, figsize=(8, 3.2), sharey=True)
     for ax, condition in zip(axes, INPUTS, strict=True):
         for player, (label, color) in PLAYERS.items():
@@ -592,7 +592,7 @@ def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
         ax.set_ylim(0, 1)
         ax.tick_params(axis="x", labelsize=8)
         ax.set_xlabel(xlabel)
-    axes[0].set_ylabel("Won rate")
+    axes[0].set_ylabel("Success rate")
     handles, labels = axes[1].get_legend_handles_labels()
     fig.legend(
         handles,

@@ -40,7 +40,7 @@ def main_table():
         won, efficiency = [], []
         for condition in ("map only", "full context"):
             row = rows.get((model, condition))
-            won.append(interval(row, "Won rate", 100) if row else "—")
+            won.append(interval(row, "Success rate", 100) if row else "—")
             efficiency.append(
                 f"{float(row['Progress']):.3f} / {float(row['SPL']):.3f}" if row else "—"
             )
@@ -58,7 +58,9 @@ def components():
             values = [name]
             for direction in ("added to map only", "full vs full minus it"):
                 row = rows[(model, name, direction)]
-                values += [interval(row, field) for field in ("Won rate change", "Progress change")]
+                values += [
+                    interval(row, field) for field in ("Success rate change", "Progress change")
+                ]
                 p_value = float(row["Holm p"])
                 values.append("<0.001" if p_value < 0.001 else f"{p_value:.3f}")
             output.append(cells(values))
