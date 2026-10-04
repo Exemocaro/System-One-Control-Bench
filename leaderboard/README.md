@@ -26,5 +26,5 @@ How to submit: [SUBMITTING.md](../SUBMITTING.md).
 |Greedy-walls||baseline|0.37 [0.28-0.48]|0.47 [0.39-0.56]|0.37 [0.28-0.48]|0.37 [0.28-0.48]|0.47 [0.39-0.56]|0.37 [0.28-0.48]|0|0|Straight at the next target, never into a wall|
 |Greedy||baseline|0.28 [0.19-0.37]|0.36 [0.28-0.44]|0.28 [0.19-0.37]|0.28 [0.19-0.37]|0.36 [0.28-0.44]|0.28 [0.19-0.37]|0|0|Straight at the next target, ignoring walls|
 |[Laya](https://huggingface.co/convaiinnovations/laya)|ConvAI Innovations|decision|0.12 [0.06-0.19]|0.26 [0.21-0.33]|0.10 [0.05-0.17]|0.02 [0.00-0.05]|0.10 [0.07-0.15]|0.02 [0.00-0.05]|n/a|1.64|convaiinnovations/laya, typed-decisions, run locally on a CPU|
-|Random||baseline|0.04 [0.01-0.08]|0.25 [0.20-0.30]|0.03 [0.01-0.07]|0.04 [0.01-0.08]|0.25 [0.20-0.30]|0.03 [0.01-0.07]|0|0|A random allowed move|
+|Random||baseline|0.04 [0.01-0.08]|0.25 [0.20-0.30]|0.03 [0.01-0.07]|0.04 [0.01-0.08]|0.25 [0.20-0.30]|0.03 [0.01-0.07]|0|0|A random offered move|
 |[GLiClass](https://huggingface.co/knowledgator/gliclass-modern-large-v3.0)|Knowledgator|decision|0.13 [0.07-0.20]|0.22 [0.15-0.29]|0.13 [0.07-0.20]|0.03 [0.00-0.07]|0.10 [0.07-0.15]|0.03 [0.00-0.07]|n/a|1.5|knowledgator/gliclass-modern-large-v3.0, run locally on a CPU|

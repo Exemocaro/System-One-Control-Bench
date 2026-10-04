@@ -56,7 +56,7 @@ Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of eve
 
 | Score | Meaning |
 | --- | --- |
-| `won` | games that reached the goal before the move limit (twice the solver's moves) |
+| `won` | the success rate: games that reached the goal before the move limit (twice the solver's moves) |
 | `progress` | how far a game got toward the goal at its closest: 1 for a win, 0 for never getting nearer than the start |
 | `SPL` | fewest moves over moves used for a won game, 0 for a lost one |
 | `errors` | games ended because the player failed to answer (they count as lost; should be 0) |

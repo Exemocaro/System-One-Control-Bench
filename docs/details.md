@@ -66,7 +66,7 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 
 | Player | Paid | How it moves |
 | --- | :---: | --- |
-| `random` | | a random allowed move |
+| `random` | | a random offered move |
 | `greedy` | | straight at the next target (key, door, goal), compass rules only |
 | `greedy-walls` | | like `greedy`, never into a wall, compass rules only |
 | `solver` | | always a best move |
@@ -81,7 +81,7 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 - **Laya** gets the question and option texts without ids (it allows 48 tokens per option; a longer option ends the game as an error). Its token budget is stretched to the whole request.
 - **GLiClass** reads the state as text, the question as task prompt and the option texts as labels. Scores are scaled to sum to 1.
 - **Qwen3.5-4B** is sent the chat the OpenRouter models get, with thinking off, plus the start of the answer. It writes nothing: each option's probability is read from its odds for the digits of the option number.
-- **Chat models** are pinned to DeepInfra on OpenRouter, which fixes the provider; it does not guarantee identical answers or an unchanged deployment. A JSON schema holds the answer to one option id. Without reasoning the answer may use 64 tokens; a model that thinks anyway ends the game as an error. An answer cut off by a cap is an error. Chat answers carry no probabilities.
+- **Chat models** are pinned to DeepInfra on OpenRouter, which fixes the provider; it does not guarantee identical answers or an unchanged deployment. A JSON schema holds the answer to one option id. Without reasoning the answer may use 64 tokens; a model that thinks anyway ends the game as an error. An answer cut off by a cap is an error. No temperature or top_p is sent, so the provider's defaults apply and answers vary between identical calls. Chat answers carry no probabilities.
 
 ## Local models
 
