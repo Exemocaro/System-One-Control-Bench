@@ -455,6 +455,12 @@ def check_game(
     where = f"{record.puzzle} {record.condition} {record.player}"
     if record.puzzle not in puzzles:
         return [f"{where}: unknown puzzle"]
+    if record.condition not in CONDITIONS:
+        return [f"{where}: unknown condition"]
+    if record.level != puzzles[record.puzzle].level:
+        return [
+            f"{where}: level {record.level}, but the puzzle's is {puzzles[record.puzzle].level}"
+        ]
     if record.benchmark is not None and record.benchmark != stamp():
         return [f"{where}: recorded under {record.benchmark}, now {stamp()}"]
     puzzle = replace(puzzles[record.puzzle], rules=make_rules(record.rules))
@@ -489,6 +495,8 @@ def check_game(
                 failures.append(
                     f"{where} move {number}: move is not the argmax of its probabilities"
                 )
+    if not game.is_over:
+        failures.append(f"{where}: the game stops before it is over")
     if game.won != record.won or game.closest != record.closest:
         failures.append(f"{where}: end differs (won {record.won}, closest {record.closest})")
     return failures

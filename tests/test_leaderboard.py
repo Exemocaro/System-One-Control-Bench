@@ -169,6 +169,13 @@ def peak_elsewhere(game):
         ),
         pytest.param(lambda game: game.__setitem__("won", not game["won"]), id="a flipped outcome"),
         pytest.param(peak_elsewhere, id="a probability peak on another move"),
+        pytest.param(
+            lambda game: game.__setitem__("level", game["level"] * 50), id="a raised level"
+        ),
+        pytest.param(
+            lambda game: game.__setitem__("condition", "map+all"), id="an unknown condition"
+        ),
+        pytest.param(lambda game: game["moves"].pop(), id="a game cut short"),
     ],
 )
 def test_validate_fails_a_tampered_game(tmp_path, tamper):

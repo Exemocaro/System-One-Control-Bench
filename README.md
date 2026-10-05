@@ -65,7 +65,7 @@ Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of eve
 
 Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines ignore the prompt, so every condition gives them the same games. Results files are in `benchmarks/`.
 
-| Player | `map` (map alone) | `everything` (full context) |
+| Player | `map` (map only) | `everything` (full context) |
 | --- | --- | --- |
 | random | 4 / 0.25 | same |
 | greedy | 28 / 0.36 | same |

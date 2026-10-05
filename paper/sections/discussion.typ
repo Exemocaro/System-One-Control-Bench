@@ -2,16 +2,19 @@
 
 = Discussion and limitations <sec:limitations>
 
-With full context, Jev is 90% optimal on shared exam positions, 79% optimal in its own games after equal puzzle weighting, and completes 57% of games. Ten independent 90%-accurate decisions would all be right about 35% of the time. This is not a prediction: errors can be recovered, routes differ in length, and decisions are not independent. Games expose states reached by each model rather than scripted exam positions. Actions change later state distributions @ross2011; this is conceptual background, not a test of that method. We did not isolate the cause of the exam/game gap. Long failed games dominate pooled accuracy and probability diagnostics. Start and late-route exam positions also differ in distance and inventory, so their contrast cannot isolate history's effect.
+*Single decisions versus whole games.* With full context, Jev answers 90% of the exam positions optimally, yet it wins only 57% of its games. Several things probably contribute. In its own games, a model reaches positions that a good player would never see, so its mistakes compound @ross2011. A long game gives many chances to fail: if each of ten moves were right 90% of the time, independently, all ten would be right only 35% of the time. Real games are less simple, because a mistake can be corrected, but the arithmetic shows how a high score per move can sit next to a modest success rate. Finally, as Greedy (walls) shows, most positions are easy, and games are decided by the few that need a detour. We did not measure how much each of these explanations contributes.
 // src: analysis/out/exam.md; analysis/out/main.md
 
-Full context nearly removes unchanged-board moves, yet 43% of games still fail. Avoiding blocked answers is only part of navigation. Explicit transitions may help, but wording and text length are not controlled separately. Comparisons that remove one component from full context do not show that any component is needed with the others present.
+*What helps.* For Jev, full context almost removes blocked moves (0.4%), yet it still loses 43% of its games, so avoiding walls is only part of finding the way. Move outcomes give Jev its largest gain when added to map only (+16 points), though for DeepSeek V4.1 Flash the surroundings help more. Once the other components are present, removing any one of them changes little; the only significant exception is move outcomes for Gemma 4 26B. We did not separate a component's content from the extra text it adds.
 // src: analysis/out/main.md; analysis/out/components.md
 
-Sequence actions change option count, text length, observation frequency and outcome duplication. Fixed-length subgoal prompts say "shortest path"; up-to prompts say "the fewest turns." Both are evaluated by decision count. Rounding also changes the attempted-step budget: a four-step puzzle allows four three-step moves (up to twelve steps), versus eight compass moves. These effects cannot be isolated. Levels vary in layout and route length; level effects do not isolate distance.
-// src: src/system_one_control/world.py; src/system_one_control/prompts.py; analysis/out/levels.md
+*Limitations.*
 
-We test one symbolic world with five or ten puzzles per level, without a held-out set. Prompts preceded puzzles. Results are single trajectories: repeated calls changed Jev's probabilities and chat answers; reruns would play different games (@app:reproducibility). Provider changes, inference caps and input limits matter. Laya ran outside its training tasks. Hardware differs; missing costs limit price comparisons.
-// src: analysis/out/cost.md; analysis/out/coverage.md; paper/references.bib; analysis/manifest.toml
+- We test one small symbolic world, with five or ten puzzles per level and no held-out set. The prompts were written, using a few test games, before the puzzles were generated.
+- Each result comes from one game per puzzle. Jev and the chat models give different answers to identical requests, so a rerun would play different games. The intervals cover the choice of puzzles, not this variation (@app:reproducibility).
+- The move rules change several things together (options, text length, steps between looks at the board). Two smaller differences also come with them. The subgoal question asks for the "shortest path" under the fixed-length rules and for the way "that takes the fewest turns" under the up-to rules (a turn here is a move); both are scored by moves. And since the move limit counts moves, longer moves allow more steps: a four-step puzzle allows 8 steps under `compass` but 12 under `three-moves`.
+- Levels differ in layout as well as route length, so the level results do not isolate distance.
+- Providers, inference limits and hardware differ between models. Laya was used outside the tasks it was trained for. Costs are missing for Jev and the local models.
+// src: analysis/out/coverage.md; src/system_one_control/world.py; src/system_one_control/prompts.py; paper/references.bib
 
 #include "leaderboard.typ"

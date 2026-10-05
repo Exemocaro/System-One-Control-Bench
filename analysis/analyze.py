@@ -20,7 +20,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import metrics
-from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 from system_one_control.bench import load
@@ -55,13 +54,23 @@ MODELS = {
 }
 PLAYERS = BASELINES | MODELS
 COMPONENTS = {
-    "surroundings": "local state description",
-    "memory": "interaction history",
-    "lookahead": "simulated action outcomes",
-    "subgoal": "explicit subgoal",
+    "surroundings": "surroundings",
+    "memory": "move history",
+    "lookahead": "move outcomes",
+    "subgoal": "subgoal",
 }
 INPUTS = {"map": "map only", "everything": "full context"}
-DIAMOND = {"marker": "D", "ls": "", "color": "white", "mec": "black", "ms": 4}  # own-game share
+
+
+def condition_name(condition: str) -> str:
+    """The paper's name for a condition, such as "full context minus subgoal"."""
+    for sign, word in [("+", " + "), ("-", " minus ")]:
+        base, found, component = condition.partition(sign)
+        if found:
+            return {"map": "map", "everything": "full context"}[base] + word + COMPONENTS[component]
+    return INPUTS[condition]
+
+
 KINDS = ["start", "on-route", "off-route", "after-blocked", "late"]  # exam items
 
 
@@ -98,7 +107,7 @@ def load_games() -> list[Game]:
             for move in record.moves:
                 found = rules.find_move(board, move.move) if move.move else None
                 after = rules.apply(board, found) if found else board
-                blocked += after == board
+                blocked += found is not None and after == board  # an error is not a move
                 board = after
             if record.puzzle not in distances:  # in single steps, as levels are counted
                 distances[record.puzzle] = Solver(rules.step_rules()).distances(puzzle.board)
@@ -180,7 +189,7 @@ def tables(games: dict) -> None:
         for component, label in COMPONENTS.items():
             for direction, a, b in [
                 ("added to map only", f"map+{component}", "map"),
-                ("full vs full minus it", "everything", f"everything-{component}"),
+                ("removed from full context", "everything", f"everything-{component}"),
             ]:
                 a, b = games[(player, "compass", a)], games[(player, "compass", b)]
                 found.append([name, label, direction, change(a, b, "won")])
@@ -198,7 +207,7 @@ def tables(games: dict) -> None:
                 if g:
                     rows.append([name, f"{rules} ({options})", INPUTS[condition], len(g)])
                     rows[-1] += [estimate([x.won for x in g]), estimate([x.progress for x in g])]
-    header = ["Model", "Action space (options)", "Input", "Games", "Success rate", "Progress"]
+    header = ["Model", "Move rules (options)", "Input", "Games", "Success rate", "Progress"]
     write_table("action_spaces", header, rows)
 
     rows = []
@@ -219,16 +228,8 @@ def tables(games: dict) -> None:
             rows[-1] += [metrics.expected_calibration_error(confidence, optimal)]
             rows[-1] += [metrics.brier_score(confidence, optimal)]
             rows[-1] += [statistics.mean(optimal) * (1 - statistics.mean(optimal)), ties, gap]
-    header = [
-        "Model",
-        "Moves",
-        "Mean p(chosen)",
-        "Optimal share",
-        "ECE",
-        "Brier",
-        "Brier of a constant",
-    ]
-    header += ["Tied share"]
+    header = ["Model", "Moves", "Mean p(chosen)", "Optimal share", "ECE", "Brier"]
+    header += ["Brier of a constant", "Tied share"]
     write_table("calibration", [*header, "Max confidence - rescaled p_max"], rows)
 
     rows = []
@@ -288,7 +289,9 @@ def in_game_optimal(games: dict, player: str, condition: str, pooled: bool = Fal
     """Optimal share of the moves in the player's own compass games: averaged within each game,
     then over puzzles, as the exam is; or `pooled` over all moves, where long games weigh more."""
     g = [
-        [m.optimal for m in x.moves if m.move]
+        [
+            m.move is not None and m.optimal for m in x.moves
+        ]  # an error is not optimal, as on the exam
         for x in games[(player, "compass", condition)].values()
     ]
     return statistics.mean(
@@ -320,9 +323,9 @@ def exam_tables(games: dict, exam: dict) -> None:
                 for k in full
             }
             changes.append([name, estimate(list(mean.values()))])
-    header = ["Model", "Input", "Answers", "Optimal rate", *KINDS, "In-game optimal share"]
-    write_table("exam", [*header, "In-game, pooled over moves", "Mean p(chosen)", "ECE"], rows)
-    write_table("exam_inputs", ["Model", "Full context - map only, optimal rate"], changes)
+    header = ["Model", "Input", "Answers", "Exam optimal rate", *KINDS, "Own games optimal rate"]
+    write_table("exam", [*header, "Own games, every move equal", "Mean p(chosen)", "ECE"], rows)
+    write_table("exam_inputs", ["Model", "Full context - map only, exam optimal rate"], changes)
     rows = []  # paired differences between the three models the paper calls similar
     for a, b in [
         ("jev", "gemma-4-26b"),
@@ -339,15 +342,6 @@ def exam_tables(games: dict, exam: dict) -> None:
     write_table(
         "pairs", ["Pair", "Input", "Success rate difference", "Exam optimal-rate difference"], rows
     )
-
-
-def fig_exam(games: dict, exam: dict) -> None:
-    fig, ax = plt.subplots(figsize=(5.4, 4.4))
-    players = [p for p in PLAYERS if (p, "map") in exam]
-    rate, own = (lambda p, c: exam_rate(exam[(p, c)])), (lambda p, c: in_game_optimal(games, p, c))
-    bar_panel(ax, players, rate, "Optimal answers, fixed-state exam (compass)", mark=own)
-    input_legend(fig, 0.0, (Line2D([], [], label="own games (per-puzzle average)", **DIAMOND),))
-    save(fig, "fig_exam")
 
 
 def calibration_moves(games: dict, player: str) -> tuple[list, list, float, float | str]:
@@ -388,10 +382,17 @@ def hypotheses(games: dict) -> list[list]:
 
     vs = {(p, f): change(jev["map"], base[p], f) for p in base for f in ["won", "progress"]}
     pairs = [(p, f) for p in ["random", "greedy-walls"] for f in ["won", "progress"]]
-    observed = "; ".join(f"{f} vs {p}: {fmt(vs[(p, f)])}" for p, f in pairs)
+    observed = "; ".join(
+        f"{'success rate' if f == 'won' else f} vs {PLAYERS[p][0]}: {fmt(vs[(p, f)])}"
+        for p, f in pairs
+    )
+    unclear = any(
+        vs[("greedy-walls", f)][1] < 0 < vs[("greedy-walls", f)][2] for f in ["won", "progress"]
+    )
     add(
         "H1: under map only, Jev beats random but not greedy (walls), on won rate and progress",
-        observed + "; 'not greedy (walls)': no advantage shown, but one is not excluded",
+        observed
+        + ("; Jev is not shown to beat Greedy (walls), nor shown not to" if unclear else ""),
         all(vs[("random", f)][1] > 0 for f in ["won", "progress"]),
         all(vs[("greedy-walls", f)][2] <= 0 for f in ["won", "progress"]),
     )
@@ -405,8 +406,9 @@ def hypotheses(games: dict) -> list[list]:
     best_rate = statistics.mean(jev[best][p].won for p in planning)
     add(
         "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
-        f"success-vs-level slope {min(slopes):+.3f} to {max(slopes):+.3f} per level; "
-        f"best on the {len(planning)} planning puzzles: {best_rate:.2f} ({best})",
+        f"success rate falls by {-max(slopes):.3f} to {-min(slopes):.3f} per level; planning "
+        f"puzzles are the {len(planning)} that Greedy (walls) loses, and the best condition on "
+        f"them wins {best_rate:.2f} ({condition_name(best)})",
         max(slopes) < 0,
         best_rate < 0.5,
     )
@@ -416,8 +418,9 @@ def hypotheses(games: dict) -> list[list]:
     ranked, worst = sorted(added, key=added.get, reverse=True), min(removed, key=removed.get)
     add(
         "H3: simulated action outcomes help most (best map+X, worst everything-X, on progress)",
-        f"map+X: {', '.join(f'{c} {added[c]:.2f}' for c in ranked)}; everything-X lowest: "
-        f"{worst} {removed[worst]:.2f}",
+        f"progress, map + one component: "
+        f"{', '.join(f'{COMPONENTS[c]} {added[c]:.2f}' for c in ranked)}; lowest full context "
+        f"minus one: {condition_name(f'everything-{worst}')} {removed[worst]:.2f}",
         ranked[0] == "lookahead",
         worst == "lookahead",
     )
@@ -431,8 +434,8 @@ def hypotheses(games: dict) -> list[list]:
     high, low = subgoal_gain(range(3, 100)), subgoal_gain(range(1, 3))
     add(
         "H4: explicit subgoal is second among additions, and helps mostly from level 3 up",
-        f"rank {ranked.index('subgoal') + 1} of 4; "
-        f"progress gain {high:+.2f} at levels 3+, {low:+.2f} at 1-2",
+        f"ranks {ranked.index('subgoal') + 1} of 4; "
+        f"progress gain {high:+.2f} at levels 3 and up, {low:+.2f} at levels 1-2",
         ranked[1] == "subgoal",
         high > low,
     )
@@ -447,7 +450,7 @@ def hypotheses(games: dict) -> list[list]:
     wins, top = sum(x.won for x in jev["everything"].values()), max(jev, key=mean)
     add(
         "H6: full context has the best progress of the ten conditions and wins at least 28/100",
-        f"best progress: {top} ({mean(top):.2f}); full context wins {wins}/100",
+        f"best progress: {condition_name(top)} ({mean(top):.2f}); full context wins {wins}/100",
         top == "everything",
         wins >= 28,
     )
@@ -460,10 +463,11 @@ def hypotheses(games: dict) -> list[list]:
     rates = [b[1] for b in metrics.calibration_bins(confidence, optimal) if b[2] >= 30]
     add(
         "H7: Jev is overconfident, but its p(chosen) still ranks its moves",
-        f"mean p(chosen) {statistics.mean(confidence):.2f} vs optimal share "
-        f"{statistics.mean(optimal):.2f}; optimal at p >= 0.9: {statistics.mean(sure):.2f} "
-        f"({len(sure)} moves), below: {statistics.mean(rest):.2f}; the split ranks, but the "
-        "reliability curve is not monotone",
+        f"chosen move's mean probability {statistics.mean(confidence):.2f}, but "
+        f"{statistics.mean(optimal):.2f} of chosen moves optimal; optimal at probability 0.9 "
+        f"or more: {statistics.mean(sure):.2f} ({len(sure)} moves), below 0.9: "
+        f"{statistics.mean(rest):.2f}; yet a higher-probability bin is not always more often "
+        "optimal",
         statistics.mean(confidence) > statistics.mean(optimal),
         statistics.mean(sure) > statistics.mean(rest) and rates == sorted(rates),
     )
@@ -477,13 +481,13 @@ def save(fig, name: str) -> None:
     plt.close(fig)
 
 
-def input_legend(fig, y: float, extra: tuple = ()) -> None:
+def input_legend(fig, y: float) -> None:
     handles = [
         Patch(color="0.5", alpha=0.35, label="map only"),
         Patch(color="0.5", label="full context"),
     ]
     fig.legend(
-        handles=[*handles, *extra],
+        handles=handles,
         loc="upper center",
         bbox_to_anchor=(0.5, y),
         ncol=3,
@@ -491,9 +495,8 @@ def input_legend(fig, y: float, extra: tuple = ()) -> None:
     )
 
 
-def bar_panel(ax, players: list[str], value, xlabel: str, mark=None) -> None:
-    """One bar per player and input (map pale, full context dark) with its interval;
-    mark(player, condition), when given, adds a diamond to each bar."""
+def bar_panel(ax, players: list[str], value, xlabel: str) -> None:
+    """One bar per player and input (map pale, full context dark) with its interval."""
     for y, player in enumerate(reversed(players)):
         conditions = ["map"] if player in BASELINES else list(INPUTS)
         for i, condition in enumerate(conditions):
@@ -503,8 +506,6 @@ def bar_panel(ax, players: list[str], value, xlabel: str, mark=None) -> None:
             height = 0.38 if len(conditions) > 1 else 0.5
             ax.barh(y_bar, v, height=height, color=PLAYERS[player][1], alpha=0.35 if pale else 1)
             ax.errorbar(v, y_bar, xerr=[[v - low], [high - v]], color="black", lw=0.8, capsize=2)
-            if mark:
-                ax.plot(mark(player, condition), y_bar, clip_on=False, **DIAMOND)
     ax.set_xlim(0, 1)
     ax.set_xlabel(xlabel)
     ax.set_yticks(range(len(players)), [PLAYERS[p][0] for p in reversed(players)])
@@ -560,11 +561,11 @@ def fig_components(games: dict) -> None:
     axes.flat[-1].legend(
         handles=[
             plt.Line2D([], [], color="0.3", marker="o", ls="", label="added to map only"),
-            plt.Line2D([], [], color="0.3", marker="s", ls="", label="full vs full\nminus it"),
+            plt.Line2D([], [], color="0.3", marker="s", ls="", label="removed from\nfull context"),
         ],
         loc="center",
         frameon=False,
-        title="filled: significant\n(McNemar, Holm)\nhollow: not",
+        title="filled: significant\nhollow: not",
     )
     fig.subplots_adjust(hspace=0.6)
     fig.supxlabel("Change in success rate when the component is included (compass)", fontsize=10)
@@ -645,14 +646,13 @@ def main() -> None:
     tables(games)
     fig_main(games)
     fig_components(games)
-    fig_lines(games, "fig_action_spaces", list(RULES), rules_won, "Action space (options per move)")
+    fig_lines(games, "fig_action_spaces", list(RULES), rules_won, "Move rules (options per move)")
     levels = sorted({x.level for x in games[("solver", "compass", "map")].values()})
     xlabel = "Level (steps to the goal; not to scale)"
     fig_lines(games, "fig_levels", levels, level_won, xlabel)
     fig_calibration(games)
     exam = load_exam()
     exam_tables(games, exam)
-    fig_exam(games, exam)
     print(f"{sum(len(v) for v in games.values())} games; outputs in {OUT}")
 
 

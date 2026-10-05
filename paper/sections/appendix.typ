@@ -1,31 +1,31 @@
 #import "../lib.typ": todo
 
-= One complete example request <app:prompts>
+= Two example requests <app:prompts>
 
-This is the compass, full-context request for @fig:example, with every field and all state text retained. Lines wrap only where needed to fit the page. All 50 frozen requests are in the repository's `examples/` directory.
-// src: examples/everything.json
+Both requests below are for the position in @fig:example, shown in full; lines wrap only to fit the page. Every model gets the same three parts: the state, the question and the options. Jev receives them as the fields of its API. Chat models receive them in one message, after this instruction: "You are playing a puzzle on a grid. You are given the state of the game, a question and a list of options, each with an id such as option_3. Reply with the id of the one option you choose." The repository's `examples/` directory holds the request for every input condition and move rule.
+// src: examples/map.json; examples/up-to-two-moves/everything.json; src/system_one_control/players/remote.py
 
-#include "example_request.typ"
+== Compass rules, map only
 
-== Prompt history <app:history>
+#include "example_map.typ"
 
-Prompts were developed by inspecting a few games on one or two puzzles at a few levels before generating the benchmark puzzles. Compass text is unchanged since `4d9a877` (23 September 2026, 20:10), before Jev's reported results in `b90ab4b` (22:01) and `808785f` (23:48). Sequence rules entered in `4da2c7d` (24 September, 00:36); their two-/three-step prompts were fixed in `5f135ed` (11:43), before runs at 13:41 committed in `1144516` (14:12). Times are local, UTC+02:00. On 26 September the up-to-subgoal question was corrected to ask for the route taking the fewest turns, and every affected game was replayed by every model or baseline that had evaluated it. The analysis uses the corrected records.
-// src: analysis/manifest.toml; src/system_one_control/prompts.py; examples/up-to-three-moves/map+subgoal.json
+== Up-to-two-moves rules, full context
+
+With full context the state adds the surroundings and the move history, each option says what it would do, and the question names the next target.
+
+#include "example_sequence.typ"
 
 #pagebreak()
-= Hypotheses specified before the main evaluation <app:hypotheses>
+= Hypotheses written before the main runs <app:hypotheses>
 
 #include "hypothesis_table.typ"
 
 #pagebreak()
-= Reproducibility <app:reproducibility>
+= Setup and reproducibility <app:reproducibility>
 
 #include "reproducibility.typ"
 
 #pagebreak()
-= Full component effects <app:components>
-
-Each row reports both paired contrasts for one component. “Add” compares map plus the component with map alone. “Full” compares full context with full context minus that component. Positive values mean including the component helps. Intervals resample puzzles; Holm correction covers eight success-rate tests per model. Success-rate changes are proportions.
-// src: analysis/out/components.md
+= All component effects <app:components>
 
 #include "component_table.typ"

@@ -65,8 +65,8 @@ error, which counts as lost.
 ## Submit it
 
 `uv run socb submit benchmarks/<file>.jsonl --kind chat --name MyModel --org MyOrg --url https://example.com
---notes "what it is"` (`--org` and `--url` are optional) validates the file first (every game replayed: options, best moves,
-won/closest, probabilities, full core coverage) and writes `leaderboard/entries/<player>.json`
+--notes "what it is"` (`--org` and `--url` are optional) validates the file first (every game replayed: level, options, best moves,
+won/closest, games played to the end, probabilities, full core coverage) and writes `leaderboard/entries/<player>.json`
 with the entry plus the player's core games in `leaderboard/results/<player>.jsonl`.
 `--kind` (`baseline`, `chat` or `decision`: the type of model, not where it runs) is required
 except for the four baselines; a file with several players needs `--player` to pick one.

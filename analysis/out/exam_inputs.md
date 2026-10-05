@@ -1,4 +1,4 @@
-| Model | Full context - map only, optimal rate |
+| Model | Full context - map only, exam optimal rate |
 | --- | --- |
 | Jev | 0.16 [0.12, 0.20] |
 | Laya | 0.21 [0.15, 0.27] |

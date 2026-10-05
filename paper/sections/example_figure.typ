@@ -2,7 +2,7 @@
 #figure(block(breakable: false, grid(columns: (auto, 1fr), gutter: 12pt,
 block[#show raw: set text(size: 11pt)
 #raw("   0123456789\n 0 ##########\n 1 #......AX#\n 2 #..##**K.#\n 3 #D****#..#\n 4 #G#.#...##\n 5 ##########", block: true)],
-[*Map alone:* position (7, 1), empty inventory, map and object coordinates; "What is the best next move?"\
-*Simulated outcomes:* "move south (down): you move to (7, 2) and pick up the key".\
-Shortest route: south, west, west, south, west, west, west, west, south.])),
-kind: image, supplement: [Figure], caption: [The frozen example position. Stars trace one shortest route through K and D to G; X marks east, a suboptimal move toward open floor. Stars and X replace floor only in this figure. Appendix A gives its full-context request.]) <fig:example>
+align(left)[*Map only:* the map, the position (7, 1), "You are carrying nothing", where the objects are, and "What is the best next move?"\
+*With move outcomes:* each option says what it does, such as "move south (down): you move to (7, 2) and pick up the key".\
+*Shortest route:* south, west, west, south, west, west, west, west, south (nine steps).])),
+kind: image, supplement: [Figure], caption: [An example position. Stars trace a shortest route through K and D to G; X marks where moving east leads, which is not optimal. Stars and X appear only in this figure. @app:prompts shows two complete requests for this position.]) <fig:example>

@@ -2,21 +2,18 @@
 
 = Introduction
 
-A model may choose a sensible action when shown a single situation, yet struggle when its own decisions determine what happens next. We test this in a small gridworld where every optimal move can be computed exactly.
+AI models are increasingly asked to act step by step: choose an action, see what happens, choose the next. A model can choose well when shown a single situation and still fail when its own choices decide what it sees next. We test this in a small grid world where the best moves are known exactly.
 
-A non-generative decision model returns probabilities over supplied options. In sequential control, those choices must guide the agent all the way to the goal. Jev's use in chess and software control motivates this test @saplin2026jev @mobilejev @jevultrafast. The map contains all information needed to navigate. We vary the input descriptions and the actions available between observations.
-// src: paper/references.bib; README.md; src/system_one_control/prompts.py; src/system_one_control/world.py
+We focus on *non-generative decision models*. Such a model does not write an answer. It receives a description of the situation, a question and a list of options, and returns a probability for each option; the program using it plays the most likely one. Jev, from TypeSafe, is one such model. It has been tried on choosing chess moves @saplin2026jev and on controlling phone apps and web browsers @mobilejev @jevultrafast. We also test Laya's Typed-Decisions checkpoint, an open model built to answer the same kind of request, and GLiClass, an open classifier that can score any list of labels. We compare them with chat models, which normally write their answers, and with simple baselines. The benchmark is called System-One Control Bench because these models make fast, intuitive "System 1" decisions, without the slower, step-by-step "System 2" reasoning.
+// src: paper/references.bib; README.md; src/system_one_control/players/local.py
 
-"System-One" refers to fast decisions without deliberate reasoning, after the System 1 / System 2 distinction. We evaluate Laya's Typed-Decisions checkpoint, called Laya below; its decision interface is `system_one`.
-// src: src/system_one_control/players/local.py
+In every puzzle the map holds all the information needed to reach the goal. We change two things: what extra descriptions the model gets, and how many steps one move contains. Five questions guide the report:
 
-Five research questions guide the report:
++ *RQ1:* How often do models reach the goal?
++ *RQ2:* Which extra descriptions help?
++ *RQ3:* Do good answers on fixed positions translate into won games?
++ *RQ4:* What changes when one move contains several steps?
++ *RQ5:* What do the returned probabilities tell us, and what do the models cost?
 
-+ *RQ1:* How often do models complete games?
-+ *RQ2:* Which added input descriptions help?
-+ *RQ3:* Do good decisions on an exam of fixed positions, shared by all models, translate into completed games?
-+ *RQ4:* What changes when actions contain sequences of steps?
-+ *RQ5:* How informative are the returned probabilities, and at what cost and latency?
-
-We provide exact labels that accept every equally optimal move, and tests of how input descriptions and available actions affect performance. Raw trajectories, replay validation and reproducible analysis accompany the results. Solver verification is established in prior planning evaluation @valmeekam2022planbench. Here it lets us inspect decisions by non-generative models.
-// src: README.md; analysis/README.md; paper/references.bib
+All puzzles, the solver, every request and every game record are public, so every result can be checked and recomputed.
+// src: README.md; analysis/README.md
