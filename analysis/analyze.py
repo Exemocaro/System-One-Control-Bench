@@ -39,15 +39,15 @@ RULES = {
 }
 BASELINES = {
     "solver": ("Solver", "black"),
-    "greedy-walls": ("Greedy (walls)", "#555555"),
-    "greedy": ("Greedy", "#8C8C8C"),
-    "random": ("Random", "#BDBDBD"),
+    "greedy-walls": ("Greedy (walls)", "#7F7F7F"),
+    "greedy": ("Greedy", "#A6A6A6"),
+    "random": ("Random", "#CCCCCC"),
 }
 MODELS = {
     "jev": ("Jev", "#D62728"),
-    "laya": ("Laya", "#8C564B"),
-    "gliclass": ("GLiClass", "#9467BD"),
-    "gemma-4-26b": ("Gemma 4 26B", "#34A853"),
+    "laya": ("Laya", "#7FC8F8"),
+    "gliclass": ("GLiClass", "#E6B400"),
+    "gemma-4-26b": ("Gemma 4 26B", "#4CD137"),
     "qwen3.5-4b": ("Qwen3.5-4B", "#FF6A00"),
     "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#4D6BFE"),
     "deepseek-v4.1-flash-think": ("DeepSeek V4.1 Flash (reasoning)", "#0B1F7A"),
