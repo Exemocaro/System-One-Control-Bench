@@ -110,7 +110,7 @@ Each level mixes kinds, set by `LEVEL_KINDS` in `puzzles.py`:
 
 Half the puzzles at levels 12, 15 and 20 have a thicker outer wall (`LEVEL_WALLS`), which changes nothing about the puzzle but tests whether irrelevant map text throws a player. `maze` at level 10 is hand-made; the rest are generated.
 
-| Level | Puzzles | Greedy-walls loses |
+| Level | Puzzles | Greedy (walls) loses |
 | --- | :---: | :---: |
 | 1, 2 | 5 each | 0 |
 | 3 | 10 | 1 |

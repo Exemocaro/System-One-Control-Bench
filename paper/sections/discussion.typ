@@ -14,7 +14,7 @@
 - Each result comes from one game per puzzle. Jev and DeepSeek V4.1 Flash give different answers to identical requests, and Gemma 4 26B and DeepSeek V4.1 Flash (reasoning) probably do too, so a rerun would play different games. The intervals cover the choice of puzzles, not this variation (@app:reproducibility).
 - The move rules change several things together (options, text length, steps before the model sees the board again). Two smaller differences also come with them. The subgoal question asks for the "shortest path" under the fixed-length rules and for the way "that takes the fewest turns" under the up-to rules (a turn here is a move); both are scored by moves. And since the move limit counts moves, longer moves allow more steps: a four-step puzzle allows 8 steps under `compass` but 12 under `three-moves`.
 - Levels differ in layout as well as route length, so the level results do not isolate distance.
-- Providers, inference limits and hardware differ between models. Laya was used outside the tasks it was trained for. Costs are missing for Jev and the local models.
+- Providers, inference limits and hardware differ between models. DeepSeek V4.1 Flash could reason for at most 1,024 tokens; with a larger budget it might do better. Laya was used outside the tasks it was trained for. Costs are missing for Jev and the local models.
 // src: analysis/out/coverage.md; src/system_one_control/world.py; src/system_one_control/prompts.py; paper/references.bib
 
 #include "leaderboard.typ"

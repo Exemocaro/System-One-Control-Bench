@@ -20,7 +20,7 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
 - `analyze.py` stays under 660 lines (as formatted by ruff). Make room by removing something before you add something.
 - Only what the paper uses. Exploratory scripts stay out of the repository.
 - Do not add options, classes, caches or configuration.
-- One colour and one display name per model, both in `PLAYERS`. The prose names of the inputs are in `COMPONENTS`
+- One colour and one display name per model, both in `PLAYERS`. The prose names of the conditions are in `COMPONENTS`
   and `INPUTS`.
 
 ## Definitions
@@ -43,9 +43,9 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
   optimal, where any of several tied best moves counts. This is computed on compass moves only, pooling all ten
   conditions, and the bins have equal width. Jev's own `confidence` field is (p_max − 1/n)/(1 − 1/n), a rescaled top
   probability, so it is not reported separately.
-- **Exam**: every player answers the same 495 fixed positions (`exam/items.jsonl`) once per input. The optimal rate is
+- **Exam**: every player answers the same 495 fixed positions (`exam/items.jsonl`) once per condition. The optimal rate is
   averaged within each puzzle and then over puzzles, so intervals resample puzzles; an error counts as not optimal.
-  "Own games optimal rate" is the share of optimal moves in the player's own compass games under the same input,
+  "Own games optimal rate" is the share of optimal moves in the player's own compass games under the same condition,
   averaged within each game and then over puzzles, as the exam is; "every move equal" weighs long games more.
   `pairs` gives paired differences (puzzle bootstrap) between Jev, Gemma and DeepSeek on success rate and on the exam.
 - **Brier of a constant**: p(1 − p) at the model's optimal share, the score of always predicting that share.

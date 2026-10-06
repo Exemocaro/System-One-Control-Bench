@@ -1,4 +1,4 @@
-| Pair | Input | Success rate difference | Exam optimal-rate difference |
+| Pair | Condition | Success rate difference | Exam optimal-rate difference |
 | --- | --- | --- | --- |
 | Jev - Gemma 4 26B | map only | -0.03 [-0.11, 0.05] | 0.04 [0.01, 0.08] |
 | Jev - Gemma 4 26B | full context | -0.04 [-0.10, 0.02] | 0.00 [-0.01, 0.02] |

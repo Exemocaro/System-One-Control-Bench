@@ -2,9 +2,11 @@
 
 = Results <sec:results>
 
+Numbers in brackets are 95% intervals (@sec:statistics). For a single score they give the range it would likely take on another set of similar puzzles; for a difference between two models or conditions, an interval that includes 0 means the data do not show which is better.
+
 == Games won
 
-DeepSeek V4.1 Flash (reasoning) wins the most games: 80% [72, 87] with full context and 67% [57, 76] with the map only (@tab:main, @fig:main). With the same input, its intervals do not overlap those of any other model.
+DeepSeek V4.1 Flash (reasoning) wins the most games: 80% [72, 87] with full context and 67% [57, 76] with the map only (@tab:main, @fig:main). Under the same condition, its intervals do not overlap those of any other model.
 // src: analysis/out/main.md
 
 With full context, Jev, Gemma 4 26B and DeepSeek V4.1 Flash win 57%, 61% and 60% of games. Compared puzzle by puzzle, Jev wins 4 percentage points fewer than Gemma 4 26B [−10, 2] and 3 fewer than DeepSeek V4.1 Flash [−11, 5]. Both intervals include zero, so neither comparison shows a difference in success rate between Jev and the chat model. With the map only, Jev wins 32%, between Random (4%) and Greedy (walls) (37%). Laya and GLiClass win 2% and 3% with the map only, no better than Random, and 12% and 13% with full context. With the map only, their progress (0.10) is even below Random's (0.25). Qwen3.5-4B wins 14% with the map only and 45% with full context.
@@ -13,7 +15,7 @@ With full context, Jev, Gemma 4 26B and DeepSeek V4.1 Flash win 57%, 61% and 60%
 #include "main_table.typ"
 
 #figure(image("../../analysis/out/fig_main.pdf", width: 85%), placement: none,
-  caption: [Success rate and progress under compass rules, with the map only (pale bars) and full context (dark bars). Baselines ignore the input and have a single bar. Lines show 95% intervals.]) <fig:main>
+  caption: [Success rate and progress under compass rules, with the map only (pale bars) and full context (dark bars). Baselines do not read the request and have a single bar. Lines show 95% intervals.]) <fig:main>
 // src: analysis/out/main.md
 
 == What each component adds
@@ -25,7 +27,7 @@ Removing a single component from full context rarely makes a clear difference. F
 // src: analysis/out/components.md
 
 #figure(image("../../analysis/out/fig_components.pdf", width: 100%), placement: auto,
-  caption: [Change in success rate when a component is included (compass rules), with 95% intervals. Circles: map + component compared with map only. Squares: full context compared with full context minus the component. Right of the vertical line, the component helps. Filled markers are significant (McNemar's test, Holm-corrected).]) <fig:ablation>
+  caption: [Change in success rate when a component is included (compass rules). Circles: map + component compared with map only. Squares: full context compared with full context minus the component. Right of the vertical line, the component helps. Each line is a 95% interval: where it crosses the vertical line, the data do not show whether the component helps or hurts. Filled markers are significant (McNemar's test, Holm-corrected; @sec:statistics).]) <fig:ablation>
 // src: analysis/out/components.md
 
 == Exam versus games
@@ -40,37 +42,53 @@ A high exam score does not guarantee a high success rate. Jev answers 90% of the
 
 == Blocked moves
 
-Under compass rules with the map only, 82% of Jev's moves are blocked. Without the move history, a blocked move leaves the request unchanged apart from the order of the options, so Jev can choose the same move into the same wall again, and often does. With full context only 0.4% of its moves are blocked, yet it still loses 43% of its games: avoiding walls is only part of finding the way. Some games get close to the goal and then wander off. With full context, Qwen3.5-4B's progress is 0.66, but its final-state progress is 0.56.
+Under compass rules with the map only, most models walk into walls often: 82% of Jev's moves are blocked, and 52% to 85% of the other models' moves, except DeepSeek V4.1 Flash (reasoning) at 14%. Without the move history, a blocked move leaves the request unchanged apart from the order of the options, so a model can choose the same move into the same wall again, and they often do. Full context cuts blocked moves to 0.4% for Jev, 2% for DeepSeek V4.1 Flash (reasoning), 4% for Gemma 4 26B, 6% for Qwen3.5-4B and 10% for DeepSeek V4.1 Flash, but Laya and GLiClass still walk into walls on 53% and 69% of their moves. Avoiding walls is only part of finding the way: with 0.4% blocked moves, Jev still loses 43% of its games.
+// src: analysis/out/main.md
+
+Some games get close to the goal and then drift away again. Progress counts the closest point a game reached, and final-state progress the point where it ended, so the gap between the two shows how far games drift back. With full context the gap is 0.03 to 0.05 for most models, but 0.10 for Qwen3.5-4B (0.66 against 0.56) and 0.11 for Laya (0.26 against 0.15).
 // src: analysis/out/main.md
 
 == Success by level
 
-Success falls as the level rises (@fig:levels). At levels 12, 15 and 20, which have ten puzzles each, Jev wins 20%, 10% and 0% of games with full context. DeepSeek V4.1 Flash (reasoning) wins 70%, 40% and 30% with full context, and 50%, 20% and 20% with the map only. Long routes stay hard even with reasoning.
+Success falls as the level rises (@fig:levels). Greedy (walls), which heads straight for its next target, loses every puzzle from level 10 up, where the route needs longer detours. At levels 12, 15 and 20, which have ten puzzles each, Jev wins 20%, 10% and 0% of games with full context. DeepSeek V4.1 Flash (reasoning) wins 70%, 40% and 30% with full context, and 50%, 20% and 20% with the map only. Long routes stay hard even with reasoning.
 // src: analysis/out/levels.md
 
-#figure(image("../../analysis/out/fig_levels.pdf", width: 100%), placement: none,
-  caption: [Success rate by level under compass rules. The level is the length of the shortest route in steps; levels are evenly spaced on the axis whatever their value. Levels 1 and 2 have five puzzles each, the others ten.]) <fig:levels>
+#figure(image("../../analysis/out/fig_levels.pdf", width: 100%), placement: auto,
+  caption: [Success rate by level under compass rules. Levels are evenly spaced on the axis whatever their value.]) <fig:levels>
 // src: analysis/out/levels.md
 
 == Move rules
 
-Longer moves have mixed effects (@fig:rules). For Jev with the map only, success rises from 32% under `compass` to 40% under `two-moves` and 47% under `three-moves`, but falls to 26% under `up-to-three-moves`, the rules with the most options (84). These differences between rules were not tested puzzle by puzzle, and for most of them the 95% intervals overlap. With full context, Jev and Gemma 4 26B stay within 8 points of their compass results under every rule. Qwen3.5-4B changes most: with full context its success rate rises from 45% under `compass` to between 58% and 71% under the four sequence rules, but with the map only it falls from 14% to between 3% and 11%. Its gain depends on the move outcomes: under the two three-step rules, full context without them wins only 16% and 18%. Laya and GLiClass stay below 15% under every rule. Because the number of options, the length of their texts and the steps before the model sees the board again all change together, we cannot say which of them causes these effects.
+Longer moves help some models and hurt others (@fig:rules). The success rates under `compass`, `two-moves`, `up-to-two-moves`, `three-moves` and `up-to-three-moves`, in that order, are:
+
+- *Jev:* with full context 57%, 63%, 57%, 63% and 49%; with the map only 32%, 40%, 39%, 47% and 26%. Fixed-length sequences help a little, and `up-to-three-moves`, the rules with the most options (84), is the worst under both conditions.
+- *Gemma 4 26B:* with full context 61%, 68%, 63%, 69% and 61%; with the map only 35%, 44%, 43%, 33% and 32%. With full context every sequence rule does at least as well as `compass`.
+- *Qwen3.5-4B:* with full context 45%, 70%, 61%, 71% and 58%, the largest gains of any model; with the map only 14%, 3%, 11%, 10% and 9%, all below `compass`. Its gains depend on the move outcomes: under the two three-step rules, full context without them wins only 16% and 18%.
+- *Laya:* with full context 12%, 7%, 9%, 13% and 5%; with the map only 2% to 7% under every rule.
+- *GLiClass:* with full context 13%, 6%, 3%, 6% and 4%; with the map only 1% to 4% under every rule. Its best full-context result is under `compass`.
+- *DeepSeek V4.1 Flash* (both setups) played compass rules only.
+
+These differences between rules were not tested puzzle by puzzle, and for most of them the 95% intervals overlap. Because the number of options, the length of their texts and the steps before the model sees the board again all change together, we cannot say which of them causes these effects.
 // src: analysis/out/action_spaces.md; benchmarks/2026-10-06_08-32_qwen3.5-4b_all_three-moves.txt; benchmarks/2026-10-06_10-25_qwen3.5-4b_all_up-to-three-moves.txt
 
-#figure(image("../../analysis/out/fig_action_spaces.pdf", width: 100%), placement: none,
-  caption: [Success rate under the five move rules (options per move in brackets). Both DeepSeek V4.1 Flash setups played compass only and are not shown. Random ignores the input, so its line is the same in both panels; Solver wins every game and is not drawn.]) <fig:rules>
+#figure(image("../../analysis/out/fig_action_spaces.pdf", width: 100%), placement: auto,
+  caption: [Success rate under the five move rules (options per move in brackets). Both DeepSeek V4.1 Flash setups played compass only and are not shown.]) <fig:rules>
 // src: analysis/out/action_spaces.md
 
 == Probabilities
 
-In its own games, Jev gives its chosen moves higher probabilities than how often they are optimal (@fig:reliability). Over all 14,642 of its compass moves, under all ten inputs, it gives the chosen move an average probability of 0.72, but only 51% of those moves are optimal; its ECE is 0.21. Its Brier score, 0.283, is worse than the 0.250 it would get by always giving the chosen move a probability of 0.51, its share of optimal moves in the same data. Its probabilities still carry some signal: moves chosen with a probability of 0.9 or more are optimal 74% of the time, against 42% for the rest. On the exam, the same measure gives a much lower ECE of 0.06 with either input, so the gap shows up mainly in the positions its own games lead to.
-// src: analysis/out/calibration.md; analysis/out/exam.md; analysis/out/hypotheses.md
+Jev, Laya, GLiClass and Qwen3.5-4B return a probability for every option. In their own compass games, under all ten conditions (@fig:reliability):
 
-In their own games, Laya and Qwen3.5-4B have a lower ECE (0.13 and 0.06) and GLiClass a higher one (0.33), although Laya's Brier score (0.166) is still worse than a constant guess (0.144). A low ECE does not mean good play: only 17.5% of Laya's chosen moves are optimal, and its low probabilities say so. Jev also returns a confidence score. On every move it equals, to within 0.023, the top probability rescaled so that 0 means all options are equally likely and 1 means certainty, $(p_"max" - 1 slash n) slash (1 - 1 slash n)$ for $n$ options @typesafeconfidence. So it adds almost nothing to the probabilities; we cannot explain the small differences.
-// src: analysis/out/calibration.md; paper/references.bib
+- *Jev* gives its chosen moves higher probabilities than how often they are optimal. Over its 14,642 moves, the chosen move gets an average probability of 0.72, but only 51% of those moves are optimal; its ECE is 0.21. Its Brier score, 0.283, is worse than the 0.250 it would get by always giving the chosen move a probability of 0.51, its share of optimal moves in the same data. Its probabilities still carry some signal: moves chosen with a probability of 0.9 or more are optimal 74% of the time, against 42% for the rest. On the exam the same measure gives a much lower ECE of 0.06 under either condition, so the gap shows up mainly in the positions its own games lead to.
+- *Laya* gives its chosen moves low probabilities (0.31 on average), and only 17.5% of them are optimal. Its ECE is 0.13, but its Brier score (0.166) is still worse than a constant guess (0.144): a low ECE does not mean good play.
+- *GLiClass* has the highest ECE, 0.33: its chosen moves get 0.45 on average, but only 12% are optimal. Its Brier score (0.220) is twice that of a constant guess (0.107).
+- *Qwen3.5-4B* matches its probabilities best: ECE 0.06, with an average probability of 0.54 and 48% of chosen moves optimal. It is the only one of the four whose Brier score (0.232) beats a constant guess (0.249).
 
-#figure(image("../../analysis/out/fig_calibration.pdf", width: 55%), placement: none,
-  caption: [Calibration over all compass games. Moves are grouped by the probability of the chosen move; each point compares a group's average probability with the share of its moves that were optimal. Points on the dotted diagonal are perfectly calibrated, and points below it are overconfident. Only groups of at least 30 moves are shown. Gemma 4 26B and the DeepSeek V4.1 Flash setups give no probabilities.]) <fig:reliability>
+Jev also returns a confidence score. On every move it equals, to within 0.023, the top probability rescaled so that 0 means all options are equally likely and 1 means certainty, $(p_"max" - 1 slash n) slash (1 - 1 slash n)$ for $n$ options @typesafeconfidence. So it adds almost nothing to the probabilities; we cannot explain the small differences.
+// src: analysis/out/calibration.md; analysis/out/exam.md; analysis/out/hypotheses.md; paper/references.bib
+
+#figure(image("../../analysis/out/fig_calibration.pdf", width: 48%), placement: none,
+  caption: [Calibration over all compass games. Moves are grouped by the probability of the chosen move; each point compares a group's average probability with the share of its moves that were optimal. Points on the dotted diagonal are perfectly calibrated, and points below it are overconfident. Only groups of at least 30 moves are shown, so Laya, which rarely gives a probability above 0.5, has only three points. Gemma 4 26B and the DeepSeek V4.1 Flash setups give no probabilities.]) <fig:reliability>
 // src: analysis/out/calibration.md
 
 == Cost and speed

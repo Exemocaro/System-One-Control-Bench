@@ -10,7 +10,7 @@ Each puzzle is a small grid map (@fig:example). A piece, `A`, must reach the goa
 An exact solver (a breadth-first search over the piece's position, the key and the door) knows how many steps each position is from the goal. We call a move *optimal* if it starts a shortest route to the goal. When several moves are equally good, all of them count as optimal.
 // src: src/system_one_control/world.py
 
-The 100 puzzles are grouped into levels 1, 2, 3, 4, 5, 6, 8, 10, 12, 15 and 20, where the level is the length of the shortest route in steps. Levels 1 and 2 have five puzzles each, and the others ten. A seeded generator made rooms and mazes; one level-10 maze is hand-made. Keys appear from level 3, and every puzzle from level 10 up has one. Higher levels also need detours away from the goal. Greedy (walls), a baseline that always steps toward its next target, loses every puzzle from level 10 up. Half of the puzzles at levels 12, 15 and 20 have extra rings of outer wall, which make the map text longer without changing the puzzle.
+The 100 puzzles are grouped into levels 1, 2, 3, 4, 5, 6, 8, 10, 12, 15 and 20, where the level is the length of the shortest route in steps. Levels 1 and 2 have five puzzles each, and the others ten. A seeded generator made rooms and mazes; one level-10 maze is hand-made. Keys appear from level 3, and every puzzle from level 10 up has one. Higher levels also need detours away from the goal. Half of the puzzles at levels 12, 15 and 20 have extra rings of outer wall, which make the map text longer without changing the puzzle.
 // src: README.md; src/system_one_control/puzzles.py; analysis/out/levels.md
 
 #include "example_figure.typ"
@@ -45,7 +45,7 @@ Every request contains the rules of the game, the map with numbered rows and col
 
 Surroundings, move outcomes and the subgoal are worked out from the map, so they add no new information; they only make it easier to use. The move history is not needed to know where the piece is, but it can show that the piece is going in circles.
 
-There are ten input conditions (@tab:conditions): map only, the map plus one component, all four components (*full context*), and full context minus one component. Most results compare map only with full context. For short, we call the input condition the *input*. @app:prompts shows two complete requests.
+There are ten *conditions* (@tab:conditions): map only, the map plus one component, all four components (*full context*), and full context minus one component. Most results compare map only with full context. @app:prompts shows two complete requests.
 // src: src/system_one_control/prompts.py; examples/everything.json
 
 #figure(table(columns: (auto, auto), align: left, stroke: none, inset: 2.5pt,
@@ -60,12 +60,12 @@ There are ten input conditions (@tab:conditions): map only, the map plus one com
   [`everything-memory`], [full context minus move history],
   [`everything-lookahead`], [full context minus move outcomes],
   [`everything-subgoal`], [full context minus subgoal]),
-  placement: none, caption: [The ten input conditions. Full context has all four components.]) <tab:conditions>
+  placement: none, caption: [The ten conditions. Full context has all four components.]) <tab:conditions>
 // src: examples/everything.json; README.md
 
 == The exam
 
-In a game, a model's own choices decide which positions it sees next, so after the first move two models no longer answer the same questions. The exam removes this difference. It has 495 fixed positions, five from each puzzle (four at level 1), that every player answers. Every model answers each position once with map only and once with full context (the baselines, which ignore the input, answer once), under compass rules, and we check whether the answer is optimal. The exam score is the share of optimal answers, with each puzzle counting equally. Each position is reached by playing a fixed list of moves from the start through the normal game, so a full-context request also lists those moves in its history.
+In a game, a model's own choices decide which positions it sees next, so after the first move two models may no longer answer the same questions. The exam removes this difference. It has 495 fixed positions, five from each puzzle (four at level 1), that every player answers. Every model answers each position once with map only and once with full context (the baselines, which do not read the request, answer once), under compass rules, and we check whether the answer is optimal. The exam score is the share of optimal answers, with each puzzle counting equally. Each position is reached by playing a fixed list of moves from the start through the normal game, so a full-context request also lists those moves in its history.
 
 There are five kinds of position: the *start*; *on-route*, partway along a shortest route; *off-route*, one wrong move away from a shortest route; *after-blocked*, just after a move into a wall; and *late*, in the second half of the route and after the key where there is one. Each puzzle gets one position of each kind where its layout allows; the remaining places are filled with extra off-route or after-blocked positions (@app:reproducibility gives the counts). A mistake on the exam costs nothing later, so the exam measures single decisions, not whole games.
 // src: scripts/make_exam.py; src/system_one_control/exam_items.py; src/system_one_control/exam.py

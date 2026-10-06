@@ -1,4 +1,4 @@
-| Model | Input | Level | Games | Success rate |
+| Model | Condition | Level | Games | Success rate |
 | --- | --- | --- | --- | --- |
 | Solver | map only | 1 | 5 | 1.00 [1.00, 1.00] |
 | Solver | map only | 2 | 5 | 1.00 [1.00, 1.00] |

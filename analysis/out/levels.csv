@@ -1,4 +1,4 @@
-Model,Input,Level,Games,Success rate,Success rate low,Success rate high
+Model,Condition,Level,Games,Success rate,Success rate low,Success rate high
 Solver,map only,1,5,1,1.0,1.0
 Solver,map only,2,5,1,1.0,1.0
 Solver,map only,3,10,1,1.0,1.0

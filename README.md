@@ -64,14 +64,14 @@ Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of eve
 
 ## Results
 
-Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines ignore the prompt, so every condition gives them the same games. Results files are in `benchmarks/`.
+Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines do not read the request, so every condition gives them the same games. Results files are in `benchmarks/`.
 
 | Player | `map` (map only) | `everything` (full context) |
 | --- | --- | --- |
-| random | 4 / 0.25 | same |
-| greedy | 28 / 0.36 | same |
-| greedy-walls | 37 / 0.47 | same |
-| solver | 100 / 1.00 | same |
+| Random | 4 / 0.25 | same |
+| Greedy | 28 / 0.36 | same |
+| Greedy (walls) | 37 / 0.47 | same |
+| Solver | 100 / 1.00 | same |
 | Jev | 32 / 0.43 | 57 / 0.68 |
 | Laya | 2 / 0.10 | 12 / 0.26 |
 | GLiClass | 3 / 0.10 | 13 / 0.22 |
@@ -82,7 +82,7 @@ Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines ignor
 
 ## Conditions
 
-Every condition includes the **map**: the rules, the numbered map, your position, what you carry, where the objects are. Four input components can be added, each something code works out for the player.
+Every condition includes the **map**: the rules, the numbered map, your position, what you carry, where the objects are. Four components can be added, each something code works out for the player.
 
 | Condition | surroundings | memory | lookahead | subgoal |
 | --- | :---: | :---: | :---: | :---: |

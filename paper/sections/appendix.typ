@@ -2,7 +2,7 @@
 
 = Two example requests <app:prompts>
 
-Both requests below are for the position in @fig:example, shown in full; lines wrap only to fit the page. Every model gets the same three parts: the state, the question and the options. Jev receives them as the fields of its API. Chat models receive them in one message, after this instruction: "You are playing a puzzle on a grid. You are given the state of the game, a question and a list of options, each with an id such as option_3. Reply with the id of the one option you choose." The repository's `examples/` directory holds the request for every input condition and move rule.
+Both requests below are for the position in @fig:example, shown in full; lines wrap only to fit the page. Every model gets the same three parts: the state, the question and the options. Jev receives them as the fields of its API. Chat models receive them in one message, after this instruction: "You are playing a puzzle on a grid. You are given the state of the game, a question and a list of options, each with an id such as option_3. Reply with the id of the one option you choose." The repository's `examples/` directory holds the request for every condition and move rule.
 // src: examples/map.json; examples/up-to-two-moves/everything.json; src/system_one_control/players/remote.py
 
 == Compass rules, map only

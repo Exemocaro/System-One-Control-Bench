@@ -1,4 +1,4 @@
-| Model | Move rules (options) | Input | Games | Success rate | Progress |
+| Model | Move rules (options) | Condition | Games | Success rate | Progress |
 | --- | --- | --- | --- | --- | --- |
 | Solver | compass (4) | map only | 100 | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] |
 | Solver | two-moves (16) | map only | 100 | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] |

@@ -1,4 +1,4 @@
-Model,Input,Answers,Exam optimal rate,Exam optimal rate low,Exam optimal rate high,start,on-route,off-route,after-blocked,late,Own games optimal rate,"Own games, every move equal",Mean p(chosen),ECE
+Model,Condition,Answers,Exam optimal rate,Exam optimal rate low,Exam optimal rate high,start,on-route,off-route,after-blocked,late,Own games optimal rate,"Own games, every move equal",Mean p(chosen),ECE
 Solver,map only,495,1,1.0,1.0,1,1,1,1,1,1,1,,
 Greedy (walls),map only,495,0.886,0.852,0.9179999999999999,0.82,0.8526315789473684,0.8680555555555556,0.9431818181818182,0.9852941176470589,0.6991666666666667,0.5679330328396651,,
 Greedy,map only,495,0.7255,0.6780000000000002,0.7719999999999999,0.63,0.7368421052631579,0.6458333333333334,0.8636363636363636,0.8235294117647058,0.31958333333333333,0.11271133375078271,,

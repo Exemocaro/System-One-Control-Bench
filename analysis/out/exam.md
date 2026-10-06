@@ -1,4 +1,4 @@
-| Model | Input | Answers | Exam optimal rate | start | on-route | off-route | after-blocked | late | Own games optimal rate | Own games, every move equal | Mean p(chosen) | ECE |
+| Model | Condition | Answers | Exam optimal rate | start | on-route | off-route | after-blocked | late | Own games optimal rate | Own games, every move equal | Mean p(chosen) | ECE |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Solver | map only | 495 | 1.00 [1.00, 1.00] | 1 | 1 | 1 | 1 | 1 | 1 | 1 |  |  |
 | Greedy (walls) | map only | 495 | 0.89 [0.85, 0.92] | 0.820 | 0.853 | 0.868 | 0.943 | 0.985 | 0.699 | 0.568 |  |  |

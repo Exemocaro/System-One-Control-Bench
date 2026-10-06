@@ -46,7 +46,7 @@ BASELINES = {
 MODELS = {
     "jev": ("Jev", "#D62728"),
     "laya": ("Laya", "#7FC8F8"),
-    "gliclass": ("GLiClass", "#E6B400"),
+    "gliclass": ("GLiClass", "#F2D600"),
     "gemma-4-26b": ("Gemma 4 26B", "#4CD137"),
     "qwen3.5-4b": ("Qwen3.5-4B", "#FF6A00"),
     "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#4D6BFE"),
@@ -180,7 +180,8 @@ def tables(games: dict) -> None:
                 rows[-1] += [estimate([x.progress for x in g])]
                 rows[-1] += [statistics.mean(x.final_progress for x in g)]
                 rows[-1] += [statistics.mean(x.spl for x in g), sum(x.blocked for x in g) / moves]
-    header = ["Model", "Input", "Games", "Success rate", "Progress", "Final-state progress", "SPL"]
+    header = ["Model", "Condition", "Games", "Success rate", "Progress"]
+    header += ["Final-state progress", "SPL"]
     write_table("main", [*header, "Blocked moves"], rows)
 
     rows = []
@@ -207,7 +208,7 @@ def tables(games: dict) -> None:
                 if g:
                     rows.append([name, f"{rules} ({options})", INPUTS[condition], len(g)])
                     rows[-1] += [estimate([x.won for x in g]), estimate([x.progress for x in g])]
-    header = ["Model", "Move rules (options)", "Input", "Games", "Success rate", "Progress"]
+    header = ["Model", "Move rules (options)", "Condition", "Games", "Success rate", "Progress"]
     write_table("action_spaces", header, rows)
 
     rows = []
@@ -217,7 +218,7 @@ def tables(games: dict) -> None:
             for level in sorted({x.level for x in g}):
                 won = [x.won for x in g if x.level == level]
                 rows.append([name, INPUTS[condition], level, len(won), estimate(won)])
-    write_table("levels", ["Model", "Input", "Level", "Games", "Success rate"], rows)
+    write_table("levels", ["Model", "Condition", "Level", "Games", "Success rate"], rows)
 
     rows = []
     for player, (name, _) in MODELS.items():
@@ -323,7 +324,8 @@ def exam_tables(games: dict, exam: dict) -> None:
                 for k in full
             }
             changes.append([name, estimate(list(mean.values()))])
-    header = ["Model", "Input", "Answers", "Exam optimal rate", *KINDS, "Own games optimal rate"]
+    header = ["Model", "Condition", "Answers", "Exam optimal rate"]
+    header += [*KINDS, "Own games optimal rate"]
     write_table("exam", [*header, "Own games, every move equal", "Mean p(chosen)", "ECE"], rows)
     write_table("exam_inputs", ["Model", "Full context - map only, exam optimal rate"], changes)
     rows = []  # paired differences between the three models the paper calls similar
@@ -340,7 +342,9 @@ def exam_tables(games: dict, exam: dict) -> None:
             won = change(games[(a, "compass", c)], games[(b, "compass", c)], "won")
             rows.append([f"{MODELS[a][0]} - {MODELS[b][0]}", INPUTS[c], won, estimate(optimal)])
     write_table(
-        "pairs", ["Pair", "Input", "Success rate difference", "Exam optimal-rate difference"], rows
+        "pairs",
+        ["Pair", "Condition", "Success rate difference", "Exam optimal-rate difference"],
+        rows,
     )
 
 
@@ -405,9 +409,9 @@ def hypotheses(games: dict) -> list[list]:
     best_rate = statistics.mean(jev[best][p].won for p in planning)
     add(
         "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
-        f"success falls by {-max(slopes):.3f} to {-min(slopes):.3f} per route step (10 inputs); "
-        f"planning puzzles are the {len(planning)} that Greedy (walls) loses; the best input on "
-        f"them wins {best_rate:.2f} ({condition_name(best)})",
+        f"success falls by {-max(slopes):.3f} to {-min(slopes):.3f} per route step (all 10 "
+        f"conditions); planning puzzles: the {len(planning)} Greedy (walls) loses; the best "
+        f"condition on them wins {best_rate:.2f} ({condition_name(best)})",
         max(slopes) < 0,
         best_rate < 0.5,
     )
@@ -557,22 +561,18 @@ def fig_components(games: dict) -> None:
         ax.set_yticks(range(len(labels)), [textwrap.fill(label, 16) for label in reversed(labels)])
         ax.tick_params(labelbottom=True)
     axes.flat[-1].axis("off")
-    axes.flat[-1].legend(
-        handles=[
-            plt.Line2D([], [], color="0.3", marker="o", ls="", label="added to map only"),
-            plt.Line2D([], [], color="0.3", marker="s", ls="", label="full vs. full\nminus it"),
-        ],
-        loc="center",
-        frameon=False,
-        title="filled: significant\nhollow: not",
-    )
+    marks = [("o", "0.3", "added to map only")]
+    marks += [("s", "0.3", "full context vs. full\ncontext minus it")]
+    marks += [("o", "0.3", "significant (filled)"), ("o", "white", "not significant\n(hollow)")]
+    handles = [plt.Line2D([], [], c="0.3", marker=m, ls="", mfc=f, label=t) for m, f, t in marks]
+    axes.flat[-1].legend(handles=handles, loc="center", frameon=False)
     fig.subplots_adjust(hspace=0.6)
     fig.supxlabel("Change in success rate when the component is included (compass)", fontsize=10)
     save(fig, "fig_components")
 
 
 def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
-    """Success rate per model along xs; one panel per input."""
+    """Success rate per model along xs; one panel per condition."""
     fig, axes = plt.subplots(1, 2, figsize=(8, 3.2), sharey=True)
     for ax, condition in zip(axes, INPUTS, strict=True):
         for player, (label, color) in PLAYERS.items():
@@ -601,14 +601,13 @@ def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
         bbox_to_anchor=(0.5, -0.1),
         ncol=4,
         frameon=False,
-        title="dashed: baselines, which ignore the input (same games in both panels); "
-        "the solver wins every game",
+        title="dashed: baselines" if name == "fig_levels" else None,
     )
     save(fig, name)
 
 
 def rules_won(games, player, rules, condition):
-    g = games.get((player, rules, condition if player in MODELS else "map"))
+    g = games.get((player, rules, condition)) if player in MODELS else None  # models only
     return statistics.mean(x.won for x in g.values()) if g else None
 
 

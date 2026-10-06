@@ -39,7 +39,7 @@ def interval(row, field, scale=1):
 
 def main_table():
     records = read("main")
-    rows = {(row["Model"], row["Input"]): row for row in records}
+    rows = {(row["Model"], row["Condition"]): row for row in records}
     output = []
     for model in dict.fromkeys(row["Model"] for row in records):
         won, efficiency = [], []
@@ -62,15 +62,15 @@ def signed(row, field, points=False):
 
 
 def exam_table():
-    games = {(row["Model"], row["Input"]): row for row in read("main")}
+    games = {(row["Model"], row["Condition"]): row for row in read("main")}
     output = []
     for row in read("exam"):
-        game = games[(row["Model"], row["Input"])]
+        game = games[(row["Model"], row["Condition"])]
         output.append(
             cells(
                 [
                     row["Model"],
-                    row["Input"],
+                    row["Condition"],
                     interval(row, "Exam optimal rate", 100),
                     f"{float(row['Own games optimal rate']) * 100:.0f}%",
                     f"{float(game['Success rate']) * 100:.0f}%",
