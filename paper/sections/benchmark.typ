@@ -29,7 +29,7 @@ A *move* is one decision by the model. Under the basic `compass` rules, a move i
   placement: auto, caption: [The five move rules. Every sequence of steps is offered, including ones that walk into walls.]) <tab:rules>
 // src: src/system_one_control/world.py
 
-Longer moves change several things at once: the number of options, the length of each option's text, and how many steps happen between two looks at the board. Several sequences can also end in the same place. We compare the rules as a whole and do not separate these effects.
+Longer moves change several things at once: the number of options, the length of each option's text, and how many steps happen before the model sees the board again. Several sequences can also end in the same place. We compare the rules as a whole and do not separate these effects.
 
 A game is won when the piece reaches the goal. It is lost when the model has used twice as many moves as the solver needs under the same rules.
 // src: src/system_one_control/world.py; src/system_one_control/bench.py; README.md

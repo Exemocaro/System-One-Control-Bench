@@ -189,7 +189,7 @@ def tables(games: dict) -> None:
         for component, label in COMPONENTS.items():
             for direction, a, b in [
                 ("added to map only", f"map+{component}", "map"),
-                ("removed from full context", "everything", f"everything-{component}"),
+                ("full context vs. full context minus it", "everything", f"everything-{component}"),
             ]:
                 a, b = games[(player, "compass", a)], games[(player, "compass", b)]
                 found.append([name, label, direction, change(a, b, "won")])
@@ -391,8 +391,7 @@ def hypotheses(games: dict) -> list[list]:
     )
     add(
         "H1: under map only, Jev beats random but not greedy (walls), on won rate and progress",
-        observed
-        + ("; Jev is not shown to beat Greedy (walls), nor shown not to" if unclear else ""),
+        observed + ("; the comparison with Greedy (walls) is inconclusive" if unclear else ""),
         all(vs[("random", f)][1] > 0 for f in ["won", "progress"]),
         all(vs[("greedy-walls", f)][2] <= 0 for f in ["won", "progress"]),
     )
@@ -561,7 +560,7 @@ def fig_components(games: dict) -> None:
     axes.flat[-1].legend(
         handles=[
             plt.Line2D([], [], color="0.3", marker="o", ls="", label="added to map only"),
-            plt.Line2D([], [], color="0.3", marker="s", ls="", label="removed from\nfull context"),
+            plt.Line2D([], [], color="0.3", marker="s", ls="", label="full vs. full\nminus it"),
         ],
         loc="center",
         frameon=False,

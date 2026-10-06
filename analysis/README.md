@@ -37,7 +37,7 @@ Keep it this small. These rules are enforced by `test_the_folder_stays_small`.
 - **Intervals**: 95% bootstrap intervals over puzzles: redraw the 100 puzzles with repeats 10,000 times (seed 0),
   recompute, and keep the middle 95%. Each game is one puzzle.
 - **Component effects**: positive means that including the component helps. For "added to map only" the effect is
-  map+X − map. For "removed from full context" it is everything − (everything−X). Each effect is a paired difference
+  map+X − map. For "full context vs. full context minus it" it is everything − (everything−X). Each effect is a paired difference
   over the same puzzles. The p-value is McNemar's exact test on won, Holm-adjusted over the 8 comparisons of each model.
 - **Calibration**: confidence is the probability the model gave its chosen move. The outcome is whether that move was
   optimal, where any of several tied best moves counts. This is computed on compass moves only, pooling all ten
