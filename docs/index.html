@@ -2,44 +2,81 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>System-One Control Bench leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System-One Control Bench</title>
 <style>
-:root { color-scheme: light dark; }
-table { border-collapse: collapse; }
-th, td { border: 1px solid gray; padding: 4px 8px; text-align: right; }
-th:first-child, td:first-child, td:nth-child(2), td:nth-child(3), td:last-child
+:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #5f5f5a; --line: #dddcd6; --head: #f0efea;
+  --link: #1f5fbf; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #171716; --fg: #ececea; --muted: #a3a39d; --line: #34342f; --head: #22221f;
+    --link: #8ab4f8; color-scheme: dark; }
+}
+body { background: var(--bg); color: var(--fg); margin: 0;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
+h1 { font-size: 1.8rem; margin: 0 0 8px; }
+p, li { max-width: 70ch; }
+a { color: var(--link); }
+.muted { color: var(--muted); }
+.links a { margin-right: 16px; }
+.scroll { overflow-x: auto; margin: 24px 0; }
+table { border-collapse: collapse; font-size: 0.92rem; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
+  vertical-align: top; }
+th { background: var(--head); white-space: nowrap; }
+th[data-col] { cursor: pointer; }
+th[rowspan]:nth-child(-n+2), td:nth-child(-n+2), th[rowspan]:last-child, td:last-child
   { text-align: left; }
-th { cursor: pointer; }
+th[colspan] { text-align: center; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+td:last-child { color: var(--muted); min-width: 260px; }
+td[title] { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
-<h1>System-One Control Bench leaderboard</h1>
+<main>
+<h1>System-One Control Bench</h1>
+<p>A model guides a piece across a small grid puzzle to a goal, one move at a time, choosing
+each move from a list of options. A solver knows every best move, so every choice can be
+scored exactly. The 100 puzzles range from 1 to 20 steps and many need a key for a locked door.</p>
+<p class="links"><a href="https://github.com/Exemocaro/JevStuff/blob/main/paper/main.pdf">Report (PDF)</a>
+<a href="https://github.com/Exemocaro/JevStuff">Code and data</a>
+<a href="https://github.com/Exemocaro/JevStuff/blob/main/SUBMITTING.md">Submit a model</a>
+<a href="https://github.com/Exemocaro/JevStuff/blob/main/leaderboard/README.md">Full table</a></p>
+<div class="scroll">
 <table id="board"><thead><tr>
-<th>player</th><th>org</th><th>kind</th><th>everything progress</th>
-<th>map progress</th><th>everything won</th><th>cost (USD)</th><th>notes</th>
-</tr></thead><tbody>
-<tr><td>Solver</td><td></td><td>baseline</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="1.0">1.00</td><td data-v="">0</td><td>Always plays a best move; the upper bound</td></tr><tr><td><a href="https://openrouter.ai/deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash (reasoning)</a></td><td>DeepSeek</td><td>chat</td><td data-v="0.8639999999999999">0.86</td><td data-v="0.7866666666666668">0.79</td><td data-v="0.8">0.80</td><td data-v="0.7121">0.7121</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning capped at 1,024 tokens</td></tr><tr><td><a href="https://openrouter.ai/deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</a></td><td>DeepSeek</td><td>chat</td><td data-v="0.71525">0.72</td><td data-v="0.5453333333333336">0.55</td><td data-v="0.6">0.60</td><td data-v="0.0954">0.0954</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td><a href="https://huggingface.co/google/gemma-4-26b-a4b-it">Gemma 4 26B</a></td><td>Google</td><td>chat</td><td data-v="0.7140833333333332">0.71</td><td data-v="0.45225000000000015">0.45</td><td data-v="0.61">0.61</td><td data-v="0.119">0.119</td><td>google/gemma-4-26b-a4b-it via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td><a href="https://docs.typesafe.ai">Jev</a></td><td>TypeSafe</td><td>decision</td><td data-v="0.6825833333333334">0.68</td><td data-v="0.4250833333333335">0.43</td><td data-v="0.57">0.57</td><td data-v="">n/a</td><td>jev-1.13.0 through its API; cost not reported</td></tr><tr><td><a href="https://huggingface.co/Qwen/Qwen3.5-4B">Qwen3.5-4B</a></td><td>Alibaba (Qwen)</td><td>chat</td><td data-v="0.6606666666666663">0.66</td><td data-v="0.33533333333333337">0.34</td><td data-v="0.45">0.45</td><td data-v="">n/a</td><td>Qwen/Qwen3.5-4B in bfloat16, run locally, thinking off, scored on option-number probabilities</td></tr><tr><td>Greedy-walls</td><td></td><td>baseline</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.4746666666666667">0.47</td><td data-v="0.37">0.37</td><td data-v="">0</td><td>Straight at the next target, never into a wall</td></tr><tr><td>Greedy</td><td></td><td>baseline</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.3561666666666669">0.36</td><td data-v="0.28">0.28</td><td data-v="">0</td><td>Straight at the next target, ignoring walls</td></tr><tr><td><a href="https://huggingface.co/convaiinnovations/laya">Laya</a></td><td>ConvAI Innovations</td><td>decision</td><td data-v="0.2635">0.26</td><td data-v="0.10483333333333335">0.10</td><td data-v="0.12">0.12</td><td data-v="">n/a</td><td>convaiinnovations/laya, typed-decisions, run locally on a CPU</td></tr><tr><td>Random</td><td></td><td>baseline</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.24908333333333338">0.25</td><td data-v="0.04">0.04</td><td data-v="">0</td><td>A random offered move</td></tr><tr><td><a href="https://huggingface.co/knowledgator/gliclass-modern-large-v3.0">GLiClass</a></td><td>Knowledgator</td><td>decision</td><td data-v="0.2158333333333333">0.22</td><td data-v="0.10425">0.10</td><td data-v="0.13">0.13</td><td data-v="">n/a</td><td>knowledgator/gliclass-modern-large-v3.0, run locally on a CPU</td></tr>
+<th rowspan="2" data-col="0">Player</th><th rowspan="2" data-col="1">Kind</th>
+<th colspan="2">Full context</th><th colspan="2">Map only</th>
+<th rowspan="2" data-col="6">Cost (USD)</th><th rowspan="2">Notes</th></tr>
+<tr><th data-col="2">Won</th><th data-col="3">Progress</th>
+<th data-col="4">Won</th><th data-col="5">Progress</th></tr>
+</thead><tbody>
+<tr><td>Solver</td><td>baseline</td><td data-v="1.0" title="95% interval: 1.00 to 1.00">100%</td><td data-v="1.0" title="95% interval: 1.00 to 1.00">1.00</td><td data-v="1.0" title="95% interval: 1.00 to 1.00">100%</td><td data-v="1.0" title="95% interval: 1.00 to 1.00">1.00</td><td data-v="">0</td><td>Always plays a best move; the upper bound</td></tr><tr><td><a href="https://openrouter.ai/deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash (reasoning)</a></td><td>chat</td><td data-v="0.8" title="95% interval: 0.72 to 0.88">80%</td><td data-v="0.8639999999999999" title="95% interval: 0.80 to 0.92">0.86</td><td data-v="0.67" title="95% interval: 0.58 to 0.76">67%</td><td data-v="0.7866666666666668" title="95% interval: 0.72 to 0.85">0.79</td><td data-v="0.7121">0.7121</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning capped at 1,024 tokens</td></tr><tr><td><a href="https://openrouter.ai/deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</a></td><td>chat</td><td data-v="0.6" title="95% interval: 0.51 to 0.70">60%</td><td data-v="0.71525" title="95% interval: 0.64 to 0.79">0.72</td><td data-v="0.39" title="95% interval: 0.30 to 0.49">39%</td><td data-v="0.5453333333333336" title="95% interval: 0.47 to 0.63">0.55</td><td data-v="0.0954">0.0954</td><td>deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td><a href="https://huggingface.co/google/gemma-4-26b-a4b-it">Gemma 4 26B</a></td><td>chat</td><td data-v="0.61" title="95% interval: 0.52 to 0.70">61%</td><td data-v="0.7140833333333332" title="95% interval: 0.64 to 0.79">0.71</td><td data-v="0.35" title="95% interval: 0.26 to 0.45">35%</td><td data-v="0.45225000000000015" title="95% interval: 0.37 to 0.54">0.45</td><td data-v="0.119">0.119</td><td>google/gemma-4-26b-a4b-it via OpenRouter (DeepInfra), reasoning off</td></tr><tr><td><a href="https://docs.typesafe.ai">Jev</a></td><td>decision</td><td data-v="0.57" title="95% interval: 0.47 to 0.67">57%</td><td data-v="0.6825833333333334" title="95% interval: 0.60 to 0.76">0.68</td><td data-v="0.32" title="95% interval: 0.23 to 0.41">32%</td><td data-v="0.4250833333333335" title="95% interval: 0.35 to 0.51">0.43</td><td data-v="">n/a</td><td>jev-1.13.0 through its API; cost not reported</td></tr><tr><td><a href="https://huggingface.co/Qwen/Qwen3.5-4B">Qwen3.5-4B</a></td><td>chat</td><td data-v="0.45" title="95% interval: 0.35 to 0.55">45%</td><td data-v="0.6606666666666663" title="95% interval: 0.59 to 0.73">0.66</td><td data-v="0.14" title="95% interval: 0.08 to 0.22">14%</td><td data-v="0.33533333333333337" title="95% interval: 0.27 to 0.41">0.34</td><td data-v="">n/a</td><td>Qwen/Qwen3.5-4B in bfloat16, run locally, thinking off, scored on option-number probabilities</td></tr><tr><td>Greedy (walls)</td><td>baseline</td><td data-v="0.37" title="95% interval: 0.28 to 0.48">37%</td><td data-v="0.4746666666666667" title="95% interval: 0.39 to 0.56">0.47</td><td data-v="0.37" title="95% interval: 0.28 to 0.48">37%</td><td data-v="0.4746666666666667" title="95% interval: 0.39 to 0.56">0.47</td><td data-v="">0</td><td>Straight at the next target, never into a wall</td></tr><tr><td>Greedy</td><td>baseline</td><td data-v="0.28" title="95% interval: 0.19 to 0.37">28%</td><td data-v="0.3561666666666669" title="95% interval: 0.28 to 0.44">0.36</td><td data-v="0.28" title="95% interval: 0.19 to 0.37">28%</td><td data-v="0.3561666666666669" title="95% interval: 0.28 to 0.44">0.36</td><td data-v="">0</td><td>Straight at the next target, ignoring walls</td></tr><tr><td><a href="https://huggingface.co/convaiinnovations/laya">Laya</a></td><td>decision</td><td data-v="0.12" title="95% interval: 0.06 to 0.19">12%</td><td data-v="0.2635" title="95% interval: 0.21 to 0.33">0.26</td><td data-v="0.02" title="95% interval: 0.00 to 0.05">2%</td><td data-v="0.10483333333333335" title="95% interval: 0.07 to 0.15">0.10</td><td data-v="">n/a</td><td>convaiinnovations/laya, typed-decisions, run locally on a CPU</td></tr><tr><td>Random</td><td>baseline</td><td data-v="0.04" title="95% interval: 0.01 to 0.08">4%</td><td data-v="0.24908333333333338" title="95% interval: 0.20 to 0.30">0.25</td><td data-v="0.04" title="95% interval: 0.01 to 0.08">4%</td><td data-v="0.24908333333333338" title="95% interval: 0.20 to 0.30">0.25</td><td data-v="">0</td><td>A random offered move</td></tr><tr><td><a href="https://huggingface.co/knowledgator/gliclass-modern-large-v3.0">GLiClass</a></td><td>decision</td><td data-v="0.13" title="95% interval: 0.07 to 0.20">13%</td><td data-v="0.2158333333333333" title="95% interval: 0.15 to 0.29">0.22</td><td data-v="0.03" title="95% interval: 0.00 to 0.07">3%</td><td data-v="0.10425" title="95% interval: 0.07 to 0.15">0.10</td><td data-v="">n/a</td><td>knowledgator/gliclass-modern-large-v3.0, run locally on a CPU</td></tr>
 </tbody></table>
+</div>
 <ul>
-<li><b>everything / map</b>: the two conditions of the core track (compass rules, 100 puzzles each);
-<b>everything</b> is the full context.</li>
-<li><b>won</b>: share of puzzles where the goal was reached before the move limit.</li>
-<li><b>progress</b>: how close a game got to the goal at its closest point (1 for a win).</li>
-<li><b>cost</b>: USD for one core run (200 games), as reported by the player;
-n/a means not reported.</li>
-<li><b>kind</b>: baseline, chat model or decision model. Click a header to sort.</li>
-<li>Intervals, SPL and latency (median seconds per answer) are in the
-<a href="https://github.com/Exemocaro/JevStuff/blob/main/leaderboard/README.md">full table</a>.</li>
+<li><b>Map only</b>: the player sees the rules, the map and where everything is.
+<b>Full context</b> adds what is next to the piece, the moves so far, what each option would
+do and the next target.</li>
+<li><b>Won</b>: the share of the 100 puzzles where the piece reached the goal within the move
+limit (twice the fewest moves needed). Compass rules: one step per move.</li>
+<li><b>Progress</b>: how close the piece got to the goal at its closest point, from 0 (never
+closer than at the start) to 1 (reached it).</li>
+<li><b>Cost</b>: US dollars for the 200 games, as reported by the player; n/a means not
+reported.</li>
+<li>Hover a score for its 95% interval, the range it could take with a different set of
+puzzles. Click a header to sort.</li>
 </ul>
-<p>How to submit: <a href="https://github.com/Exemocaro/JevStuff/blob/main/SUBMITTING.md">SUBMITTING.md</a>.</p>
+</main>
 <script>
-document.querySelectorAll("th").forEach((h, i) => h.addEventListener("click", () => {
+document.querySelectorAll("th[data-col]").forEach(h => h.addEventListener("click", () => {
+  const i = Number(h.dataset.col);
   const rows = [...document.querySelectorAll("#board tbody tr")];
   rows.sort((a, b) => {
     const x = a.children[i].dataset.v ?? a.children[i].textContent;
     const y = b.children[i].dataset.v ?? b.children[i].textContent;
     if (x === "" || y === "") return x === "" ? 1 : -1;
-    return isNaN(x) ? x.localeCompare(y) : x - y;
+    return isNaN(x) ? x.localeCompare(y) : y - x;
   });
   document.querySelector("#board tbody").append(...rows);
 }));

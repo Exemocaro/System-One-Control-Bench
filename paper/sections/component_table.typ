@@ -3,7 +3,7 @@
 #set text(size: 8.5pt)
 #set par(leading: 0.25em)
 #table(columns: (1.05fr, 0.85fr, 1.3fr, 0.45fr, 0.85fr, 1.3fr, 0.45fr), stroke: none, inset: 2pt, align: (x, y) => if x == 0 { left } else { center },
-table.header(table.cell(rowspan: 2, align: bottom)[Component], table.cell(colspan: 3)[Added to map only], table.cell(colspan: 3)[Full context vs. full context without it], [Success (points)], [Progress], [p], [Success (points)], [Progress], [p]),
+table.header(table.cell(rowspan: 2, align: bottom)[Component], table.cell(colspan: 3)[Added to map only], table.cell(colspan: 3)[Full context vs. full context minus it], [Success (points)], [Progress], [p], [Success (points)], [Progress], [p]),
 table.cell(colspan: 7, text(weight: "bold", "Jev")),
 text("surroundings"), text("+13 [7, 20]"), text("+0.14 [0.09, 0.20]"), text("0.001"), text("−5 [−11, 1]"), text("−0.02 [−0.06, 0.02]"), text("0.719"),
 text("move history"), text("+14 [7, 21]"), text("+0.15 [0.11, 0.21]"), text("<0.001"), text("+4 [−2, 10]"), text("+0.06 [0.01, 0.10]"), text("1.000"),

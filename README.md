@@ -1,5 +1,6 @@
 # System-One Control Bench
 
+![CI](https://github.com/Exemocaro/JevStuff/actions/workflows/ci.yml/badge.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![uv](https://img.shields.io/badge/built%20with-uv-purple)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
@@ -96,7 +97,7 @@ Every condition includes the **map**: the rules, the numbered map, your position
 | `everything-lookahead` | ✓ | ✓ | | ✓ |
 | `everything-subgoal` | ✓ | ✓ | ✓ | |
 
-`surroundings`: what is next to you, and where the key, door and goal are. `memory`: the moves so far. `lookahead`: what each option would do. `subgoal`: the question names the next target.
+`surroundings`: what is next to you, and where the key, door and goal are. `memory`: the moves so far (the report calls it *move history*). `lookahead`: what each option would do (*move outcomes* in the report). `subgoal`: the question names the next target.
 
 ## Rules
 
@@ -140,7 +141,7 @@ Puzzles are YAML files under `puzzles/`: 100 over the levels 1, 2, 3, 4, 5, 6, 8
 
 ## Leaderboard
 
-The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md) (also built as `docs/index.html`). To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
+The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md); the same results as a web page are at [exemocaro.github.io/JevStuff](https://exemocaro.github.io/JevStuff/), built from `docs/index.html`. To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
 
 ## Citation
 

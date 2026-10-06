@@ -58,6 +58,10 @@
 | Qwen3.5-4B | two-moves (16) | full context | 100 | 0.70 [0.61, 0.79] | 0.81 [0.74, 0.87] |
 | Qwen3.5-4B | up-to-two-moves (20) | map only | 100 | 0.11 [0.05, 0.17] | 0.32 [0.26, 0.38] |
 | Qwen3.5-4B | up-to-two-moves (20) | full context | 100 | 0.61 [0.51, 0.70] | 0.75 [0.68, 0.82] |
+| Qwen3.5-4B | three-moves (64) | map only | 100 | 0.10 [0.05, 0.16] | 0.37 [0.31, 0.43] |
+| Qwen3.5-4B | three-moves (64) | full context | 100 | 0.71 [0.62, 0.80] | 0.81 [0.74, 0.87] |
+| Qwen3.5-4B | up-to-three-moves (84) | map only | 100 | 0.09 [0.04, 0.15] | 0.35 [0.29, 0.41] |
+| Qwen3.5-4B | up-to-three-moves (84) | full context | 100 | 0.58 [0.48, 0.68] | 0.73 [0.65, 0.80] |
 | DeepSeek V4.1 Flash | compass (4) | map only | 100 | 0.39 [0.30, 0.49] | 0.55 [0.47, 0.62] |
 | DeepSeek V4.1 Flash | compass (4) | full context | 100 | 0.60 [0.50, 0.69] | 0.72 [0.64, 0.79] |
 | DeepSeek V4.1 Flash (reasoning) | compass (4) | map only | 100 | 0.67 [0.57, 0.76] | 0.79 [0.72, 0.85] |

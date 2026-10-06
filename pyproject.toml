@@ -1,7 +1,7 @@
 [project]
 name = "system-one-control-bench"
 version = "1.0.0"
-description = "Can a bounded decision model steer an agent across a small grid?"
+description = "Can a non-generative decision model steer an agent across a small grid?"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [

@@ -87,7 +87,7 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 
 `uv sync --extra local` installs PyTorch. On Windows it comes from PyTorch's CUDA 13.0 index (NVIDIA driver 580 or later; without a GPU it runs on the CPU). A plain `uv sync` removes it again, so run local players with `uv run --extra local socb benchmark --players laya`. Each model downloads from Hugging Face on first use (about 800 MB for Laya and GLiClass, 9 GB for Qwen3.5-4B) and is shared by every game.
 
-On an RTX 5070 Ti laptop GPU a Laya move takes about 0.1 s and a GLiClass move 0.3 s; Qwen3.5-4B takes 0.2 s with 4 options and 1.7 s with 84. On a 20-core CPU Laya takes about 1 s under `compass` and 5 to 6 s under `three-moves`. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`. Qwen3.5-4B needs 9 GB of GPU memory; on a 12 GB GPU play it alone, since too little free memory can make the driver reset and end every game under way in an error (`--resume` plays them again).
+On an RTX 5070 Ti laptop GPU a Laya move takes about 0.1 s and a GLiClass move 0.3 s; Qwen3.5-4B takes 0.2 s with 4 options and 1.5 s with 84 (the median over a full run). On a 20-core CPU Laya takes about 1 s under `compass` and 5 to 6 s under `three-moves`. `SOCB_DEVICE` in `.env` picks `cpu` or `cuda`. Qwen3.5-4B needs 9 GB of GPU memory; on a 12 GB GPU play it alone, since too little free memory can make the driver reset and end every game under way in an error (`--resume` plays them again).
 
 ## Rules, in more detail
 
@@ -151,7 +151,9 @@ examples/           the exact request each condition sends
 leaderboard/        entries, core-track results, players endpoint example, the generated table
 analysis/           recomputes every table and figure of the paper from the results files
 paper/              the Typst source of the report
-scripts/            make_exam.py, which made exam/items.jsonl
+scripts/            make_exam.py, which made exam/items.jsonl; replay_check.py, which asks
+                    a player again at recorded positions and compares the answers
+docs/               this file, and index.html: the leaderboard web page (GitHub Pages)
 ```
 
 ## Extending

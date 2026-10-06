@@ -48,7 +48,7 @@ MODELS = {
     "laya": ("Laya", "#332288"),
     "gliclass": ("GLiClass", "#AA4499"),
     "gemma-4-26b": ("Gemma 4 26B", "#009E73"),
-    "qwen3.5-4b": ("Qwen3.5-4B", "#44AA99"),
+    "qwen3.5-4b": ("Qwen3.5-4B", "#999933"),
     "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#CC79A7"),
     "deepseek-v4.1-flash-think": ("DeepSeek V4.1 Flash (reasoning)", "#882255"),
 }
@@ -406,8 +406,8 @@ def hypotheses(games: dict) -> list[list]:
     best_rate = statistics.mean(jev[best][p].won for p in planning)
     add(
         "H2: Jev's wins fall with the level; no condition wins half of the planning puzzles",
-        f"success rate falls by {-max(slopes):.3f} to {-min(slopes):.3f} per level; planning "
-        f"puzzles are the {len(planning)} that Greedy (walls) loses, and the best condition on "
+        f"success falls by {-max(slopes):.3f} to {-min(slopes):.3f} per route step (10 inputs); "
+        f"planning puzzles are the {len(planning)} that Greedy (walls) loses; the best input on "
         f"them wins {best_rate:.2f} ({condition_name(best)})",
         max(slopes) < 0,
         best_rate < 0.5,

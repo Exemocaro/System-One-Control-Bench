@@ -12,4 +12,4 @@ text("Gemma 4 26B"), text("35% [26, 44]"), text("61% [51, 70]"), text("0.452 / 0
 text("Qwen3.5-4B"), text("14% [8, 21]"), text("45% [35, 55]"), text("0.335 / 0.124"), text("0.661 / 0.387"),
 text("DeepSeek V4.1 Flash"), text("39% [30, 49]"), text("60% [50, 69]"), text("0.545 / 0.347"), text("0.715 / 0.542"),
 text("DeepSeek V4.1 Flash (reasoning)"), text("67% [57, 76]"), text("80% [72, 87]"), text("0.787 / 0.618"), text("0.864 / 0.741"),
-), caption: [Compass results over 100 games per player and input. Success rate with its 95% interval in brackets; progress and SPL run from 0 to 1. Baselines ignore the input, so they have map only.], placement: none) <tab:main>
+), caption: [Compass results over 100 games per player and input. Success rate with its 95% interval in brackets; progress and SPL run from 0 to 1. Baselines ignore the input, so they have map only.], placement: auto) <tab:main>

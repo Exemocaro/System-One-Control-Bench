@@ -26,7 +26,7 @@ A *move* is one decision by the model. Under the basic `compass` rules, a move i
   [`up-to-two-moves`], [one or two steps], [20],
   [`three-moves`], [exactly three steps], [64],
   [`up-to-three-moves`], [one, two or three steps], [84]),
-  placement: none, caption: [The five move rules. Every sequence of steps is offered, including ones that walk into walls.]) <tab:rules>
+  placement: auto, caption: [The five move rules. Every sequence of steps is offered, including ones that walk into walls.]) <tab:rules>
 // src: src/system_one_control/world.py
 
 Longer moves change several things at once: the number of options, the length of each option's text, and how many steps happen between two looks at the board. Several sequences can also end in the same place. We compare the rules as a whole and do not separate these effects.
@@ -65,7 +65,7 @@ There are ten input conditions (@tab:conditions): map only, the map plus one com
 
 == The exam
 
-In a game, a model's own choices decide which positions it sees next, so after the first move two models no longer answer the same questions. The exam removes this difference. It has 495 fixed positions, five from each puzzle (four at level 1). Every model answers each position once with map only and once with full context, under compass rules, and we check whether the answer is optimal. The exam score is the share of optimal answers, with each puzzle counting equally. Each position is reached by playing a fixed list of moves from the start through the normal game, so a full-context request also lists those moves in its history.
+In a game, a model's own choices decide which positions it sees next, so after the first move two models no longer answer the same questions. The exam removes this difference. It has 495 fixed positions, five from each puzzle (four at level 1), that every player answers. Every model answers each position once with map only and once with full context (the baselines, which ignore the input, answer once), under compass rules, and we check whether the answer is optimal. The exam score is the share of optimal answers, with each puzzle counting equally. Each position is reached by playing a fixed list of moves from the start through the normal game, so a full-context request also lists those moves in its history.
 
-There are five kinds of position: the *start*; *on-route*, partway along a shortest route; *off-route*, one wrong move away from a shortest route; *after-blocked*, just after a move into a wall; and *late*, in the second half of the route and after the key where there is one. A mistake on the exam costs nothing later, so the exam measures single decisions, not whole games.
+There are five kinds of position: the *start*; *on-route*, partway along a shortest route; *off-route*, one wrong move away from a shortest route; *after-blocked*, just after a move into a wall; and *late*, in the second half of the route and after the key where there is one. Each puzzle gets one position of each kind where its layout allows; the remaining places are filled with extra off-route or after-blocked positions (@app:reproducibility gives the counts). A mistake on the exam costs nothing later, so the exam measures single decisions, not whole games.
 // src: scripts/make_exam.py; src/system_one_control/exam_items.py; src/system_one_control/exam.py

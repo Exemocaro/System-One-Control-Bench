@@ -145,17 +145,18 @@ def shown(value: float | None, kind: str) -> str:
     return f"{value:g}"
 
 
-LEGEND = """- **everything / map**: the core track conditions (compass rules, 100 puzzles each);
-  `everything` is the full context.
+LEGEND = """- **everything / map**: the two conditions of the core track, compass rules (one step
+  per move), 100 puzzles each. `everything` is the full context; `map` is the map only.
 - **won**: share of the 100 puzzles where the goal was reached before the move limit.
 - **progress**: how close a game got to the goal at its closest point (1 for a win).
 - **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
-- **[lo-hi]**: 95% bootstrap interval over puzzles (1,000 draws; the report uses 10,000, so
-  the ends can differ by 0.01).
+- **[lo-hi]**: 95% interval: how much the score depends on which puzzles are in the set
+  (puzzles redrawn at random 1,000 times; the report uses 10,000, so the ends can differ by 0.01).
 - **cost**: USD for one core run (200 games), as reported by the player; n/a means not reported.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
+The website version of this table: https://exemocaro.github.io/JevStuff/.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 """
 
@@ -204,66 +205,105 @@ def page_url(url: str) -> str | None:
 
 
 def build_page(entries: Sequence[dict[str, Any]]) -> str:
-    """The leaderboard as one static page: the table plus a small sorter, light and dark."""
+    """The leaderboard as one static page: an introduction, the table and a small sorter."""
     rows = []
     for entry in ranked(entries):
         name = html.escape(entry["name"])
         link = page_url(entry["url"])
         player = f'<a href="{html.escape(link)}">{name}</a>' if link else name
-        ev, mp = entry["conditions"]["everything"], entry["conditions"]["map"]
+        cells = [f"<td>{player}</td>", f"<td>{html.escape(entry['kind'])}</td>"]
+        for condition in ("everything", "map"):
+            for metric in ("won", "progress"):
+                mean, lo, hi = entry["conditions"][condition][metric]
+                text = f"{mean * 100:.0f}%" if metric == "won" else f"{mean:.2f}"
+                cells.append(
+                    f'<td data-v="{mean}" title="95% interval: {lo:.2f} to {hi:.2f}">{text}</td>'
+                )
         cost = entry["cost"]
-        rows.append(
-            f"<tr><td>{player}</td><td>{html.escape(entry['org'])}</td>"
-            f"<td>{html.escape(entry['kind'])}</td>"
-            f'<td data-v="{ev["progress"][0]}">{ev["progress"][0]:.2f}</td>'
-            f'<td data-v="{mp["progress"][0]}">{mp["progress"][0]:.2f}</td>'
-            f'<td data-v="{ev["won"][0]}">{ev["won"][0]:.2f}</td>'
-            f'<td data-v="{cost if cost is not None else ""}">'
-            f"{shown(cost, entry['kind'])}</td>"
-            f"<td>{html.escape(entry['notes'])}</td></tr>"
+        cells.append(
+            f'<td data-v="{cost if cost is not None else ""}">{shown(cost, entry["kind"])}</td>'
         )
+        cells.append(f"<td>{html.escape(entry['notes'])}</td>")
+        rows.append("<tr>" + "".join(cells) + "</tr>")
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>System-One Control Bench leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System-One Control Bench</title>
 <style>
-:root {{ color-scheme: light dark; }}
-table {{ border-collapse: collapse; }}
-th, td {{ border: 1px solid gray; padding: 4px 8px; text-align: right; }}
-th:first-child, td:first-child, td:nth-child(2), td:nth-child(3), td:last-child
+:root {{ --bg: #fbfbfa; --fg: #1d1d1b; --muted: #5f5f5a; --line: #dddcd6; --head: #f0efea;
+  --link: #1f5fbf; color-scheme: light; }}
+@media (prefers-color-scheme: dark) {{
+  :root {{ --bg: #171716; --fg: #ececea; --muted: #a3a39d; --line: #34342f; --head: #22221f;
+    --link: #8ab4f8; color-scheme: dark; }}
+}}
+body {{ background: var(--bg); color: var(--fg); margin: 0;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }}
+main {{ max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }}
+h1 {{ font-size: 1.8rem; margin: 0 0 8px; }}
+p, li {{ max-width: 70ch; }}
+a {{ color: var(--link); }}
+.muted {{ color: var(--muted); }}
+.links a {{ margin-right: 16px; }}
+.scroll {{ overflow-x: auto; margin: 24px 0; }}
+table {{ border-collapse: collapse; font-size: 0.92rem; }}
+th, td {{ border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
+  vertical-align: top; }}
+th {{ background: var(--head); white-space: nowrap; }}
+th[data-col] {{ cursor: pointer; }}
+th[rowspan]:nth-child(-n+2), td:nth-child(-n+2), th[rowspan]:last-child, td:last-child
   {{ text-align: left; }}
-th {{ cursor: pointer; }}
+th[colspan] {{ text-align: center; }}
+td:first-child {{ white-space: nowrap; font-weight: 600; }}
+td:last-child {{ color: var(--muted); min-width: 260px; }}
+td[title] {{ font-variant-numeric: tabular-nums; }}
 </style>
 </head>
 <body>
-<h1>System-One Control Bench leaderboard</h1>
+<main>
+<h1>System-One Control Bench</h1>
+<p>A model guides a piece across a small grid puzzle to a goal, one move at a time, choosing
+each move from a list of options. A solver knows every best move, so every choice can be
+scored exactly. The 100 puzzles range from 1 to 20 steps and many need a key for a locked door.</p>
+<p class="links"><a href="{REPO}/blob/main/paper/main.pdf">Report (PDF)</a>
+<a href="{REPO}">Code and data</a>
+<a href="{REPO}/blob/main/SUBMITTING.md">Submit a model</a>
+<a href="{REPO}/blob/main/leaderboard/README.md">Full table</a></p>
+<div class="scroll">
 <table id="board"><thead><tr>
-<th>player</th><th>org</th><th>kind</th><th>everything progress</th>
-<th>map progress</th><th>everything won</th><th>cost (USD)</th><th>notes</th>
-</tr></thead><tbody>
+<th rowspan="2" data-col="0">Player</th><th rowspan="2" data-col="1">Kind</th>
+<th colspan="2">Full context</th><th colspan="2">Map only</th>
+<th rowspan="2" data-col="6">Cost (USD)</th><th rowspan="2">Notes</th></tr>
+<tr><th data-col="2">Won</th><th data-col="3">Progress</th>
+<th data-col="4">Won</th><th data-col="5">Progress</th></tr>
+</thead><tbody>
 {"".join(rows)}
 </tbody></table>
+</div>
 <ul>
-<li><b>everything / map</b>: the two conditions of the core track (compass rules, 100 puzzles each);
-<b>everything</b> is the full context.</li>
-<li><b>won</b>: share of puzzles where the goal was reached before the move limit.</li>
-<li><b>progress</b>: how close a game got to the goal at its closest point (1 for a win).</li>
-<li><b>cost</b>: USD for one core run (200 games), as reported by the player;
-n/a means not reported.</li>
-<li><b>kind</b>: baseline, chat model or decision model. Click a header to sort.</li>
-<li>Intervals, SPL and latency (median seconds per answer) are in the
-<a href="{REPO}/blob/main/leaderboard/README.md">full table</a>.</li>
+<li><b>Map only</b>: the player sees the rules, the map and where everything is.
+<b>Full context</b> adds what is next to the piece, the moves so far, what each option would
+do and the next target.</li>
+<li><b>Won</b>: the share of the 100 puzzles where the piece reached the goal within the move
+limit (twice the fewest moves needed). Compass rules: one step per move.</li>
+<li><b>Progress</b>: how close the piece got to the goal at its closest point, from 0 (never
+closer than at the start) to 1 (reached it).</li>
+<li><b>Cost</b>: US dollars for the 200 games, as reported by the player; n/a means not
+reported.</li>
+<li>Hover a score for its 95% interval, the range it could take with a different set of
+puzzles. Click a header to sort.</li>
 </ul>
-<p>How to submit: <a href="{REPO}/blob/main/SUBMITTING.md">SUBMITTING.md</a>.</p>
+</main>
 <script>
-document.querySelectorAll("th").forEach((h, i) => h.addEventListener("click", () => {{
+document.querySelectorAll("th[data-col]").forEach(h => h.addEventListener("click", () => {{
+  const i = Number(h.dataset.col);
   const rows = [...document.querySelectorAll("#board tbody tr")];
   rows.sort((a, b) => {{
     const x = a.children[i].dataset.v ?? a.children[i].textContent;
     const y = b.children[i].dataset.v ?? b.children[i].textContent;
     if (x === "" || y === "") return x === "" ? 1 : -1;
-    return isNaN(x) ? x.localeCompare(y) : x - y;
+    return isNaN(x) ? x.localeCompare(y) : y - x;
   }});
   document.querySelector("#board tbody").append(...rows);
 }}));
@@ -297,7 +337,7 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     readme = leaderboard / "README.md"
     readme.parent.mkdir(parents=True, exist_ok=True)
     readme.write_text(
-        "# Leaderboard\n\nCore track, best everything progress first.\n\n"
+        "# Leaderboard\n\nCore track, sorted by full-context progress, best first.\n\n"
         + LEGEND
         + "\n"
         + build_table(entries),

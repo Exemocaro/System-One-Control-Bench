@@ -2,4 +2,4 @@
 #figure(table(columns: (1.6fr, 1fr, 1fr, 1fr, 1fr), stroke: none, inset: 3pt, align: (x, y) => if x == 0 { left } else { center },
 table.header(table.cell(rowspan: 2, align: bottom)[Player], table.cell(colspan: 2)[Success rate], table.cell(colspan: 2)[Progress / SPL], [Map only], [Full context], [Map only], [Full context]),
 @ROWS@
-), caption: [Compass results over 100 games per player and input. Success rate with its 95% interval in brackets; progress and SPL run from 0 to 1. Baselines ignore the input, so they have map only.], placement: none) <tab:main>
+), caption: [Compass results over 100 games per player and input. Success rate with its 95% interval in brackets; progress and SPL run from 0 to 1. Baselines ignore the input, so they have map only.], placement: auto) <tab:main>

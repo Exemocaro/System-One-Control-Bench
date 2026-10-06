@@ -87,6 +87,11 @@ players = ["gliclass"]
 file = "2026-09-26_10-47_gliclass_all_three-moves.jsonl"
 
 [[results]]
+rules = "three-moves"
+players = ["qwen3.5-4b"]
+file = "2026-10-06_08-32_qwen3.5-4b_all_three-moves.jsonl"
+
+[[results]]
 rules = "up-to-two-moves"
 players = ["random", "solver"]
 file = "2026-09-26_12-43_random+solver_map_up-to-two-moves.jsonl"
@@ -140,6 +145,11 @@ file = "2026-09-26_10-51_laya_all_up-to-three-moves.jsonl"
 rules = "up-to-three-moves"
 players = ["gliclass"]
 file = "2026-10-02_23-49_gliclass_all_up-to-three-moves.jsonl"
+
+[[results]]
+rules = "up-to-three-moves"
+players = ["qwen3.5-4b"]
+file = "2026-10-06_10-25_qwen3.5-4b_all_up-to-three-moves.jsonl"
 
 [[results]]
 rules = "compass"
