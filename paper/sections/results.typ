@@ -2,7 +2,7 @@
 
 = Results <sec:results>
 
-Numbers in brackets are 95% intervals (@sec:statistics). For a single score they give the range it would likely take on another set of similar puzzles; for a difference between two models or conditions, an interval that includes 0 means the data do not show which is better.
+Numbers in brackets are 95% bootstrap intervals (@sec:statistics), which show how sensitive a result is to the puzzles in the set. For a difference between two models or conditions, an interval that includes 0 means the data do not establish which is better.
 
 == Games won
 
@@ -27,7 +27,7 @@ Removing a single component from full context rarely makes a clear difference. F
 // src: analysis/out/components.md
 
 #figure(image("../../analysis/out/fig_components.pdf", width: 100%), placement: auto,
-  caption: [Change in success rate when a component is included (compass rules). Circles: map + component compared with map only. Squares: full context compared with full context minus the component. Right of the vertical line, the component helps. Each line is a 95% interval: where it crosses the vertical line, the data do not show whether the component helps or hurts. Filled markers are significant (McNemar's test, Holm-corrected; @sec:statistics).]) <fig:ablation>
+  caption: [Change in success rate when a component is included (compass rules). Circles: map + component compared with map only. Squares: full context compared with full context minus the component. Right of the vertical line, the component helps. Each line is a 95% interval: where it crosses the vertical line, the data do not establish whether the component helps or hurts. Filled markers are significant (McNemar's test, Holm-corrected; @sec:statistics).]) <fig:ablation>
 // src: analysis/out/components.md
 
 == Exam versus games

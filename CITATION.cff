@@ -3,8 +3,8 @@ message: "If you use this benchmark, please cite it as below."
 type: software
 title: "System-One Control Bench"
 version: 1.0.0
-url: "https://github.com/Exemocaro/JevStuff"
-repository-code: "https://github.com/Exemocaro/JevStuff"
+url: "https://github.com/Exemocaro/System-One-Control-Bench"
+repository-code: "https://github.com/Exemocaro/System-One-Control-Bench"
 authors:
   - family-names: "Pereira"
     given-names: "Mateus"

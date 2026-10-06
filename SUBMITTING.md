@@ -5,7 +5,7 @@ The core track is compass rules, conditions `map` and `everything` (the full con
 retries). Any player can be
 submitted: a chat model, a decision endpoint, or a Python `Player` from the README, since
 `socb submit` works from the results file, not from how the player runs.
-The repository is <https://github.com/Exemocaro/JevStuff>; submissions are pull requests to it.
+The repository is <https://github.com/Exemocaro/System-One-Control-Bench>; submissions are pull requests to it.
 
 ## Run it
 

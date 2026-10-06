@@ -13,7 +13,7 @@ Core track, sorted by full-context progress, best first.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
-The website version of this table: https://exemocaro.github.io/JevStuff/.
+The website version of this table: https://exemocaro.github.io/System-One-Control-Bench/.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 
 |player|org|kind|everything won|everything progress|everything SPL|map won|map progress|map SPL|cost|latency|notes|

@@ -19,7 +19,7 @@ LEADERBOARD_DIR = Path(__file__).resolve().parents[2] / "leaderboard"
 CORE_CONDITIONS = ("map", "everything")
 
 KINDS = ("baseline", "chat", "decision")
-REPO = "https://github.com/Exemocaro/JevStuff"
+REPO = "https://github.com/Exemocaro/System-One-Control-Bench"
 BASELINES = ("random", "greedy", "greedy-walls", "solver")
 
 
@@ -156,7 +156,7 @@ LEGEND = """- **everything / map**: the two conditions of the core track, compas
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
-The website version of this table: https://exemocaro.github.io/JevStuff/.
+The website version of this table: https://exemocaro.github.io/System-One-Control-Bench/.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 """
 

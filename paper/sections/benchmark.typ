@@ -4,10 +4,10 @@
 
 == Puzzles
 
-Each puzzle is a small grid map (@fig:example). A piece, `A`, must reach the goal, `G`, and walls, `#`, are in the way. Some puzzles also have a key, `K`, and a locked door, `D`: the piece picks up the key by stepping onto it, and the door opens only when the piece walks into it carrying the key. A *step* moves the piece one cell north, south, east or west. A step into a wall, or into the door without the key, is *blocked*, and the piece stays where it is.
+Each puzzle is a small grid map (@fig:example). An agent, `A`, must reach the goal, `G`, and walls, `#`, are in the way. Some puzzles also have a key, `K`, and a locked door, `D`: the agent picks up the key by stepping onto it, and the door opens only when the agent walks into it carrying the key. A *step* moves the agent one cell north, south, east or west. A step into a wall, or into the door without the key, is *blocked*, and the agent stays where it is.
 // src: README.md; src/system_one_control/world.py
 
-An exact solver (a breadth-first search over the piece's position, the key and the door) knows how many steps each position is from the goal. We call a move *optimal* if it starts a shortest route to the goal. When several moves are equally good, all of them count as optimal.
+An exact solver (a breadth-first search over the agent's position, the key and the door) knows how many steps each position is from the goal. We call a move *optimal* if it starts a shortest route to the goal. When several moves are equally good, all of them count as optimal.
 // src: src/system_one_control/world.py
 
 The 100 puzzles are grouped into levels 1, 2, 3, 4, 5, 6, 8, 10, 12, 15 and 20, where the level is the length of the shortest route in steps. Levels 1 and 2 have five puzzles each, and the others ten. A seeded generator made rooms and mazes; one level-10 maze is hand-made. Keys appear from level 3, and every puzzle from level 10 up has one. Higher levels also need detours away from the goal. Half of the puzzles at levels 12, 15 and 20 have extra rings of outer wall, which make the map text longer without changing the puzzle.
@@ -31,19 +31,19 @@ A *move* is one decision by the model. Under the basic `compass` rules, a move i
 
 Longer moves change several things at once: the number of options, the length of each option's text, and how many steps happen before the model sees the board again. Several sequences can also end in the same place. We compare the rules as a whole and do not separate these effects.
 
-A game is won when the piece reaches the goal. It is lost when the model has used twice as many moves as the solver needs under the same rules.
+A game is won when the agent reaches the goal. It is lost when the model has used twice as many moves as the solver needs under the same rules.
 // src: src/system_one_control/world.py; src/system_one_control/bench.py; README.md
 
 == What the model is told
 
-Every request contains the rules of the game, the map with numbered rows and columns, the piece's position, whether it carries the key, and where the key, door and goal are. We call this basic request *map only*. Four *components* can be added to it:
+Every request contains the rules of the game, the map with numbered rows and columns, the agent's position, whether it carries the key, and where the key, door and goal are. We call this basic request *map only*. Four *components* can be added to it:
 
-- *Surroundings:* what is next to the piece in each direction, and how far away each object is ("The key is 1 south of you").
+- *Surroundings:* what is next to the agent in each direction, and how far away each object is ("The key is 1 south of you").
 - *Move history:* every move so far and what it did.
 - *Move outcomes:* each option also says what it would do ("move south (down): you move to (7, 2) and pick up the key").
 - *Subgoal:* instead of "What is the best next move?", the question names the next target: the key, then the door, then the goal.
 
-Surroundings, move outcomes and the subgoal are worked out from the map, so they add no new information; they only make it easier to use. The move history is not needed to know where the piece is, but it can show that the piece is going in circles.
+Surroundings, move outcomes and the subgoal are worked out from the map, so they add no new information; they only make it easier to use. The move history is not needed to know where the agent is, but it can show that the agent is going in circles.
 
 There are ten *conditions* (@tab:conditions): map only, the map plus one component, all four components (*full context*), and full context minus one component. Most results compare map only with full context. @app:prompts shows two complete requests.
 // src: src/system_one_control/prompts.py; examples/everything.json

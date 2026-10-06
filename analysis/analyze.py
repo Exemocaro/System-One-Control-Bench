@@ -20,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import metrics
+from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import Patch
 
 from system_one_control.bench import load
@@ -561,11 +562,11 @@ def fig_components(games: dict) -> None:
         ax.set_yticks(range(len(labels)), [textwrap.fill(label, 16) for label in reversed(labels)])
         ax.tick_params(labelbottom=True)
     axes.flat[-1].axis("off")
-    marks = [("o", "0.3", "added to map only")]
-    marks += [("s", "0.3", "full context vs. full\ncontext minus it")]
-    marks += [("o", "0.3", "significant (filled)"), ("o", "white", "not significant\n(hollow)")]
-    handles = [plt.Line2D([], [], c="0.3", marker=m, ls="", mfc=f, label=t) for m, f, t in marks]
-    axes.flat[-1].legend(handles=handles, loc="center", frameon=False)
+    mark = lambda m, f="0.3": plt.Line2D([], [], c="0.3", marker=m, ls="", mfc=f)  # noqa: E731
+    shapes = [mark("o"), mark("s"), (mark("o"), mark("s")), (mark("o", "w"), mark("s", "w"))]
+    texts = ["added to map only", "full context vs. full\ncontext minus it", "significant"]
+    tuples = {tuple: HandlerTuple(ndivide=None)}
+    axes.flat[-1].legend(shapes, [*texts, "not significant"], handler_map=tuples, frameon=False)
     fig.subplots_adjust(hspace=0.6)
     fig.supxlabel("Change in success rate when the component is included (compass)", fontsize=10)
     save(fig, "fig_components")
