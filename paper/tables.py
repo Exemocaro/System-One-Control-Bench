@@ -97,6 +97,20 @@ def components():
     table("component_table", output)
 
 
+def rules_table():
+    records = read("action_spaces")
+    rows = {(r["Model"], r["Move rules (options)"], r["Condition"]): r for r in records}
+    rules = list(dict.fromkeys(r["Move rules (options)"] for r in records))
+    output = []
+    for model in dict.fromkeys(r["Model"] for r in records):
+        if not all((model, rule, "full context") in rows for rule in rules):
+            continue  # baselines, and models that played compass only
+        for condition in ("map only", "full context"):
+            won = [float(rows[(model, rule, condition)]["Success rate"]) for rule in rules]
+            output.append(cells([model, condition, *[f"{w * 100:.0f}%" for w in won]]))
+    table("rules_table", output)
+
+
 def request_text(path):
     """A frozen request as every model gets it: the state, the question and the options."""
     request = json.loads((ROOT / "examples" / path).read_text(encoding="utf-8"))
@@ -137,4 +151,5 @@ if __name__ == "__main__":
     exam_table()
     table("hypothesis_table", [cells(row.values()) for row in read("hypotheses")])
     components()
+    rules_table()
     example()

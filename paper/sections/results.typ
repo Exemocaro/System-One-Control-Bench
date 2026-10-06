@@ -9,7 +9,7 @@ Numbers in brackets are 95% bootstrap intervals (@sec:statistics), which show ho
 DeepSeek V4.1 Flash (reasoning) wins the most games: 80% [72, 87] with full context and 67% [57, 76] with the map only (@tab:main, @fig:main). Under the same condition, its intervals do not overlap those of any other model.
 // src: analysis/out/main.md
 
-With full context, Jev, Gemma 4 26B and DeepSeek V4.1 Flash win 57%, 61% and 60% of games. Compared puzzle by puzzle, Jev wins 4 percentage points fewer than Gemma 4 26B [−10, 2] and 3 fewer than DeepSeek V4.1 Flash [−11, 5]. Both intervals include zero, so neither comparison shows a difference in success rate between Jev and the chat model. With the map only, Jev wins 32%, between Random (4%) and Greedy (walls) (37%). Laya and GLiClass win 2% and 3% with the map only, no better than Random, and 12% and 13% with full context. With the map only, their progress (0.10) is even below Random's (0.25). Qwen3.5-4B wins 14% with the map only and 45% with full context.
+With full context, Jev, Gemma 4 26B and DeepSeek V4.1 Flash win 57%, 61% and 60% of games. Compared puzzle by puzzle, Jev wins 4 percentage points fewer than Gemma 4 26B [−10, 2] and 3 fewer than DeepSeek V4.1 Flash [−11, 5]. Both intervals include zero, so neither comparison establishes an advantage for either model. With the map only, Jev wins 32%, between Random (4%) and Greedy (walls) (37%). Laya and GLiClass win 2% and 3% with the map only, no better than Random, and 12% and 13% with full context. With the map only, their progress (0.10) is even below Random's (0.25). Qwen3.5-4B wins 14% with the map only and 45% with full context.
 // src: analysis/out/main.md; analysis/out/pairs.md
 
 #include "main_table.typ"
@@ -53,25 +53,20 @@ Some games get close to the goal and then drift away again. Progress counts the 
 Success falls as the level rises (@fig:levels). Greedy (walls), which heads straight for its next target, loses every puzzle from level 10 up, where the route needs longer detours. At levels 12, 15 and 20, which have ten puzzles each, Jev wins 20%, 10% and 0% of games with full context. DeepSeek V4.1 Flash (reasoning) wins 70%, 40% and 30% with full context, and 50%, 20% and 20% with the map only. Long routes stay hard even with reasoning.
 // src: analysis/out/levels.md
 
-#figure(image("../../analysis/out/fig_levels.pdf", width: 100%), placement: auto,
+#figure(image("../../analysis/out/fig_levels.pdf", width: 90%), placement: none,
   caption: [Success rate by level under compass rules. Levels are evenly spaced on the axis whatever their value.]) <fig:levels>
 // src: analysis/out/levels.md
 
 == Move rules
 
-Longer moves help some models and hurt others (@fig:rules). The success rates under `compass`, `two-moves`, `up-to-two-moves`, `three-moves` and `up-to-three-moves`, in that order, are:
-
-- *Jev:* with full context 57%, 63%, 57%, 63% and 49%; with the map only 32%, 40%, 39%, 47% and 26%. Fixed-length sequences help a little, and `up-to-three-moves`, the rules with the most options (84), is the worst under both conditions.
-- *Gemma 4 26B:* with full context 61%, 68%, 63%, 69% and 61%; with the map only 35%, 44%, 43%, 33% and 32%. With full context every sequence rule does at least as well as `compass`.
-- *Qwen3.5-4B:* with full context 45%, 70%, 61%, 71% and 58%, the largest gains of any model; with the map only 14%, 3%, 11%, 10% and 9%, all below `compass`. Its gains depend on the move outcomes: under the two three-step rules, full context without them wins only 16% and 18%.
-- *Laya:* with full context 12%, 7%, 9%, 13% and 5%; with the map only 2% to 7% under every rule.
-- *GLiClass:* with full context 13%, 6%, 3%, 6% and 4%; with the map only 1% to 4% under every rule. Its best full-context result is under `compass`.
-- *DeepSeek V4.1 Flash* (both setups) played compass rules only.
+Longer moves help some models and hurt others (@tab:rules-results, @fig:rules). Qwen3.5-4B changes most: with full context it gains under every sequence rule, from 45% under `compass` to as much as 71% under `three-moves`, but with the map only it does worse under every sequence rule than under `compass`. Its gains depend on the move outcomes: under the two three-step rules, full context without them wins only 16% and 18%. With full context, Jev and Gemma 4 26B stay within 8 points of their compass results under every rule, and for both, `up-to-three-moves`, the rules with the most options (84), is never better than `compass`. Laya and GLiClass stay below 15% under every rule, and with full context GLiClass does best under `compass`. Both DeepSeek V4.1 Flash setups played compass rules only.
 
 These differences between rules were not tested puzzle by puzzle, and for most of them the 95% intervals overlap. Because the number of options, the length of their texts and the steps before the model sees the board again all change together, we cannot say which of them causes these effects.
 // src: analysis/out/action_spaces.md; benchmarks/2026-10-06_08-32_qwen3.5-4b_all_three-moves.txt; benchmarks/2026-10-06_10-25_qwen3.5-4b_all_up-to-three-moves.txt
 
-#figure(image("../../analysis/out/fig_action_spaces.pdf", width: 100%), placement: auto,
+#include "rules_table.typ"
+
+#figure(image("../../analysis/out/fig_action_spaces.pdf", width: 90%), placement: none,
   caption: [Success rate under the five move rules (options per move in brackets). Both DeepSeek V4.1 Flash setups played compass only and are not shown.]) <fig:rules>
 // src: analysis/out/action_spaces.md
 

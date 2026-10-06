@@ -12,7 +12,15 @@ from system_one_control.bench import (
     validate_file,
 )
 from system_one_control.cli import app
-from system_one_control.leaderboard import build_page, player_cell, rebuild, safe, shown, submit
+from system_one_control.leaderboard import (
+    build_page,
+    dollars,
+    player_cell,
+    rebuild,
+    safe,
+    shown,
+    submit,
+)
 from system_one_control.players import PlayerEntry, players_from_toml
 from system_one_control.players.baselines import SolverPlayer
 from system_one_control.players.remote import DecisionPlayer, LLMPlayer
@@ -428,3 +436,11 @@ def test_unreported_cost_is_na_and_free_is_zero():
     assert shown(None, "baseline") == "0"
     assert shown(0.0, "decision") == "0"
     assert shown(0.7121, "chat") == "0.7121"
+
+
+def test_page_costs_round_up_to_the_cent():
+    assert dollars(0.7121, "chat") == "0.72"
+    assert dollars(0.0954, "chat") == "0.10"
+    assert dollars(0.07, "chat") == "0.07"
+    assert dollars(None, "chat") == "n/a"
+    assert dollars(None, "baseline") == "0"

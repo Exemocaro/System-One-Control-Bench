@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import random
 import re
 from collections import defaultdict
@@ -152,7 +153,8 @@ LEGEND = """- **everything / map**: the two conditions of the core track, compas
 - **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
 - **[lo-hi]**: 95% interval: how much the score depends on which puzzles are in the set
   (puzzles redrawn at random 1,000 times; the report uses 10,000, so the ends can differ by 0.01).
-- **cost**: USD for one core run (200 games), as reported by the player; n/a means not reported.
+- **cost**: USD for one core run (200 games), as reported by the player, rounded up to the
+  cent; n/a means not reported.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
@@ -193,7 +195,7 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
             for metric in ("won", "progress", "spl"):
                 mean, lo, hi = entry["conditions"][condition][metric]
                 row.append(f"{mean:.2f} [{lo:.2f}-{hi:.2f}]")
-        row += [shown(entry["cost"], entry["kind"]), shown(entry["latency"], entry["kind"])]
+        row += [dollars(entry["cost"], entry["kind"]), shown(entry["latency"], entry["kind"])]
         row.append(html.escape(safe(entry["notes"])))
         lines.append("|" + "|".join(row) + "|")
     return "\n".join(lines) + "\n"
@@ -202,6 +204,40 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
 def page_url(url: str) -> str | None:
     """The url when it points at a web page, else None."""
     return url if url.startswith(("http://", "https://")) else None
+
+
+def dollars(value: float | None, kind: str) -> str:
+    """A cost for the page: rounded up to the cent, or as `shown` when there is none."""
+    if value is None:
+        return shown(value, kind)
+    return f"{math.ceil(round(value * 100, 6)) / 100:.2f}"
+
+
+CONDITION_ROWS = "\n".join(
+    f"<tr><td>{name}</td><td><code>{code}</code></td><td>{added}</td></tr>"
+    for name, code, added in [
+        ("map only", "map", "nothing"),
+        ("map + surroundings", "map+surroundings", "surroundings"),
+        ("map + move history", "map+memory", "move history"),
+        ("map + move outcomes", "map+lookahead", "move outcomes"),
+        ("map + subgoal", "map+subgoal", "subgoal"),
+        ("full context", "everything", "all four components"),
+        ("full context minus surroundings", "everything-surroundings", "all but surroundings"),
+        ("full context minus move history", "everything-memory", "all but move history"),
+        ("full context minus move outcomes", "everything-lookahead", "all but move outcomes"),
+        ("full context minus subgoal", "everything-subgoal", "all but the subgoal"),
+    ]
+)
+RULE_ROWS = "\n".join(
+    f"<tr><td><code>{rules}</code></td><td>{move}</td><td>{options}</td></tr>"
+    for rules, move, options in [
+        ("compass", "one step north, south, east or west (the leaderboard's rules)", 4),
+        ("two-moves", "exactly two steps", 16),
+        ("up-to-two-moves", "one or two steps", 20),
+        ("three-moves", "exactly three steps", 64),
+        ("up-to-three-moves", "one, two or three steps", 84),
+    ]
+)
 
 
 def build_page(entries: Sequence[dict[str, Any]]) -> str:
@@ -221,7 +257,7 @@ def build_page(entries: Sequence[dict[str, Any]]) -> str:
                 )
         cost = entry["cost"]
         cells.append(
-            f'<td data-v="{cost if cost is not None else ""}">{shown(cost, entry["kind"])}</td>'
+            f'<td data-v="{cost if cost is not None else ""}">{dollars(cost, entry["kind"])}</td>'
         )
         cells.append(f"<td>{html.escape(entry['notes'])}</td>")
         rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -241,12 +277,15 @@ def build_page(entries: Sequence[dict[str, Any]]) -> str:
 body {{ background: var(--bg); color: var(--fg); margin: 0;
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }}
 main {{ max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }}
-h1 {{ font-size: 1.8rem; margin: 0 0 8px; }}
-p, li {{ max-width: 70ch; }}
+h1 {{ font-size: 1.8rem; margin: 0 0 12px; text-align: center; }}
+h2 {{ font-size: 1.2rem; margin: 32px 0 8px; }}
 a {{ color: var(--link); }}
-.muted {{ color: var(--muted); }}
-.links a {{ margin-right: 16px; }}
+.links {{ text-align: center; }}
+.links a {{ margin: 0 8px; }}
 .scroll {{ overflow-x: auto; margin: 24px 0; }}
+.info th, .info td {{ text-align: left; }}
+.info td:first-child {{ font-weight: normal; }}
+.info td:last-child {{ color: var(--fg); min-width: 0; }}
 table {{ border-collapse: collapse; font-size: 0.92rem; }}
 th, td {{ border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
   vertical-align: top; }}
@@ -263,9 +302,11 @@ td[title] {{ font-variant-numeric: tabular-nums; }}
 <body>
 <main>
 <h1>System-One Control Bench</h1>
-<p>A model guides a piece across a small grid puzzle to a goal, one move at a time, choosing
+<p>A model guides an agent across a small grid puzzle to a goal, one move at a time, choosing
 each move from a list of options. A solver knows every best move, so every choice can be
-scored exactly. The 100 puzzles range from 1 to 20 steps and many need a key for a locked door.</p>
+scored exactly. The 100 puzzles range from 1 to 20 steps, and many need a key for a locked
+door. The leaderboard uses compass rules (one step per move) and two conditions, map only and
+full context, so each player plays 200 games.</p>
 <p class="links"><a href="{REPO}/blob/main/paper/main.pdf">Report (PDF)</a>
 <a href="{REPO}">Code and data</a>
 <a href="{REPO}/blob/main/SUBMITTING.md">Submit a model</a>
@@ -282,18 +323,32 @@ scored exactly. The 100 puzzles range from 1 to 20 steps and many need a key for
 </tbody></table>
 </div>
 <ul>
-<li><b>Map only</b>: the player sees the rules, the map and where everything is.
-<b>Full context</b> adds what is next to the piece, the moves so far, what each option would
-do and the next target.</li>
-<li><b>Won</b>: the share of the 100 puzzles where the piece reached the goal within the move
-limit (twice the fewest moves needed). Compass rules: one step per move.</li>
-<li><b>Progress</b>: how close the piece got to the goal at its closest point, from 0 (never
+<li><b>Won</b>: the share of the 100 puzzles where the agent reached the goal within the move
+limit (twice the fewest moves needed).</li>
+<li><b>Progress</b>: how close the agent got to the goal at its closest point, from 0 (never
 closer than at the start) to 1 (reached it).</li>
-<li><b>Cost</b>: US dollars for the 200 games, as reported by the player; n/a means not
-reported.</li>
-<li>Hover a score for its 95% interval, the range it could take with a different set of
-puzzles. Click a header to sort.</li>
+<li><b>Cost</b>: US dollars for the 200 games, as reported by the player, rounded up to the
+cent; n/a means not reported.</li>
+<li>Hover a score for its 95% interval, which shows how much it depends on the puzzles in the
+set. Click a header to sort.</li>
 </ul>
+<h2>Conditions</h2>
+<p>A condition sets what the player is told. Every request has the rules, the numbered map,
+the agent's position, what it carries and where the key, door and goal are (map only). Four
+components can be added: <b>surroundings</b> (what is next to the agent and how far away each
+object is), <b>move history</b> (every move so far and what it did), <b>move outcomes</b> (each
+option says what it would do) and <b>subgoal</b> (the question names the next target).</p>
+<div class="scroll"><table class="info"><thead><tr><th>Condition</th><th>Name in the code</th>
+<th>What is added to the map</th></tr></thead><tbody>
+{CONDITION_ROWS}
+</tbody></table></div>
+<h2>Move rules</h2>
+<p>A move is one decision. Under the sequence rules a move is several steps chosen together,
+and every possible sequence is offered, including ones that walk into walls.</p>
+<div class="scroll"><table class="info"><thead><tr><th>Rules</th><th>One move is</th>
+<th>Options</th></tr></thead><tbody>
+{RULE_ROWS}
+</tbody></table></div>
 </main>
 <script>
 document.querySelectorAll("th[data-col]").forEach(h => h.addEventListener("click", () => {{
