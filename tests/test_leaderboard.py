@@ -13,8 +13,10 @@ from system_one_control.bench import (
 )
 from system_one_control.cli import app
 from system_one_control.leaderboard import (
+    LEADERBOARD_DIR,
     build_page,
     dollars,
+    example_frames,
     player_cell,
     rebuild,
     safe,
@@ -444,3 +446,11 @@ def test_page_costs_round_up_to_the_cent():
     assert dollars(0.07, "chat") == "0.07"
     assert dollars(None, "chat") == "n/a"
     assert dollars(None, "baseline") == "0"
+
+
+def test_the_page_replays_its_example_game_to_the_goal():
+    frames = example_frames(LEADERBOARD_DIR)
+    assert frames[0]["note"] == "Start" and len(frames) == 15  # the start and 14 moves
+    assert "G" not in frames[-1]["map"]  # the agent stands on the goal
+    assert "frames = [" in build_page([hostile_entry()], frames)
+    assert "frames = [" not in build_page([hostile_entry()])

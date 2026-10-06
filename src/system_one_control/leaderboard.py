@@ -240,7 +240,62 @@ RULE_ROWS = "\n".join(
 )
 
 
-def build_page(entries: Sequence[dict[str, Any]]) -> str:
+EXAMPLE = ("jev.jsonl", "gen-10-03", "everything")  # the recorded game the page replays
+
+
+def example_frames(leaderboard: Path) -> list[dict[str, str]]:
+    """The board after each move of one recorded leaderboard game, with a note on the move."""
+    results, name, condition = EXAMPLE
+    path = leaderboard / "results" / results
+    if not path.exists():
+        return []
+    games = map(json.loads, path.read_text(encoding="utf-8").splitlines())
+    game = next(g for g in games if g["puzzle"] == name and g["condition"] == condition)
+    puzzle = load_puzzles()[name]
+    board, frames = puzzle.board, [{"map": puzzle.board.draw(), "note": "Start"}]
+    for number, played in enumerate(game["moves"], start=1):
+        move = puzzle.rules.find_move(board, played["move"])
+        assert move is not None, f"{name}: move {number} is not an allowed move"
+        board = puzzle.rules.apply(board, move)
+        note = f"Move {number} of {len(game['moves'])}: {played['move']}"
+        note += " (optimal)" if played["optimal"] else " (not optimal)"
+        note += ", carrying the key" if board.holding else ""
+        frames.append({"map": board.draw(), "note": note})
+    return frames
+
+
+def replay_section(frames: Sequence[dict[str, str]]) -> str:
+    """A recorded game the reader steps through with two buttons or the arrow keys."""
+    if not frames:
+        return ""
+    data = json.dumps(list(frames)).replace("</", "<\\/")
+    return f"""<h2>One game, move by move</h2>
+<p>Jev with full context on a level-10 puzzle, as recorded for this leaderboard. <code>A</code>
+is the agent, <code>K</code> the key, <code>D</code> the locked door, <code>G</code> the goal
+and <code>#</code> a wall. Use the buttons or the arrow keys.</p>
+<div class="replay"><pre id="map"></pre><p id="note"></p>
+<button id="back" aria-label="Previous move">&larr;</button>
+<button id="forward" aria-label="Next move">&rarr;</button></div>
+<script>
+const frames = {data};
+let at = 0;
+function show(step) {{
+  at = Math.max(0, Math.min(frames.length - 1, at + step));
+  document.getElementById("map").textContent = frames[at].map;
+  document.getElementById("note").textContent = frames[at].note;
+}}
+document.getElementById("back").onclick = () => show(-1);
+document.getElementById("forward").onclick = () => show(1);
+document.addEventListener("keydown", e => {{
+  if (e.key === "ArrowLeft") show(-1);
+  if (e.key === "ArrowRight") show(1);
+}});
+show(0);
+</script>
+"""
+
+
+def build_page(entries: Sequence[dict[str, Any]], frames: Sequence[dict[str, str]] = ()) -> str:
     """The leaderboard as one static page: an introduction, the table and a small sorter."""
     rows = []
     for entry in ranked(entries):
@@ -286,6 +341,10 @@ a {{ color: var(--link); }}
 .info th, .info td {{ text-align: left; }}
 .info td:first-child {{ font-weight: normal; }}
 .info td:last-child {{ color: var(--fg); min-width: 0; }}
+.replay {{ text-align: center; }}
+.replay pre {{ display: inline-block; text-align: left; font-size: 1.3rem; line-height: 1.2;
+  padding: 12px 18px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 0; }}
+.replay button {{ font-size: 1.2rem; padding: 4px 18px; margin: 0 6px; cursor: pointer; }}
 table {{ border-collapse: collapse; font-size: 0.92rem; }}
 th, td {{ border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
   vertical-align: top; }}
@@ -332,7 +391,7 @@ cent; n/a means not reported.</li>
 <li>Hover a score for its 95% interval, which shows how much it depends on the puzzles in the
 set. Click a header to sort.</li>
 </ul>
-<h2>Conditions</h2>
+{replay_section(frames)}<h2>Conditions</h2>
 <p>A condition sets what the player is told. Every request has the rules, the numbered map,
 the agent's position, what it carries and where the key, door and goal are (map only). Four
 components can be added: <b>surroundings</b> (what is next to the agent and how far away each
@@ -401,5 +460,5 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     )
     page = (docs or leaderboard.parents[0] / "docs") / "index.html"
     page.parent.mkdir(parents=True, exist_ok=True)
-    page.write_text(build_page(entries), encoding="utf-8", newline="")
+    page.write_text(build_page(entries, example_frames(leaderboard)), encoding="utf-8", newline="")
     return readme, page
