@@ -23,9 +23,11 @@ a { color: var(--link); }
 .info th, .info td { text-align: left; }
 .info td:first-child { font-weight: normal; }
 .info td:last-child { color: var(--fg); min-width: 0; }
-.replay { text-align: center; }
+.replays { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px 48px; }
+.replay { display: flex; flex-direction: column; align-items: center; min-width: 280px; }
+.replay h3 { font-size: 1rem; margin: 0; }
 .replay pre { display: inline-block; text-align: left; font-size: 1.3rem; line-height: 1.2;
-  padding: 12px 18px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 0; }
+  padding: 12px 18px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 auto; }
 .replay button { font-size: 1.2rem; padding: 4px 18px; margin: 0 6px; cursor: pointer; }
 table { border-collapse: collapse; font-size: 0.92rem; }
 th, td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
@@ -73,28 +75,26 @@ cent; n/a means not reported.</li>
 <li>Hover a score for its 95% interval, which shows how much it depends on the puzzles in the
 set. Click a header to sort.</li>
 </ul>
-<h2>One game, move by move</h2>
-<p>Jev with full context on a level-10 puzzle, as recorded for this leaderboard. <code>A</code>
-is the agent, <code>K</code> the key, <code>D</code> the locked door, <code>G</code> the goal
-and <code>#</code> a wall. Use the buttons or the arrow keys.</p>
-<div class="replay"><pre id="map"></pre><p id="note"></p>
-<button id="back" aria-label="Previous move">&larr;</button>
-<button id="forward" aria-label="Next move">&rarr;</button></div>
+<h2>Two games, move by move</h2>
+<p>Two full-context games as recorded for this leaderboard. <code>A</code> is the agent,
+<code>K</code> the key, <code>D</code> the locked door, <code>G</code> the goal and <code>#</code>
+a wall. Step through each game with its arrows.</p>
+<div class="replays"><div class="replay" data-game="0"><h3>Jev, level 10</h3><pre></pre><p></p><div><button aria-label="Previous move">&larr;</button><button aria-label="Next move">&rarr;</button></div></div><div class="replay" data-game="1"><h3>DeepSeek V4.1 Flash (reasoning), level 20</h3><pre></pre><p></p><div><button aria-label="Previous move">&larr;</button><button aria-label="Next move">&rarr;</button></div></div></div>
 <script>
-const frames = [{"map": "#########\n#..A....#\n#....#..#\n#..K#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Start"}, {"map": "#########\n#.......#\n#..A.#..#\n#..K#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 1 of 14: south (optimal)"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 2 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#GD.#\n#..A.#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 3 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 4 of 14: north (not optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#.A.#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 5 of 14: west (not optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 6 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.......#\n#..A.#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 7 of 14: north (optimal), carrying the key"}, {"map": "#########\n#.......#\n#...A#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 8 of 14: east (optimal), carrying the key"}, {"map": "#########\n#...A...#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 9 of 14: north (optimal), carrying the key"}, {"map": "#########\n#....A..#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 10 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.....A.#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 11 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#A.#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 12 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#GA.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 13 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#A..#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 14 of 14: west (optimal), carrying the key"}];
-let at = 0;
-function show(step) {
-  at = Math.max(0, Math.min(frames.length - 1, at + step));
-  document.getElementById("map").textContent = frames[at].map;
-  document.getElementById("note").textContent = frames[at].note;
-}
-document.getElementById("back").onclick = () => show(-1);
-document.getElementById("forward").onclick = () => show(1);
-document.addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft") show(-1);
-  if (e.key === "ArrowRight") show(1);
+const games = [{"title": "Jev, level 10", "frames": [{"map": "#########\n#..A....#\n#....#..#\n#..K#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Start"}, {"map": "#########\n#.......#\n#..A.#..#\n#..K#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 1 of 14: south (optimal)"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 2 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#GD.#\n#..A.#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 3 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 4 of 14: north (not optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#.A.#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 5 of 14: west (not optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#..A#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 6 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.......#\n#..A.#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 7 of 14: north (optimal), carrying the key"}, {"map": "#########\n#.......#\n#...A#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 8 of 14: east (optimal), carrying the key"}, {"map": "#########\n#...A...#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 9 of 14: north (optimal), carrying the key"}, {"map": "#########\n#....A..#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 10 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.....A.#\n#....#..#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 11 of 14: east (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#A.#\n#...#GD.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 12 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#GA.#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 13 of 14: south (optimal), carrying the key"}, {"map": "#########\n#.......#\n#....#..#\n#...#A..#\n#....#..#\n#.......#\n#.......#\n#.......#\n#########", "note": "Move 14 of 14: west (optimal), carrying the key"}]}, {"title": "DeepSeek V4.1 Flash (reasoning), level 20", "frames": [{"map": "#########\n##GDA...#\n#######.#\n#..K....#\n#########", "note": "Start"}, {"map": "#########\n##GD.A..#\n#######.#\n#..K....#\n#########", "note": "Move 1 of 22: east (optimal)"}, {"map": "#########\n##GDA...#\n#######.#\n#..K....#\n#########", "note": "Move 2 of 22: west (not optimal)"}, {"map": "#########\n##GD.A..#\n#######.#\n#..K....#\n#########", "note": "Move 3 of 22: east (optimal)"}, {"map": "#########\n##GD..A.#\n#######.#\n#..K....#\n#########", "note": "Move 4 of 22: east (optimal)"}, {"map": "#########\n##GD...A#\n#######.#\n#..K....#\n#########", "note": "Move 5 of 22: east (optimal)"}, {"map": "#########\n##GD....#\n#######A#\n#..K....#\n#########", "note": "Move 6 of 22: south (optimal)"}, {"map": "#########\n##GD....#\n#######.#\n#..K...A#\n#########", "note": "Move 7 of 22: south (optimal)"}, {"map": "#########\n##GD....#\n#######.#\n#..K..A.#\n#########", "note": "Move 8 of 22: west (optimal)"}, {"map": "#########\n##GD....#\n#######.#\n#..K.A..#\n#########", "note": "Move 9 of 22: west (optimal)"}, {"map": "#########\n##GD....#\n#######.#\n#..KA...#\n#########", "note": "Move 10 of 22: west (optimal)"}, {"map": "#########\n##GD....#\n#######.#\n#..A....#\n#########", "note": "Move 11 of 22: west (optimal), carrying the key"}, {"map": "#########\n##GD....#\n#######.#\n#...A...#\n#########", "note": "Move 12 of 22: east (optimal), carrying the key"}, {"map": "#########\n##GD....#\n#######.#\n#....A..#\n#########", "note": "Move 13 of 22: east (optimal), carrying the key"}, {"map": "#########\n##GD....#\n#######.#\n#.....A.#\n#########", "note": "Move 14 of 22: east (optimal), carrying the key"}, {"map": "#########\n##GD....#\n#######.#\n#......A#\n#########", "note": "Move 15 of 22: east (optimal), carrying the key"}, {"map": "#########\n##GD....#\n#######A#\n#.......#\n#########", "note": "Move 16 of 22: north (optimal), carrying the key"}, {"map": "#########\n##GD...A#\n#######.#\n#.......#\n#########", "note": "Move 17 of 22: north (optimal), carrying the key"}, {"map": "#########\n##GD..A.#\n#######.#\n#.......#\n#########", "note": "Move 18 of 22: west (optimal), carrying the key"}, {"map": "#########\n##GD.A..#\n#######.#\n#.......#\n#########", "note": "Move 19 of 22: west (optimal), carrying the key"}, {"map": "#########\n##GDA...#\n#######.#\n#.......#\n#########", "note": "Move 20 of 22: west (optimal), carrying the key"}, {"map": "#########\n##GA....#\n#######.#\n#.......#\n#########", "note": "Move 21 of 22: west (optimal), carrying the key"}, {"map": "#########\n##A.....#\n#######.#\n#.......#\n#########", "note": "Move 22 of 22: west (optimal), carrying the key"}]}];
+document.querySelectorAll(".replay").forEach(box => {
+  const frames = games[box.dataset.game].frames;
+  let at = 0;
+  const show = step => {
+    at = Math.max(0, Math.min(frames.length - 1, at + step));
+    box.querySelector("pre").textContent = frames[at].map;
+    box.querySelector("p").textContent = frames[at].note;
+  };
+  const [back, forward] = box.querySelectorAll("button");
+  back.onclick = () => show(-1);
+  forward.onclick = () => show(1);
+  show(0);
 });
-show(0);
 </script>
 <h2>Conditions</h2>
 <p>A condition sets what the player is told. Every request has the rules, the numbered map,

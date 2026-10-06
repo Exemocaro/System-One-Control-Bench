@@ -240,62 +240,72 @@ RULE_ROWS = "\n".join(
 )
 
 
-EXAMPLE = ("jev.jsonl", "gen-10-03", "everything")  # the recorded game the page replays
+# The recorded full-context games the page replays: results file, player and puzzle.
+EXAMPLES = [
+    ("jev.jsonl", "Jev", "gen-10-03"),
+    ("deepseek-v4.1-flash-think.jsonl", "DeepSeek V4.1 Flash (reasoning)", "gen-20-01"),
+]
 
 
-def example_frames(leaderboard: Path) -> list[dict[str, str]]:
-    """The board after each move of one recorded leaderboard game, with a note on the move."""
-    results, name, condition = EXAMPLE
-    path = leaderboard / "results" / results
-    if not path.exists():
-        return []
-    games = map(json.loads, path.read_text(encoding="utf-8").splitlines())
-    game = next(g for g in games if g["puzzle"] == name and g["condition"] == condition)
-    puzzle = load_puzzles()[name]
-    board, frames = puzzle.board, [{"map": puzzle.board.draw(), "note": "Start"}]
-    for number, played in enumerate(game["moves"], start=1):
-        move = puzzle.rules.find_move(board, played["move"])
-        assert move is not None, f"{name}: move {number} is not an allowed move"
-        board = puzzle.rules.apply(board, move)
-        note = f"Move {number} of {len(game['moves'])}: {played['move']}"
-        note += " (optimal)" if played["optimal"] else " (not optimal)"
-        note += ", carrying the key" if board.holding else ""
-        frames.append({"map": board.draw(), "note": note})
-    return frames
+def example_frames(leaderboard: Path) -> list[dict[str, Any]]:
+    """Each example game: a title, and the board after each move with a note on the move."""
+    puzzles, examples = load_puzzles(), []
+    for results, player, name in EXAMPLES:
+        path = leaderboard / "results" / results
+        if not path.exists():
+            continue
+        games = map(json.loads, path.read_text(encoding="utf-8").splitlines())
+        game = next(g for g in games if g["puzzle"] == name and g["condition"] == "everything")
+        puzzle = puzzles[name]
+        board, frames = puzzle.board, [{"map": puzzle.board.draw(), "note": "Start"}]
+        for number, played in enumerate(game["moves"], start=1):
+            move = puzzle.rules.find_move(board, played["move"])
+            assert move is not None, f"{name}: move {number} is not an allowed move"
+            board = puzzle.rules.apply(board, move)
+            note = f"Move {number} of {len(game['moves'])}: {played['move']}"
+            note += " (optimal)" if played["optimal"] else " (not optimal)"
+            note += ", carrying the key" if board.holding else ""
+            frames.append({"map": board.draw(), "note": note})
+        examples.append({"title": f"{player}, level {puzzle.level}", "frames": frames})
+    return examples
 
 
-def replay_section(frames: Sequence[dict[str, str]]) -> str:
-    """A recorded game the reader steps through with two buttons or the arrow keys."""
-    if not frames:
+def replay_section(examples: Sequence[dict[str, Any]]) -> str:
+    """Recorded games side by side, each stepped through with its own two buttons."""
+    if not examples:
         return ""
-    data = json.dumps(list(frames)).replace("</", "<\\/")
-    return f"""<h2>One game, move by move</h2>
-<p>Jev with full context on a level-10 puzzle, as recorded for this leaderboard. <code>A</code>
-is the agent, <code>K</code> the key, <code>D</code> the locked door, <code>G</code> the goal
-and <code>#</code> a wall. Use the buttons or the arrow keys.</p>
-<div class="replay"><pre id="map"></pre><p id="note"></p>
-<button id="back" aria-label="Previous move">&larr;</button>
-<button id="forward" aria-label="Next move">&rarr;</button></div>
+    data = json.dumps(list(examples)).replace("</", "<\/")
+    boxes = "".join(
+        f'<div class="replay" data-game="{i}"><h3>{html.escape(game["title"])}</h3><pre></pre>'
+        '<p></p><div><button aria-label="Previous move">&larr;</button>'
+        '<button aria-label="Next move">&rarr;</button></div></div>'
+        for i, game in enumerate(examples)
+    )
+    return f"""<h2>Two games, move by move</h2>
+<p>Two full-context games as recorded for this leaderboard. <code>A</code> is the agent,
+<code>K</code> the key, <code>D</code> the locked door, <code>G</code> the goal and <code>#</code>
+a wall. Step through each game with its arrows.</p>
+<div class="replays">{boxes}</div>
 <script>
-const frames = {data};
-let at = 0;
-function show(step) {{
-  at = Math.max(0, Math.min(frames.length - 1, at + step));
-  document.getElementById("map").textContent = frames[at].map;
-  document.getElementById("note").textContent = frames[at].note;
-}}
-document.getElementById("back").onclick = () => show(-1);
-document.getElementById("forward").onclick = () => show(1);
-document.addEventListener("keydown", e => {{
-  if (e.key === "ArrowLeft") show(-1);
-  if (e.key === "ArrowRight") show(1);
+const games = {data};
+document.querySelectorAll(".replay").forEach(box => {{
+  const frames = games[box.dataset.game].frames;
+  let at = 0;
+  const show = step => {{
+    at = Math.max(0, Math.min(frames.length - 1, at + step));
+    box.querySelector("pre").textContent = frames[at].map;
+    box.querySelector("p").textContent = frames[at].note;
+  }};
+  const [back, forward] = box.querySelectorAll("button");
+  back.onclick = () => show(-1);
+  forward.onclick = () => show(1);
+  show(0);
 }});
-show(0);
 </script>
 """
 
 
-def build_page(entries: Sequence[dict[str, Any]], frames: Sequence[dict[str, str]] = ()) -> str:
+def build_page(entries: Sequence[dict[str, Any]], examples: Sequence[dict[str, Any]] = ()) -> str:
     """The leaderboard as one static page: an introduction, the table and a small sorter."""
     rows = []
     for entry in ranked(entries):
@@ -341,9 +351,11 @@ a {{ color: var(--link); }}
 .info th, .info td {{ text-align: left; }}
 .info td:first-child {{ font-weight: normal; }}
 .info td:last-child {{ color: var(--fg); min-width: 0; }}
-.replay {{ text-align: center; }}
+.replays {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 24px 48px; }}
+.replay {{ display: flex; flex-direction: column; align-items: center; min-width: 280px; }}
+.replay h3 {{ font-size: 1rem; margin: 0; }}
 .replay pre {{ display: inline-block; text-align: left; font-size: 1.3rem; line-height: 1.2;
-  padding: 12px 18px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 0; }}
+  padding: 12px 18px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 auto; }}
 .replay button {{ font-size: 1.2rem; padding: 4px 18px; margin: 0 6px; cursor: pointer; }}
 table {{ border-collapse: collapse; font-size: 0.92rem; }}
 th, td {{ border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: right;
@@ -391,7 +403,7 @@ cent; n/a means not reported.</li>
 <li>Hover a score for its 95% interval, which shows how much it depends on the puzzles in the
 set. Click a header to sort.</li>
 </ul>
-{replay_section(frames)}<h2>Conditions</h2>
+{replay_section(examples)}<h2>Conditions</h2>
 <p>A condition sets what the player is told. Every request has the rules, the numbered map,
 the agent's position, what it carries and where the key, door and goal are (map only). Four
 components can be added: <b>surroundings</b> (what is next to the agent and how far away each

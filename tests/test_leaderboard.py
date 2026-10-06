@@ -448,9 +448,11 @@ def test_page_costs_round_up_to_the_cent():
     assert dollars(None, "baseline") == "0"
 
 
-def test_the_page_replays_its_example_game_to_the_goal():
-    frames = example_frames(LEADERBOARD_DIR)
-    assert frames[0]["note"] == "Start" and len(frames) == 15  # the start and 14 moves
-    assert "G" not in frames[-1]["map"]  # the agent stands on the goal
-    assert "frames = [" in build_page([hostile_entry()], frames)
-    assert "frames = [" not in build_page([hostile_entry()])
+def test_the_page_replays_its_example_games_to_the_goal():
+    examples = example_frames(LEADERBOARD_DIR)
+    assert [len(game["frames"]) for game in examples] == [15, 23]  # the start and every move
+    for game in examples:
+        assert game["frames"][0]["note"] == "Start"
+        assert "G" not in game["frames"][-1]["map"]  # the agent stands on the goal
+    assert "const games = [" in build_page([hostile_entry()], examples)
+    assert "const games = [" not in build_page([hostile_entry()])
