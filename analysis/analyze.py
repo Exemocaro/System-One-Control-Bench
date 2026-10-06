@@ -39,18 +39,18 @@ RULES = {
 }
 BASELINES = {
     "solver": ("Solver", "black"),
-    "greedy-walls": ("Greedy (walls)", "#D55E00"),
-    "greedy": ("Greedy", "#E69F00"),
-    "random": ("Random", "#999999"),
+    "greedy-walls": ("Greedy (walls)", "#555555"),
+    "greedy": ("Greedy", "#8C8C8C"),
+    "random": ("Random", "#BDBDBD"),
 }
 MODELS = {
-    "jev": ("Jev", "#0072B2"),
-    "laya": ("Laya", "#332288"),
-    "gliclass": ("GLiClass", "#AA4499"),
-    "gemma-4-26b": ("Gemma 4 26B", "#009E73"),
-    "qwen3.5-4b": ("Qwen3.5-4B", "#999933"),
-    "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#CC79A7"),
-    "deepseek-v4.1-flash-think": ("DeepSeek V4.1 Flash (reasoning)", "#882255"),
+    "jev": ("Jev", "#D62728"),
+    "laya": ("Laya", "#8C564B"),
+    "gliclass": ("GLiClass", "#9467BD"),
+    "gemma-4-26b": ("Gemma 4 26B", "#34A853"),
+    "qwen3.5-4b": ("Qwen3.5-4B", "#FF6A00"),
+    "deepseek-v4.1-flash": ("DeepSeek V4.1 Flash", "#4D6BFE"),
+    "deepseek-v4.1-flash-think": ("DeepSeek V4.1 Flash (reasoning)", "#0B1F7A"),
 }
 PLAYERS = BASELINES | MODELS
 COMPONENTS = {
