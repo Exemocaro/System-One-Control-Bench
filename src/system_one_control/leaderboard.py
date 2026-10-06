@@ -243,11 +243,11 @@ RULE_ROWS = "\n".join(
 # The recorded full-context games the page replays: results file, player and puzzle.
 EXAMPLES = [
     ("jev.jsonl", "Jev", "gen-10-03"),
-    ("deepseek-v4.1-flash-think.jsonl", "DeepSeek V4.1 Flash (reasoning)", "gen-20-01"),
+    ("deepseek-v4.1-flash-think.jsonl", "DeepSeek V4.1 Flash (reasoning)", "gen-20-09"),
 ]
 
 
-def example_frames(leaderboard: Path) -> list[dict[str, Any]]:
+def example_games(leaderboard: Path) -> list[dict[str, Any]]:
     """Each example game: a title, and the board after each move with a note on the move."""
     puzzles, examples = load_puzzles(), []
     for results, player, name in EXAMPLES:
@@ -472,5 +472,5 @@ def rebuild(leaderboard: Path = LEADERBOARD_DIR, docs: Path | None = None) -> tu
     )
     page = (docs or leaderboard.parents[0] / "docs") / "index.html"
     page.parent.mkdir(parents=True, exist_ok=True)
-    page.write_text(build_page(entries, example_frames(leaderboard)), encoding="utf-8", newline="")
+    page.write_text(build_page(entries, example_games(leaderboard)), encoding="utf-8", newline="")
     return readme, page

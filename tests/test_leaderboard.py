@@ -16,7 +16,7 @@ from system_one_control.leaderboard import (
     LEADERBOARD_DIR,
     build_page,
     dollars,
-    example_frames,
+    example_games,
     player_cell,
     rebuild,
     safe,
@@ -449,8 +449,8 @@ def test_page_costs_round_up_to_the_cent():
 
 
 def test_the_page_replays_its_example_games_to_the_goal():
-    examples = example_frames(LEADERBOARD_DIR)
-    assert [len(game["frames"]) for game in examples] == [15, 23]  # the start and every move
+    examples = example_games(LEADERBOARD_DIR)
+    assert [len(game["frames"]) for game in examples] == [15, 30]  # the start and every move
     for game in examples:
         assert game["frames"][0]["note"] == "Start"
         assert "G" not in game["frames"][-1]["map"]  # the agent stands on the goal
