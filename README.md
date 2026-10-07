@@ -9,7 +9,7 @@
 
 The player sees a small grid puzzle as text and chooses the agent's next move from a list of options: reach the goal, avoid walls, and collect a key when a locked door blocks the way. A breadth-first solver knows the shortest route from every position, so each move is scored exactly: it either starts a shortest route (an optimal move) or it does not. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
 
-The main finding: with full context, Jev chooses an optimal move in about 90% of the positions of the exam, where every model answers the same fixed situations, yet it finishes only 57 of the 100 puzzles when it plays whole games. Strong single decisions do not guarantee a finished game. Read the report, [paper/main.pdf](paper/main.pdf), or browse the results and two recorded games on the [website](https://exemocaro.github.io/System-One-Control-Bench/).
+The main finding: with full context, Jev chooses an optimal move in about 90% of the positions of the exam, where every model answers the same fixed situations, yet it finishes only 57 of the 100 puzzles when it plays whole games. Strong single decisions do not guarantee a finished game. Read the report, [paper/main.pdf](paper/main.pdf), or browse the results and two recorded games on the [website, socb.dev](https://socb.dev).
 
 What a player sees (shortened):
 
@@ -142,7 +142,7 @@ Puzzles are YAML files under `puzzles/`: 100 over the levels 1, 2, 3, 4, 5, 6, 8
 
 ## Leaderboard
 
-The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md); the same results as a web page, with two recorded games to step through, are at [exemocaro.github.io/System-One-Control-Bench](https://exemocaro.github.io/System-One-Control-Bench/), built from `docs/index.html` by `uv run socb leaderboard`. To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
+The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md); the same results as a web page, with two recorded games to step through, are at [socb.dev](https://socb.dev), built from `docs/index.html` by `uv run socb leaderboard`. To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
 
 ## Citation
 

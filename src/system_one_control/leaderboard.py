@@ -168,7 +168,7 @@ LEGEND = """- **full context / map only**: the two conditions of the core track 
 - **kind**: baseline, chat model or decision model.
 
 The same results as a web page, with two recorded games to step through:
-https://exemocaro.github.io/System-One-Control-Bench/.
+https://socb.dev.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 """
 

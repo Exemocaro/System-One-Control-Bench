@@ -17,7 +17,7 @@ Core track, sorted by full-context games won, best first.
 - **kind**: baseline, chat model or decision model.
 
 The same results as a web page, with two recorded games to step through:
-https://exemocaro.github.io/System-One-Control-Bench/.
+https://socb.dev.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 
 |player|org|kind|full context won|full context progress|full context SPL|map only won|map only progress|map only SPL|cost|latency|notes|
