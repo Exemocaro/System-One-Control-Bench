@@ -9,6 +9,7 @@ repository-code: "https://github.com/Exemocaro/System-One-Control-Bench"
 authors:
   - family-names: "Pereira"
     given-names: "Mateus"
+    orcid: "https://orcid.org/0009-0006-6897-5121"
 license: MIT
 preferred-citation:
   type: report
@@ -16,4 +17,5 @@ preferred-citation:
   authors:
     - family-names: "Pereira"
       given-names: "Mateus"
+      orcid: "https://orcid.org/0009-0006-6897-5121"
   year: 2026
