@@ -21,6 +21,11 @@ CORE_CONDITIONS = ("map", "everything")
 
 KINDS = ("baseline", "chat", "decision")
 REPO = "https://github.com/Exemocaro/System-One-Control-Bench"
+SITE = "https://socb.dev"
+DESCRIPTION = (
+    "How well do individual decisions add up to a completed task? A benchmark for decision "
+    "models, chat models and baselines on 100 grid puzzles, with a leaderboard and a report."
+)
 BASELINES = ("random", "greedy", "greedy-walls", "solver")
 
 
@@ -370,6 +375,12 @@ def build_page(entries: Sequence[dict[str, Any]], examples: Sequence[dict[str, A
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>System-One Control Bench</title>
+<meta name="description" content="{DESCRIPTION}">
+<meta property="og:title" content="System-One Control Bench">
+<meta property="og:description" content="{DESCRIPTION}">
+<meta property="og:url" content="{SITE}/">
+<meta property="og:image" content="{SITE}/preview.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 :root {{ --bg: #fbfbfa; --fg: #1d1d1b; --muted: #5f5f5a; --line: #e2e1db; --head: #f0efea;
   --full: #eef3fb; --link: #1f5fbf; color-scheme: light; }}
