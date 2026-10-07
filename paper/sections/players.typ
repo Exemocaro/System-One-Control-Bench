@@ -15,7 +15,7 @@ We call anything that plays a game a *player*: seven model setups and four basel
   [Jev], [TypeSafe's hosted decision model, `jev-1.13.0`.],
   [Laya], [Laya's open Typed-Decisions model, built for the same kind of request as Jev @layacard. Run locally.],
   [GLiClass], [An open classifier that scores any list of labels @stepanov2025gliclass; each option text is one label, and we scale the scores to sum to 1. Run locally.],
-  group[Chat models: answer with an option number],
+  group[Chat models: name an option (Qwen3.5-4B is scored on the option numbers instead)],
   [Qwen3.5-4B], [A small open chat model @qwen2026. Run locally; we read the probability it gives each option number.],
   [Gemma 4 26B], [A chat model from Google @gemma2026, reasoning off.],
   [DeepSeek V4.1 Flash], [A chat model from DeepSeek @deepseek2026, reasoning off.],
@@ -51,7 +51,7 @@ Every condition has 100 games per player, one per puzzle.
 - *Progress:* how close to the goal the agent ever got. Distance is the number of steps the solver would still need from a position, and progress is 1 − (closest distance reached / distance at the start). It is 0 if the agent never got closer than where it started, and 1 if it reached the goal.
 - *Final-state progress:* the same, but measured where the game ended. It is negative if the agent ended farther from the goal than it started.
 - *SPL* (success weighted by path length) @anderson2018evaluation: 0 for a lost game; for a won game, the fewest moves needed divided by the moves used. An SPL of 1 means every game was won by a shortest route.
-- *Blocked moves* (compass rules only): the share of moves that change nothing, because the step runs into a wall or into the locked door without the key.
+- *Blocked moves* (compass rules only): the share of moves that change nothing, because the step runs into a wall or into the locked door without the key. It pools every recorded move of a player in a condition, so long games, which are mostly lost ones, count more.
 - *Optimal-move rate:* the share of a player's moves that are optimal, worked out for each game and then averaged over games.
 // src: analysis/README.md; analysis/metrics.py; src/system_one_control/world.py
 

@@ -10,7 +10,7 @@
 
 *Limitations.*
 
-- We test one small symbolic world, with five or ten puzzles per level and no held-out set. The prompts were written, using a few test games, before the puzzles were generated.
+- We test one small symbolic world, with five or ten puzzles per level and no held-out set.
 - Each result comes from one game per puzzle. Jev and DeepSeek V4.1 Flash give different answers to identical requests, and Gemma 4 26B and DeepSeek V4.1 Flash (reasoning) probably do too, so a rerun would play different games. The intervals cover the choice of puzzles, not this variation (@app:reproducibility).
 - The move rules change several things together (options, text length, steps before the model sees the board again). Two smaller differences also come with them. The subgoal question asks for the "shortest path" under the fixed-length rules and for the way "that takes the fewest turns" under the up-to rules (a turn here is a move); both are scored by moves. And since the move limit counts moves, longer moves allow more steps: a four-step puzzle allows 8 steps under `compass` but 12 under `three-moves`.
 - Levels differ in layout as well as route length, so the level results do not isolate distance.

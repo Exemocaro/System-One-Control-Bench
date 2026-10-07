@@ -41,7 +41,7 @@
 
 #heading(numbering: none)[AI use]
 
-This project was carried out with substantial help from AI assistants, chiefly Anthropic's Claude models (through Claude Code) and OpenAI's GPT models (through Codex). Under the author's direction they wrote most of the code and the analysis scripts, drafted and revised the text of this report, and reviewed one another's work. The author set the research question, made the design decisions, checked the results and reviewed the manuscript, and takes full responsibility for its contents.
+The author conceived the project, designed the benchmark and its experiments, chose the models, ran the evaluations, wrote parts of this report and revised the rest, and checked the results. AI coding assistants (Anthropic's Claude through Claude Code, and OpenAI's GPT models through Codex) wrote most of the code under the author's direction, helped draft and revise the text, and reviewed the code and the manuscript. The author takes full responsibility for the contents.
 
 #context metadata(here().page()) <report:main-end>
 #pagebreak()
