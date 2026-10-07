@@ -7,9 +7,9 @@
 
 > Can a non-generative decision model, one that picks an answer from a list instead of writing one, steer an agent across a small grid?
 
-The player sees a grid as text and chooses the next move from a list of options. A breadth-first solver knows every best move, so each move is scored exactly. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
+The player sees a small grid puzzle as text and chooses the agent's next move from a list of options: reach the goal, avoid walls, and collect a key when a locked door blocks the way. A breadth-first solver knows the shortest route from every position, so each move is scored exactly: it either starts a shortest route (an optimal move) or it does not. There are 100 puzzles, ten conditions that change what the player is told, and five rule sets (one step per move, or several steps chosen together). The puzzles are the final benchmark: there is no held-out set.
 
-The main finding: with full context Jev picks a best move on 90% of the shared exam positions, yet wins 57 of 100 games. Good single decisions do not reliably add up to finished games. See the report, [paper/main.pdf](paper/main.pdf).
+The main finding: with full context, Jev chooses an optimal move in about 90% of the positions of the exam, where every model answers the same fixed situations, yet it finishes only 57 of the 100 puzzles when it plays whole games. Strong single decisions do not guarantee a finished game. Read the report, [paper/main.pdf](paper/main.pdf), or browse the results and two recorded games on the [website](https://exemocaro.github.io/System-One-Control-Bench/).
 
 What a player sees (shortened):
 
@@ -57,32 +57,33 @@ Results go to `benchmarks/<date>_<time>_<what was run>.jsonl` (every move of eve
 
 | Score | Meaning |
 | --- | --- |
-| `won` | the success rate: games that reached the goal before the move limit (twice the solver's moves) |
-| `progress` | how far a game got toward the goal at its closest: 1 for a win, 0 for never getting nearer than the start |
-| `SPL` | fewest moves over moves used for a won game, 0 for a lost one |
+| `won` | games won, the success rate: games finished within the move limit, which is twice the shortest route |
+| `progress` | how much closer the agent got to the goal at its best point: 1 means finished, 0 means it never got closer than where it started |
+| `SPL` | for a won game, the moves of the shortest route over the moves used; 0 for a lost one |
 | `errors` | games ended because the player failed to answer (they count as lost; should be 0) |
 
 ## Results
 
-Compass rules, 100 puzzles, wins out of 100 / mean progress. The baselines do not read the request, so every condition gives them the same games. Results files are in `benchmarks/`.
+Compass rules (one step per move), 100 puzzles: games won out of 100 / mean progress, sorted by full-context games won. The programmed baselines do not read the request, so both conditions give them the same games. Results files are in `benchmarks/`.
 
-| Player | `map` (map only) | `everything` (full context) |
+| Player | Full context (`everything`) | Map only (`map`) |
 | --- | --- | --- |
-| Random | 4 / 0.25 | same |
-| Greedy | 28 / 0.36 | same |
-| Greedy (walls) | 37 / 0.47 | same |
+| DeepSeek V4.1 Flash (reasoning) | 80 / 0.86 | 67 / 0.79 |
+| Gemma 4 26B | 61 / 0.71 | 35 / 0.45 |
+| DeepSeek V4.1 Flash | 60 / 0.72 | 39 / 0.55 |
+| Jev | 57 / 0.68 | 32 / 0.43 |
+| Qwen3.5-4B | 45 / 0.66 | 14 / 0.34 |
+| GLiClass | 13 / 0.22 | 3 / 0.10 |
+| Laya | 12 / 0.26 | 2 / 0.10 |
+| *Programmed baselines* | | |
 | Solver | 100 / 1.00 | same |
-| Jev | 32 / 0.43 | 57 / 0.68 |
-| Laya | 2 / 0.10 | 12 / 0.26 |
-| GLiClass | 3 / 0.10 | 13 / 0.22 |
-| Gemma 4 26B | 35 / 0.45 | 61 / 0.71 |
-| DeepSeek V4.1 Flash | 39 / 0.55 | 60 / 0.72 |
-| DeepSeek V4.1 Flash (reasoning) | 67 / 0.79 | 80 / 0.86 |
-| Qwen3.5-4B | 14 / 0.34 | 45 / 0.66 |
+| Greedy (walls) | 37 / 0.47 | same |
+| Greedy | 28 / 0.36 | same |
+| Random | 4 / 0.25 | same |
 
 ## Conditions
 
-Every condition includes the **map**: the rules, the numbered map, your position, what you carry, where the objects are. Four components can be added, each something code works out for the player.
+Every condition includes the **map**: the rules, the numbered map, the agent's position, whether it carries the key, and where the objects are. Four components can be added, each worked out by code for the player, so the results measure the model together with the information it receives.
 
 | Condition | surroundings | memory | lookahead | subgoal |
 | --- | :---: | :---: | :---: | :---: |
@@ -97,7 +98,7 @@ Every condition includes the **map**: the rules, the numbered map, your position
 | `everything-lookahead` | ✓ | ✓ | | ✓ |
 | `everything-subgoal` | ✓ | ✓ | ✓ | |
 
-`surroundings`: what is next to you, and where the key, door and goal are. `memory`: the moves so far (the report calls it *move history*). `lookahead`: what each option would do (*move outcomes* in the report). `subgoal`: the question names the next target.
+`surroundings`: what is next to the agent, and how far away the key, door and goal are. `memory` (*move history* in the report and on the website): every move already made, and what it did. `lookahead` (*move outcomes*): what would happen if the player chose each option. `subgoal`: the question names the object to aim for next, the key, the door or the goal.
 
 ## Rules
 
@@ -109,7 +110,7 @@ Every condition includes the **map**: the rules, the numbered map, your position
 | `up-to-two-moves` | one or two steps | 20 |
 | `up-to-three-moves` | one, two or three steps | 84 |
 
-Choose with `--rules`. Every sequence is offered, blocked or not. A blocked step is wasted; reaching the goal ends the move.
+Choose with `--rules`. Under the sequence rules the player commits to a whole sequence before seeing the new situation. Every sequence is offered, blocked or not: a blocked step is wasted, the remaining steps still run, and reaching the goal ends the move.
 
 ## Players
 
@@ -141,7 +142,7 @@ Puzzles are YAML files under `puzzles/`: 100 over the levels 1, 2, 3, 4, 5, 6, 8
 
 ## Leaderboard
 
-The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md); the same results as a web page are at [exemocaro.github.io/System-One-Control-Bench](https://exemocaro.github.io/System-One-Control-Bench/), built from `docs/index.html`. To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
+The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 games per player, so models can be compared without paying for all 5,000 games. The table is [leaderboard/README.md](leaderboard/README.md); the same results as a web page, with two recorded games to step through, are at [exemocaro.github.io/System-One-Control-Bench](https://exemocaro.github.io/System-One-Control-Bench/), built from `docs/index.html` by `uv run socb leaderboard`. To add a model, any chat model, decision endpoint or Python `Player`, follow [SUBMITTING.md](SUBMITTING.md).
 
 ## Citation
 

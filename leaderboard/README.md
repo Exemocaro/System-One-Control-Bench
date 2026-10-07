@@ -2,24 +2,27 @@
 
 Core track, sorted by full-context games won, best first.
 
-- **everything / map**: the two conditions of the core track, compass rules (one step
-  per move), 100 puzzles each. `everything` is the full context; `map` is the map only.
-- **won**: share of the 100 puzzles where the goal was reached before the move limit.
-- **progress**: how close a game got to the goal at its closest point (1 for a win).
-- **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
+- **full context / map only**: the two conditions of the core track (`everything` and
+  `map` in the code), compass rules (one step per move), 100 puzzles each.
+- **won**: the share of the 100 puzzles finished within the move limit, which is twice the
+  shortest route.
+- **progress**: how much closer the agent got to the goal at its best point, averaged over the
+  puzzles: 1 means finished, 0 means it never got closer than where it started.
+- **SPL**: for a won game, the moves of the shortest route over the moves used; 0 for a lost one.
 - **[lo-hi]**: 95% interval: how much the score depends on which puzzles are in the set
   (puzzles redrawn at random 1,000 times; the report uses 10,000, so the ends can differ by 0.01).
-- **cost**: USD for one core run (200 games), as reported by the player, rounded up to the
-  cent; n/a means not reported.
+- **cost**: the reported API cost in USD for one core run (200 games), rounded up to the cent;
+  n/a means no cost was reported. Local computing is not included.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
-The website version of this table: https://exemocaro.github.io/System-One-Control-Bench/.
+The same results as a web page, with two recorded games to step through:
+https://exemocaro.github.io/System-One-Control-Bench/.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 
-|player|org|kind|everything won|everything progress|everything SPL|map won|map progress|map SPL|cost|latency|notes|
+|player|org|kind|full context won|full context progress|full context SPL|map only won|map only progress|map only SPL|cost|latency|notes|
 |---|---|---|---|---|---|---|---|---|---|---|---|
-|Solver||baseline|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|0|0|Always plays a best move; the upper bound|
+|Solver||baseline|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|1.00 [1.00-1.00]|0|0|Always plays an optimal move; the upper bound|
 |[DeepSeek V4.1 Flash (reasoning)](https://openrouter.ai/deepseek/deepseek-v4.1-flash)|DeepSeek|chat|0.80 [0.72-0.88]|0.86 [0.80-0.92]|0.74 [0.66-0.81]|0.67 [0.58-0.76]|0.79 [0.72-0.85]|0.62 [0.53-0.71]|0.72|6.84|deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning capped at 1,024 tokens|
 |[Gemma 4 26B](https://huggingface.co/google/gemma-4-26b-a4b-it)|Google|chat|0.61 [0.52-0.70]|0.71 [0.64-0.79]|0.57 [0.48-0.66]|0.35 [0.26-0.45]|0.45 [0.37-0.54]|0.32 [0.23-0.41]|0.12|0.66|google/gemma-4-26b-a4b-it via OpenRouter (DeepInfra), reasoning off|
 |[DeepSeek V4.1 Flash](https://openrouter.ai/deepseek/deepseek-v4.1-flash)|DeepSeek|chat|0.60 [0.51-0.70]|0.72 [0.64-0.79]|0.54 [0.46-0.64]|0.39 [0.30-0.49]|0.55 [0.47-0.63]|0.35 [0.26-0.44]|0.10|0.81|deepseek/deepseek-v4.1-flash via OpenRouter (DeepInfra), reasoning off|

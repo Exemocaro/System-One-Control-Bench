@@ -1,11 +1,11 @@
 # Submitting to the leaderboard
 
-The core track is compass rules, conditions `map` and `everything` (the full context), all
-100 puzzles: 200 games, up to ~3,400 paid calls worst case (one per move, not counting
-retries). Any player can be
-submitted: a chat model, a decision endpoint, or a Python `Player` from the README, since
-`socb submit` works from the results file, not from how the player runs.
-The repository is <https://github.com/Exemocaro/System-One-Control-Bench>; submissions are pull requests to it.
+The core track is compass rules (one step per move) under two conditions, `map` (map only)
+and `everything` (full context), on all 100 puzzles: 200 games, and at most about 3,400 paid
+calls (one per move, not counting retries). Any player can be submitted: a chat model, a
+decision endpoint, or a Python `Player` from the README, since `socb submit` works from the
+results file, not from how the player runs. Submissions are pull requests to
+<https://github.com/Exemocaro/System-One-Control-Bench>.
 
 ## Run it
 
@@ -58,16 +58,22 @@ since `paid = false`).
 
 Probabilities are keyed by option id and are not renormalised; ids that are not options are
 dropped from the record. For `socb submit` to accept the file, the probabilities over the
-options must sum to 1 (within 0.02). The likeliest id is played (a tie goes to the first id in sorted
-order). An answer whose id is not an option, or with neither field, ends the game as an
+options must sum to 1 (within 0.02). The likeliest id is played (a tie goes to the first id in
+sorted order). An answer whose id is not an option, or with neither field, ends the game as an
 error, which counts as lost.
 
 ## Submit it
 
-`uv run socb submit benchmarks/<file>.jsonl --kind chat --name MyModel --org MyOrg --url https://example.com
---notes "what it is"` (`--org` and `--url` are optional) validates the file first (every game replayed: level, options, best moves,
-won/closest, games played to the end, probabilities, full core coverage) and writes `leaderboard/entries/<player>.json`
-with the entry plus the player's core games in `leaderboard/results/<player>.jsonl`.
+```bash
+uv run socb submit benchmarks/<file>.jsonl --kind chat --name MyModel --org MyOrg \
+    --url https://example.com --notes "what it is"
+```
+
+`--org` and `--url` are optional. The command validates the file first: it replays every game
+and checks the level, options, optimal moves, whether each game was won and how close it got,
+that games were played to the end, the probabilities, and that the whole core track is there.
+Then it writes the entry to `leaderboard/entries/<player>.json` and the player's core games to
+`leaderboard/results/<player>.jsonl`.
 `--kind` (`baseline`, `chat` or `decision`: the type of model, not where it runs) is required
 except for the four baselines; a file with several players needs `--player` to pick one.
 Then `uv run socb leaderboard` and commit `leaderboard/results/<player>.jsonl`, the entry in

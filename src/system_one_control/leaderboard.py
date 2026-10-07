@@ -153,19 +153,22 @@ def shown(value: float | None, kind: str) -> str:
     return f"{value:g}"
 
 
-LEGEND = """- **everything / map**: the two conditions of the core track, compass rules (one step
-  per move), 100 puzzles each. `everything` is the full context; `map` is the map only.
-- **won**: share of the 100 puzzles where the goal was reached before the move limit.
-- **progress**: how close a game got to the goal at its closest point (1 for a win).
-- **SPL**: fewest moves over moves used for a won game, 0 for a lost one.
+LEGEND = """- **full context / map only**: the two conditions of the core track (`everything` and
+  `map` in the code), compass rules (one step per move), 100 puzzles each.
+- **won**: the share of the 100 puzzles finished within the move limit, which is twice the
+  shortest route.
+- **progress**: how much closer the agent got to the goal at its best point, averaged over the
+  puzzles: 1 means finished, 0 means it never got closer than where it started.
+- **SPL**: for a won game, the moves of the shortest route over the moves used; 0 for a lost one.
 - **[lo-hi]**: 95% interval: how much the score depends on which puzzles are in the set
   (puzzles redrawn at random 1,000 times; the report uses 10,000, so the ends can differ by 0.01).
-- **cost**: USD for one core run (200 games), as reported by the player, rounded up to the
-  cent; n/a means not reported.
+- **cost**: the reported API cost in USD for one core run (200 games), rounded up to the cent;
+  n/a means no cost was reported. Local computing is not included.
 - **latency**: median seconds per answer (the successful call alone).
 - **kind**: baseline, chat model or decision model.
 
-The website version of this table: https://exemocaro.github.io/System-One-Control-Bench/.
+The same results as a web page, with two recorded games to step through:
+https://exemocaro.github.io/System-One-Control-Bench/.
 How to submit: [SUBMITTING.md](../SUBMITTING.md).
 """
 
@@ -185,12 +188,12 @@ def build_table(entries: Sequence[dict[str, Any]]) -> str:
         "player",
         "org",
         "kind",
-        "everything won",
-        "everything progress",
-        "everything SPL",
-        "map won",
-        "map progress",
-        "map SPL",
+        "full context won",
+        "full context progress",
+        "full context SPL",
+        "map only won",
+        "map only progress",
+        "map only SPL",
         "cost",
         "latency",
         "notes",

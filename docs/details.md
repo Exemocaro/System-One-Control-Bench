@@ -67,9 +67,9 @@ A Jev call the server turns away is tried twice more, after one and two seconds.
 | Player | Paid | How it moves |
 | --- | :---: | --- |
 | `random` | | a random offered move |
-| `greedy` | | straight at the next target (key, door, goal), compass rules only |
+| `greedy` | | straight at the next target (key, door, goal), even into a wall, compass rules only |
 | `greedy-walls` | | like `greedy`, never into a wall, compass rules only |
-| `solver` | | always a best move |
+| `solver` | | always an optimal move |
 | `jev` | ✓ | asks Jev (`jev-1.13.0`) |
 | `laya` | | [Laya](https://huggingface.co/convaiinnovations/laya), `typed-decisions`, on this machine |
 | `gliclass` | | [GLiClass](https://huggingface.co/knowledgator/gliclass-modern-large-v3.0), on this machine |
@@ -148,12 +148,13 @@ src/system_one_control/
 benchmarks/         results of the runs in the paper (.jsonl and .txt)
 exam/               exam items and the exam results
 examples/           the exact request each condition sends
-leaderboard/        entries, core-track results, players endpoint example, the generated table
+leaderboard/        entries, core-track results, a decision endpoint example, the generated table
 analysis/           recomputes every table and figure of the paper from the results files
 paper/              the Typst source of the report
 scripts/            make_exam.py, which made exam/items.jsonl; replay_check.py, which asks
                     a player again at recorded positions and compares the answers
-docs/               this file, and index.html: the leaderboard web page (GitHub Pages)
+docs/               this file, and index.html: the website, with the leaderboard and two
+                    recorded games (GitHub Pages)
 ```
 
 ## Extending
