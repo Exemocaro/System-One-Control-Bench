@@ -3,6 +3,7 @@ message: "If you use this benchmark, please cite it as below."
 type: software
 title: "System-One Control Bench"
 version: 1.0.0
+doi: 10.5281/zenodo.23221455
 url: "https://socb.dev"
 repository-code: "https://github.com/Exemocaro/System-One-Control-Bench"
 authors:

@@ -4,6 +4,7 @@
 ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 ![uv](https://img.shields.io/badge/built%20with-uv-purple)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+[![DOI](https://zenodo.org/badge/1380370812.svg)](https://doi.org/10.5281/zenodo.23221455)
 
 > Can a non-generative decision model, one that picks an answer from a list instead of writing one, steer an agent across a small grid?
 
@@ -146,7 +147,7 @@ The core track is compass rules, `map` and `everything`, all 100 puzzles: 200 ga
 
 ## Citation
 
-Report: *Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks* (`paper/`). Cite it with `CITATION.cff`.
+Report: *Evaluating Non-Generative Decision Models in Sequential Gridworld Tasks* (`paper/`). Cite it with `CITATION.cff`. The code and data are archived on Zenodo: [10.5281/zenodo.23221455](https://doi.org/10.5281/zenodo.23221455).
 
 ## License
 
