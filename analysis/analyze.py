@@ -596,13 +596,7 @@ def fig_lines(games: dict, name: str, xs: list, key, xlabel: str) -> None:
     axes[0].set_ylabel("Success rate")
     handles, labels = axes[1].get_legend_handles_labels()
     fig.legend(
-        handles,
-        labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.1),
-        ncol=4,
-        frameon=False,
-        title="dashed: baselines" if name == "fig_levels" else None,
+        handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=4, frameon=False
     )
     save(fig, name)
 

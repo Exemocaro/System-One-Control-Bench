@@ -82,7 +82,7 @@ Jev, Laya, GLiClass and Qwen3.5-4B return a probability for every option. In the
 Jev also returns a confidence score. On every move it equals, to within 0.023, the top probability rescaled so that 0 means all options are equally likely and 1 means certainty, $(p_"max" - 1 slash n) slash (1 - 1 slash n)$ for $n$ options @typesafeconfidence. So it adds almost nothing to the probabilities; we cannot explain the small differences.
 // src: analysis/out/calibration.md; analysis/out/exam.md; analysis/out/hypotheses.md; paper/references.bib
 
-#figure(image("../../analysis/out/fig_calibration.pdf", width: 48%), placement: none,
+#figure(image("../../analysis/out/fig_calibration.pdf", width: 56%), placement: none,
   caption: [Calibration over all compass games. Moves are grouped by the probability of the chosen move; each point compares a group's average probability with the share of its moves that were optimal. Points on the dotted diagonal are perfectly calibrated, and points below it are overconfident. Only groups of at least 30 moves are shown, so Laya, which rarely gives a probability above 0.5, has only three points. Gemma 4 26B and the DeepSeek V4.1 Flash setups give no probabilities.]) <fig:reliability>
 // src: analysis/out/calibration.md
 
